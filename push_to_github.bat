@@ -5,7 +5,7 @@ echo ==============================================
 echo   Pushing LorMusic repository to GitHub...
 echo ==============================================
 git add .
-git commit -m "Update"
+git commit -m "Release v1.5.6"
 git push -u origin main
 echo.
 pause

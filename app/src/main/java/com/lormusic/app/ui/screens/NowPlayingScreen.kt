@@ -215,22 +215,12 @@ fun NowPlayingScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .padding(horizontal = 92.dp)
+                                .padding(horizontal = 72.dp)
                         )
                         Row(
                             modifier = Modifier.align(Alignment.CenterEnd),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (ytShareUrl != null) {
-                                IconButton(
-                                    onClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        YouTubeMusicRepository.shareSongLink(context, song)
-                                    }
-                                ) {
-                                    Icon(Icons.Filled.Share, contentDescription = "Поделиться ссылкой на песню")
-                                }
-                            }
                             IconButton(onClick = onOpenTagEditor) {
                                 Icon(Icons.Filled.Edit, contentDescription = "Редактор тегов")
                             }
@@ -361,17 +351,35 @@ fun NowPlayingScreen(
                                 )
                             }
                         }
-                        FilledTonalIconButton(
-                            onClick = {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                onToggleFavorite()
-                            }
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = "Избранное",
-                                tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
+                            if (ytShareUrl != null) {
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        YouTubeMusicRepository.shareSongLink(context, song)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Share,
+                                        contentDescription = "Поделиться ссылкой на песню"
+                                    )
+                                }
+                            }
+                            FilledTonalIconButton(
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onToggleFavorite()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                                    contentDescription = "Избранное",
+                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
                         }
                     }
 

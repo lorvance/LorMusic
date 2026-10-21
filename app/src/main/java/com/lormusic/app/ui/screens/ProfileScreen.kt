@@ -334,14 +334,14 @@ fun ProfileScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text("Проверить обновления") },
-                    supportingContent = { Text("Текущая версия 1.5.5.2") },
+                    supportingContent = { Text("Текущая версия 1.5.6") },
                     leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
                     modifier = Modifier.clickable { onCheckForUpdates() }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text("О приложении") },
-                    supportingContent = { Text("LorMusic 1.5.5.2") },
+                    supportingContent = { Text("LorMusic 1.5.6") },
                     leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
                     modifier = Modifier.clickable { showAboutDialog = true }
                 )
@@ -506,7 +506,7 @@ fun ProfileScreen(
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("LorMusic 1.5.5.2") },
+            title = { Text("LorMusic 1.5.6") },
             text = {
                 Text(
                     "Музыкальный плеер в стиле Material 3 Expressive + iOS Blur.\n\n" +

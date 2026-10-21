@@ -29,7 +29,7 @@ sealed interface UpdateState {
 
 class UpdateManager(private val context: Context) {
 
-    suspend fun checkForUpdates(currentVersion: String = "1.5.5.2"): UpdateState = withContext(Dispatchers.IO) {
+    suspend fun checkForUpdates(currentVersion: String = "1.5.6"): UpdateState = withContext(Dispatchers.IO) {
         val endpoints = listOf(
             "https://api.github.com/repos/Lorvance/LorMusic/releases/latest",
             "https://api.github.com/repos/Lorvance/LorMuisc/releases/latest"

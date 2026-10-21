@@ -1091,14 +1091,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.5.5.2")
+            val result = updateManager.checkForUpdates("1.5.6")
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
                 showUpdateDialog.value = true
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
-                    statusMessage.value = "У вас установлена актуальная версия (1.5.5.2)"
+                    statusMessage.value = "У вас установлена актуальная версия (1.5.6)"
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message
                 }
