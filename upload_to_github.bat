@@ -24,29 +24,20 @@ if not exist ".git" (
 )
 
 git remote get-url origin >nul 2>&1
-if not errorlevel 1 goto :remote_exists
+if errorlevel 1 (
+    echo [2/5] Setting remote origin to https://github.com/Lorvance/LorMusic.git ...
+    git remote add origin https://github.com/Lorvance/LorMusic.git
+) else (
+    for /f "tokens=*" %%u in ('git remote get-url origin') do echo [2/5] Remote origin: %%u
+)
 
-echo.
-echo [2/5] Configuring remote repository...
-set "REPO_URL=https://github.com/Lorvance/LorMusic.git"
-echo Default repo URL: %REPO_URL%
-set "USER_INPUT="
-set /p "USER_INPUT=Press Enter to use default, or enter new URL: "
-if not "%USER_INPUT%"=="" set "REPO_URL=%USER_INPUT%"
-git remote remove origin >nul 2>&1
-git remote add origin "%REPO_URL%"
-echo Remote origin set to: %REPO_URL%
-goto :remote_done
-
-:remote_exists
-for /f "tokens=*" %%u in ('git remote get-url origin') do echo [2/5] Remote origin: %%u
-
-:remote_done
 echo.
 set "COMMIT_MSG=Release v1.5.5.2"
 set "USER_MSG="
 set /p "USER_MSG=[3/5] Commit message [Enter for 'Release v1.5.5.2']: "
-if not "%USER_MSG%"=="" set "COMMIT_MSG=%USER_MSG%"
+if defined USER_MSG (
+    for /f "tokens=* delims= " %%a in ("%USER_MSG%") do if not "%%a"=="" set "COMMIT_MSG=%%a"
+)
 
 echo.
 echo [4/5] Adding files and creating commit...
@@ -70,10 +61,10 @@ echo.
 echo =======================================================
 echo   PUSH FAILED / ОШИБКА ОТПРАВКИ
 echo.
-echo   If GitHub requires authentication:
-echo     Sign in with GitHub CLI (gh auth login) or Personal Access Token.
+echo   If GitHub requires login:
+echo     Please authenticate in Git (e.g. Personal Access Token or GitHub CLI).
 echo.
-echo   If GitHub repository already has existing commits:
+echo   If GitHub already has commits:
 echo     Run: git pull origin main --rebase
 echo     Then run this script again.
 echo =======================================================
