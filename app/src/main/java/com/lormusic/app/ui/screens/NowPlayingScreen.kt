@@ -39,6 +39,7 @@ import com.lormusic.app.data.YouTubeMusicRepository
 import com.lormusic.app.model.LyricLine
 import com.lormusic.app.model.RepeatMode
 import com.lormusic.app.model.Song
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.ui.components.*
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
@@ -88,6 +89,7 @@ fun NowPlayingScreen(
 ) {
     val view = LocalView.current
     val context = LocalContext.current
+    val strings = LocalStrings.current
     val ytShareUrl = remember(song) { YouTubeMusicRepository.getShareUrl(song) }
     var showLyrics by remember { mutableStateOf(false) }
 
@@ -216,10 +218,10 @@ fun NowPlayingScreen(
                             onClick = onClose,
                             modifier = Modifier.align(Alignment.CenterStart)
                         ) {
-                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = "Свернуть")
+                            Icon(Icons.Filled.KeyboardArrowDown, contentDescription = strings.collapse)
                         }
                         Text(
-                            text = "Сейчас играет",
+                            text = strings.nowPlayingTitle,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             color = MaterialTheme.colorScheme.onSurface,
@@ -228,18 +230,13 @@ fun NowPlayingScreen(
                             overflow = TextOverflow.Ellipsis,
                             modifier = Modifier
                                 .align(Alignment.Center)
-                                .padding(horizontal = 72.dp)
+                                .padding(horizontal = 56.dp)
                         )
-                        Row(
-                            modifier = Modifier.align(Alignment.CenterEnd),
-                            verticalAlignment = Alignment.CenterVertically
+                        IconButton(
+                            onClick = onOpenSongActions,
+                            modifier = Modifier.align(Alignment.CenterEnd)
                         ) {
-                            IconButton(onClick = onOpenTagEditor) {
-                                Icon(Icons.Filled.Edit, contentDescription = "Редактор тегов")
-                            }
-                            IconButton(onClick = onOpenSongActions) {
-                                Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = "Действия с треком")
-                            }
+                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = strings.songActions)
                         }
                     }
 
@@ -387,7 +384,7 @@ fun NowPlayingScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Share,
-                                        contentDescription = "Поделиться ссылкой на песню"
+                                        contentDescription = strings.shareSongLink
                                     )
                                 }
                             }
@@ -400,9 +397,20 @@ fun NowPlayingScreen(
                                 ) {
                                     Icon(
                                         imageVector = Icons.Filled.Download,
-                                        contentDescription = "Скачать трек"
+                                        contentDescription = strings.downloadTrack
                                     )
                                 }
+                            }
+                            FilledTonalIconButton(
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onOpenTagEditor()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = strings.editTags
+                                )
                             }
                             FilledTonalIconButton(
                                 onClick = {
@@ -412,7 +420,7 @@ fun NowPlayingScreen(
                             ) {
                                 Icon(
                                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                    contentDescription = "Избранное",
+                                    contentDescription = strings.favorites,
                                     tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
                                 )
                             }
@@ -484,7 +492,7 @@ fun NowPlayingScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.Shuffle,
-                                contentDescription = "Перемешать",
+                                contentDescription = strings.shuffle,
                                 tint = if (shuffleOn) accentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                             )
                         }
@@ -497,7 +505,7 @@ fun NowPlayingScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.SkipPrevious,
-                                contentDescription = "Предыдущий",
+                                contentDescription = strings.previousTrack,
                                 modifier = Modifier.size(30.dp)
                             )
                         }
@@ -517,7 +525,7 @@ fun NowPlayingScreen(
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.SkipNext,
-                                contentDescription = "Следующий",
+                                contentDescription = strings.nextTrack,
                                 modifier = Modifier.size(30.dp)
                             )
                         }
@@ -532,7 +540,7 @@ fun NowPlayingScreen(
                                     RepeatMode.ONE -> Icons.Filled.RepeatOne
                                     else -> Icons.Filled.Repeat
                                 },
-                                contentDescription = "Режим повтора",
+                                contentDescription = strings.repeatMode,
                                 tint = if (repeatMode != RepeatMode.OFF) {
                                     accentColor
                                 } else {
@@ -555,7 +563,7 @@ fun NowPlayingScreen(
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 showLyrics = true
                             },
-                            label = { Text("Текст") },
+                            label = { Text(strings.lyricsTab) },
                             leadingIcon = { Icon(Icons.Filled.Lyrics, contentDescription = null, modifier = Modifier.size(17.dp)) },
                             shape = RoundedCornerShape(16.dp)
                         )
@@ -568,7 +576,7 @@ fun NowPlayingScreen(
                         AssistChip(
                             onClick = { showSleepDialog = true },
                             label = {
-                                val timerText = sleepTimerRemainingSec?.let { formatDurationShort(it * 1000L) } ?: "Таймер"
+                                val timerText = sleepTimerRemainingSec?.let { formatDurationShort(it * 1000L) } ?: strings.timerChip
                                 Text(timerText)
                             },
                             leadingIcon = { Icon(Icons.Filled.Bedtime, contentDescription = null, modifier = Modifier.size(17.dp)) },
@@ -611,7 +619,7 @@ fun NowPlayingScreen(
                     .padding(bottom = 16.dp)
             ) {
                 Text(
-                    text = "Очередь воспроизведения (${queue.size})",
+                    text = "${strings.queueTitle} (${queue.size})",
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.Bold,
                     modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
@@ -636,7 +644,7 @@ fun NowPlayingScreen(
                             IconButton(onClick = { onRemoveFromQueue(index) }) {
                                 Icon(
                                     imageVector = Icons.Filled.Close,
-                                    contentDescription = "Убрать из очереди",
+                                    contentDescription = strings.removeFromQueue,
                                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                                 )
                             }
@@ -650,15 +658,15 @@ fun NowPlayingScreen(
     if (showSleepDialog) {
         AlertDialog(
             onDismissRequest = { showSleepDialog = false },
-            title = { Text("Таймер сна") },
+            title = { Text(strings.sleepTimerDialogTitle) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf(
-                        null to "Выключить",
-                        5 to "5 минут",
-                        15 to "15 минут",
-                        30 to "30 минут",
-                        60 to "60 минут"
+                        null to strings.sleepTimerOff,
+                        5 to strings.minutesFormat.format(5),
+                        15 to strings.minutesFormat.format(15),
+                        30 to strings.minutesFormat.format(30),
+                        60 to strings.minutesFormat.format(60)
                     ).forEach { (mins, label) ->
                         TextButton(
                             onClick = {
@@ -674,7 +682,7 @@ fun NowPlayingScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showSleepDialog = false }) {
-                    Text("Закрыть")
+                    Text(strings.close)
                 }
             }
         )
@@ -689,6 +697,7 @@ private fun LiveBottomLyricBanner(
     accentColor: Color,
     onClick: () -> Unit
 ) {
+    val strings = LocalStrings.current
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.48f),
@@ -725,7 +734,7 @@ private fun LiveBottomLyricBanner(
                 when {
                     loading -> {
                         Text(
-                            text = "Загрузка синхронного текста…",
+                            text = strings.loadingLyrics,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                             textAlign = TextAlign.Center,
@@ -737,7 +746,7 @@ private fun LiveBottomLyricBanner(
 
                     activeLine == null -> {
                         Text(
-                            text = "Нажми, чтобы открыть текст песни",
+                            text = strings.tapToOpenLyrics,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center,
@@ -826,6 +835,7 @@ private fun FullScreenLyricsLayout(
     onBackToCover: () -> Unit
 ) {
     var displayMode by remember { mutableStateOf(LyricsDisplayMode.SYNCED) }
+    val strings = LocalStrings.current
     val listState = rememberLazyListState()
     val lyricsHazeState = remember { HazeState() }
 
@@ -909,7 +919,7 @@ private fun FullScreenLyricsLayout(
                 IconButton(onClick = onPrevious) {
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
-                        contentDescription = "Предыдущий",
+                        contentDescription = strings.previousTrack,
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(28.dp)
                     )
@@ -922,7 +932,7 @@ private fun FullScreenLyricsLayout(
                 IconButton(onClick = onNext) {
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
-                        contentDescription = "Следующий",
+                        contentDescription = strings.nextTrack,
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(28.dp)
                     )
@@ -962,7 +972,7 @@ private fun FullScreenLyricsLayout(
                                 ExpressiveLoadingIndicator(size = 58.dp, color = accentColor)
                                 Spacer(Modifier.height(14.dp))
                                 Text(
-                                    text = "Ищем синхронный текст по названию…",
+                                    text = strings.searchingLyrics,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
@@ -986,14 +996,14 @@ private fun FullScreenLyricsLayout(
                                 )
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    text = "Синхронный текст для этого трека не найден",
+                                    text = strings.lyricsNotFound,
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                                 )
                                 Spacer(Modifier.height(6.dp))
                                 Text(
-                                    text = "Поддерживается поиск по названию (LRCLIB), пользовательский текст из редактора тегов и .lrc",
+                                    text = strings.lyricsHint,
                                     style = MaterialTheme.typography.bodyMedium,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
@@ -1002,7 +1012,7 @@ private fun FullScreenLyricsLayout(
                                 FilledTonalButton(onClick = onRefresh) {
                                     Icon(Icons.Filled.Refresh, contentDescription = null)
                                     Spacer(Modifier.width(6.dp))
-                                    Text("Повторить поиск")
+                                    Text(strings.retrySearch)
                                 }
                             }
                         }
@@ -1118,7 +1128,7 @@ private fun FullScreenLyricsLayout(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.Refresh,
-                        contentDescription = "Обновить текст",
+                        contentDescription = strings.refreshLyrics,
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -1151,7 +1161,7 @@ private fun FullScreenLyricsLayout(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Синхронизирован",
+                            text = strings.syncedLyrics,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (syncedSelected) MaterialTheme.colorScheme.surface
@@ -1173,7 +1183,7 @@ private fun FullScreenLyricsLayout(
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
-                            text = "Простой",
+                            text = strings.plainLyrics,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (plainSelected) MaterialTheme.colorScheme.surface

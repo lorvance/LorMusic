@@ -25,6 +25,7 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lormusic.app.data.AppUpdateInfo
 import com.lormusic.app.data.UpdateState
+import com.lormusic.app.model.LocalStrings
 import java.io.File
 
 @Composable
@@ -35,6 +36,7 @@ fun UpdateDialog(
     onInstall: (File) -> Unit,
     onDismiss: () -> Unit
 ) {
+    val strings = LocalStrings.current
     var isChangelogExpanded by remember { mutableStateOf(false) }
     val arrowRotation by animateFloatAsState(
         targetValue = if (isChangelogExpanded) 180f else 0f,
@@ -87,12 +89,12 @@ fun UpdateDialog(
 
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Доступно обновление",
+                            text = strings.updateAvailable,
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "Версия ${updateInfo.versionName}",
+                            text = "${strings.appVersion.substringBefore(" ")} ${updateInfo.versionName}",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -131,7 +133,7 @@ fun UpdateDialog(
                                     modifier = Modifier.size(18.dp)
                                 )
                                 Text(
-                                    text = "Список изменений",
+                                    text = strings.changelogTitle,
                                     style = MaterialTheme.typography.titleSmall,
                                     fontWeight = FontWeight.SemiBold,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -187,7 +189,7 @@ fun UpdateDialog(
                                 verticalAlignment = Alignment.CenterVertically
                             ) {
                                 Text(
-                                    text = "Скачивание обновления...",
+                                    text = strings.downloadingUpdate,
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = FontWeight.Medium,
                                     color = MaterialTheme.colorScheme.onSurface
@@ -208,7 +210,7 @@ fun UpdateDialog(
 
                             if (totalMb > 0.1f) {
                                 Text(
-                                    text = "%.1f МБ / %.1f МБ".format(downloadedMb, totalMb),
+                                    text = "%.1f / %.1f MB".format(downloadedMb, totalMb),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurfaceVariant
                                 )
@@ -224,7 +226,7 @@ fun UpdateDialog(
                                 .fillMaxWidth()
                                 .height(52.dp)
                         ) {
-                            Text("Установить обновление", style = MaterialTheme.typography.titleSmall)
+                            Text(strings.installUpdate, style = MaterialTheme.typography.titleSmall)
                         }
                     }
 
@@ -240,7 +242,7 @@ fun UpdateDialog(
                                     .fillMaxWidth()
                                     .height(52.dp)
                             ) {
-                                Text("Скачать обновление", style = MaterialTheme.typography.titleSmall)
+                                Text(strings.downloadUpdate, style = MaterialTheme.typography.titleSmall)
                             }
 
                             OutlinedButton(
@@ -250,7 +252,7 @@ fun UpdateDialog(
                                     .fillMaxWidth()
                                     .height(48.dp)
                             ) {
-                                Text("Напомнить позже", style = MaterialTheme.typography.titleSmall)
+                                Text(strings.remindLater, style = MaterialTheme.typography.titleSmall)
                             }
                         }
                     }

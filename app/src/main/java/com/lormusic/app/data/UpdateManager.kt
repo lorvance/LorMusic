@@ -199,18 +199,54 @@ class UpdateManager(private val context: Context) {
         }
     }
 
+    private data class ParsedVersion(
+        val parts: List<Int>,
+        val preReleaseNumber: Int?
+    )
+
+    private fun parseVersion(raw: String): ParsedVersion {
+        val clean = raw.trim().removePrefix("v").removePrefix("V")
+        val sepIndex = clean.indexOfFirst { it == '-' || it == '_' }
+        val basePart = if (sepIndex >= 0) clean.substring(0, sepIndex) else clean
+        val prePart = if (sepIndex >= 0) clean.substring(sepIndex + 1) else ""
+
+        val parts = basePart.split(".").mapNotNull { segment ->
+            segment.filter { it.isDigit() }.toIntOrNull()
+        }
+
+        val preNumber = if (prePart.isNotBlank()) {
+            val digits = prePart.filter { it.isDigit() }
+            digits.toIntOrNull() ?: 0
+        } else {
+            null
+        }
+
+        return ParsedVersion(parts, preNumber)
+    }
+
     private fun isNewerVersion(remote: String, current: String): Boolean {
         if (remote.isBlank()) return false
-        val remoteParts = remote.split(".").mapNotNull { it.filter { char -> char.isDigit() }.toIntOrNull() }
-        val currentParts = current.split(".").mapNotNull { it.filter { char -> char.isDigit() }.toIntOrNull() }
+        val r = parseVersion(remote)
+        val c = parseVersion(current)
 
-        val maxLength = maxOf(remoteParts.size, currentParts.size)
+        val maxLength = maxOf(r.parts.size, c.parts.size)
         for (i in 0 until maxLength) {
-            val r = remoteParts.getOrElse(i) { 0 }
-            val c = currentParts.getOrElse(i) { 0 }
-            if (r > c) return true
-            if (r < c) return false
+            val rPart = r.parts.getOrElse(i) { 0 }
+            val cPart = c.parts.getOrElse(i) { 0 }
+            if (rPart > cPart) return true
+            if (rPart < cPart) return false
         }
+
+        if (r.preReleaseNumber == null && c.preReleaseNumber != null) {
+            return true
+        }
+        if (r.preReleaseNumber != null && c.preReleaseNumber == null) {
+            return false
+        }
+        if (r.preReleaseNumber != null && c.preReleaseNumber != null) {
+            return r.preReleaseNumber > c.preReleaseNumber
+        }
+
         return false
     }
 }

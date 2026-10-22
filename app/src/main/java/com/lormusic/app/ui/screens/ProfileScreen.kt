@@ -92,7 +92,7 @@ fun ProfileScreen(
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
         Text(
-            text = "Настройки",
+            text = strings.settingsTitle,
             style = MaterialTheme.typography.displayMedium,
             fontWeight = FontWeight.ExtraBold
         )
@@ -103,17 +103,17 @@ fun ProfileScreen(
             horizontalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             StatCard(
-                title = "Треков",
+                title = strings.statsTracks,
                 value = totalSongsCount.toString(),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                title = "Любимых",
+                title = strings.statsFavorites,
                 value = favoritesCount.toString(),
                 modifier = Modifier.weight(1f)
             )
             StatCard(
-                title = "Плейлистов",
+                title = strings.statsPlaylists,
                 value = playlistsCount.toString(),
                 modifier = Modifier.weight(1f)
             )
@@ -122,14 +122,14 @@ fun ProfileScreen(
         Spacer(Modifier.height(20.dp))
 
         Text(
-            text = "Иконка приложения",
+            text = strings.appIconSectionTitle,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            text = "Выбери стиль иконки на рабочем столе (предпросмотр в реальном времени)",
+            text = strings.appIconSectionDesc,
             style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
         )
@@ -176,7 +176,7 @@ fun ProfileScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = option.label,
+                            text = option.getDisplayName(strings),
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
@@ -184,7 +184,7 @@ fun ProfileScreen(
                         )
                         Spacer(Modifier.height(2.dp))
                         Text(
-                            text = option.subtitle,
+                            text = option.getDisplaySubtitle(strings),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center,
@@ -202,7 +202,7 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(20.dp))
         Text(
-            text = "Оформление, навигация и плеер",
+            text = strings.appearanceAndPlayerSection,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -215,15 +215,15 @@ fun ProfileScreen(
         ) {
             Column {
                 ListItem(
-                    headlineContent = { Text("Тема оформления") },
-                    supportingContent = { Text(themeMode.label) },
+                    headlineContent = { Text(strings.themeModeTitle) },
+                    supportingContent = { Text(themeMode.getDisplayName(strings)) },
                     leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
                     modifier = Modifier.clickable { showThemeDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Цвета Material You") },
-                    supportingContent = { Text("При отключении используется лавандовая палитра под новую иконку") },
+                    headlineContent = { Text(strings.materialYouTitle) },
+                    supportingContent = { Text(strings.materialYouDesc) },
                     leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -234,8 +234,8 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Размытие интерфейса (Blur)") },
-                    supportingContent = { Text("Живой эффект матового стекла на верхней шапке и нижней панели") },
+                    headlineContent = { Text(strings.blurEffectTitle) },
+                    supportingContent = { Text(strings.blurEffectDesc) },
                     leadingContent = { Icon(Icons.Filled.BlurOn, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -246,13 +246,13 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Стиль Liquid Glass (Apple)") },
+                    headlineContent = { Text(strings.liquidGlassTitle) },
                     supportingContent = {
                         Text(
                             if (isLiquidGlassSupported) {
-                                "Жидкое стекло с объёмными бликами вместо обычного блюра"
+                                strings.liquidGlassDescSupported
                             } else {
-                                "Требуется Android 13+ (у вас Android ${Build.VERSION.RELEASE})"
+                                "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
                             }
                         )
                     },
@@ -262,7 +262,7 @@ fun ProfileScreen(
                             checked = useLiquidGlass,
                             onCheckedChange = { checked ->
                                 if (!isLiquidGlassSupported) {
-                                    showLiquidGlassWarning = "Liquid Glass работает только на Android 13 и выше, а у вас Android ${Build.VERSION.RELEASE}"
+                                    showLiquidGlassWarning = "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
                                 } else {
                                     onToggleLiquidGlass(checked)
                                 }
@@ -272,8 +272,8 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Динамический градиент обложки") },
-                    supportingContent = { Text("Фон экрана «Сейчас играет» формируется из цветов обложки") },
+                    headlineContent = { Text(strings.dynamicCoverGradientTitle) },
+                    supportingContent = { Text(strings.dynamicCoverGradientDesc) },
                     leadingContent = { Icon(Icons.Filled.Gradient, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -284,15 +284,15 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Расположение поиска") },
-                    supportingContent = { Text(searchBarPlacement.label) },
+                    headlineContent = { Text(strings.searchPlacementTitle) },
+                    supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
                     leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
                     modifier = Modifier.clickable { showSearchPlacementDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Свайпы треков в плеере") },
-                    supportingContent = { Text("Свайп вправо — следующий трек, свайп влево — предыдущий") },
+                    headlineContent = { Text(strings.playerSwipeTitle) },
+                    supportingContent = { Text(strings.playerSwipeDesc) },
                     leadingContent = { Icon(Icons.Filled.Swipe, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -303,8 +303,8 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Волнистый ползунок") },
-                    supportingContent = { Text("Живая бегущая волна при воспроизведении") },
+                    headlineContent = { Text(strings.squigglySliderTitle) },
+                    supportingContent = { Text(strings.squigglySliderDesc) },
                     leadingContent = { Icon(Icons.Filled.Waves, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -316,7 +316,7 @@ fun ProfileScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text(strings.languageTitle) },
-                    supportingContent = { Text(appLanguage.displayName) },
+                    supportingContent = { Text(appLanguage.getLabel(strings)) },
                     leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
                     modifier = Modifier.clickable { showLanguageDialog = true }
                 )
@@ -334,8 +334,8 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Скрыть демо-треки") },
-                    supportingContent = { Text("Показывать только реальную музыку с устройства") },
+                    headlineContent = { Text(strings.hideDemoTracksTitle) },
+                    supportingContent = { Text(strings.hideDemoTracksTitle) },
                     leadingContent = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -349,7 +349,7 @@ fun ProfileScreen(
 
         Spacer(Modifier.height(20.dp))
         Text(
-            text = "Инструменты тегов и медиатека",
+            text = strings.librarySection,
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.primary
@@ -364,12 +364,12 @@ fun ProfileScreen(
                 ListItem(
                     headlineContent = {
                         Text(
-                            text = "TagFix — Автоисправление тегов и Shazam-поиск",
+                            text = strings.tagFixSectionTitle,
                             fontWeight = FontWeight.Bold
                         )
                     },
                     supportingContent = {
-                        Text("Очистка названий, отделение исполнителя, поиск обложек и распознавание неизвестных треков")
+                        Text(strings.tagFixSubtitle)
                     },
                     leadingContent = {
                         Icon(
@@ -382,8 +382,8 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Автоматический TagFix") },
-                    supportingContent = { Text("Предлагать исправление при обнаружении треков со сломанными тегами") },
+                    headlineContent = { Text(strings.autoTagFixTitle) },
+                    supportingContent = { Text(strings.autoTagFixDesc) },
                     leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -394,8 +394,8 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Получать бета-обновления") },
-                    supportingContent = { Text("Уведомлять о предварительных и пре-релизных сборках с GitHub") },
+                    headlineContent = { Text(strings.betaUpdatesTitle) },
+                    supportingContent = { Text(strings.betaUpdatesDesc) },
                     leadingContent = { Icon(Icons.Filled.BugReport, contentDescription = null) },
                     trailingContent = {
                         Switch(
@@ -406,18 +406,18 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Скорость воспроизведения") },
+                    headlineContent = { Text(strings.playbackSpeedTitle) },
                     supportingContent = { Text("${playbackSpeed}x") },
                     leadingContent = { Icon(Icons.Filled.Speed, contentDescription = null) },
                     modifier = Modifier.clickable { showSpeedDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Таймер сна") },
+                    headlineContent = { Text(strings.sleepTimerTitle) },
                     supportingContent = {
                         val status = sleepTimerRemainingSec?.let {
-                            "Осталось ${formatDurationShort(it * 1000L)}"
-                        } ?: "Выключен"
+                            formatDurationShort(it * 1000L)
+                        } ?: strings.sleepTimerOff
                         Text(status)
                     },
                     leadingContent = { Icon(Icons.Filled.Bedtime, contentDescription = null) },
@@ -425,22 +425,22 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Сканировать память устройства") },
-                    supportingContent = { Text("Локальных треков найдено: $localSongsCount") },
+                    headlineContent = { Text(strings.rescanLibraryTitle) },
+                    supportingContent = { Text("$localSongsCount ${strings.tracksCount}") },
                     leadingContent = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
                     modifier = Modifier.clickable { onRescanLocalMusic() }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Проверить обновления") },
-                    supportingContent = { Text("Текущая версия 1.6.0") },
+                    headlineContent = { Text(strings.checkForUpdatesTitle) },
+                    supportingContent = { Text(strings.appVersion) },
                     leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
                     modifier = Modifier.clickable { onCheckForUpdates() }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("О приложении") },
-                    supportingContent = { Text("LorMusic 1.6.0") },
+                    headlineContent = { Text(strings.aboutAppSection) },
+                    supportingContent = { Text(strings.appVersion) },
                     leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
                     modifier = Modifier.clickable { showAboutDialog = true }
                 )
@@ -453,7 +453,7 @@ fun ProfileScreen(
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
-            title = { Text("Тема оформления") },
+            title = { Text(strings.themeModeTitle) },
             text = {
                 Column {
                     ThemeMode.entries.forEach { mode ->
@@ -475,13 +475,13 @@ fun ProfileScreen(
                                 }
                             )
                             Spacer(Modifier.width(8.dp))
-                            Text(mode.label)
+                            Text(mode.getDisplayName(strings))
                         }
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) { Text("Закрыть") }
+                TextButton(onClick = { showThemeDialog = false }) { Text(strings.close) }
             }
         )
     }
@@ -489,7 +489,7 @@ fun ProfileScreen(
     if (showSearchPlacementDialog) {
         AlertDialog(
             onDismissRequest = { showSearchPlacementDialog = false },
-            title = { Text("Расположение кнопки поиска") },
+            title = { Text(strings.searchPlacementTitle) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     SearchBarPlacement.entries.forEach { option ->
@@ -514,12 +514,12 @@ fun ProfileScreen(
                             Spacer(Modifier.width(8.dp))
                             Column {
                                 Text(
-                                    text = option.label,
+                                    text = option.getDisplayName(strings),
                                     style = MaterialTheme.typography.bodyMedium,
                                     fontWeight = if (searchBarPlacement == option) FontWeight.Bold else FontWeight.Normal
                                 )
                                 Text(
-                                    text = option.subtitle,
+                                    text = option.getDisplaySubtitle(strings),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                                 )
@@ -529,7 +529,7 @@ fun ProfileScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSearchPlacementDialog = false }) { Text("Закрыть") }
+                TextButton(onClick = { showSearchPlacementDialog = false }) { Text(strings.close) }
             }
         )
     }
@@ -538,7 +538,7 @@ fun ProfileScreen(
         val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
         AlertDialog(
             onDismissRequest = { showSpeedDialog = false },
-            title = { Text("Скорость воспроизведения") },
+            title = { Text(strings.playbackSpeedTitle) },
             text = {
                 Column {
                     speeds.forEach { sp ->
@@ -566,7 +566,7 @@ fun ProfileScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSpeedDialog = false }) { Text("Закрыть") }
+                TextButton(onClick = { showSpeedDialog = false }) { Text(strings.close) }
             }
         )
     }
@@ -574,15 +574,15 @@ fun ProfileScreen(
     if (showSleepDialog) {
         AlertDialog(
             onDismissRequest = { showSleepDialog = false },
-            title = { Text("Таймер сна") },
+            title = { Text(strings.sleepTimerTitle) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                     listOf(
-                        null to "Выключить таймер",
-                        5 to "Через 5 минут",
-                        15 to "Через 15 минут",
-                        30 to "Через 30 минут",
-                        60 to "Через 60 минут"
+                        null to strings.sleepTimerOff,
+                        5 to strings.minutesFormat.format(5),
+                        15 to strings.minutesFormat.format(15),
+                        30 to strings.minutesFormat.format(30),
+                        60 to strings.minutesFormat.format(60)
                     ).forEach { (mins, label) ->
                         TextButton(
                             onClick = {
@@ -597,7 +597,7 @@ fun ProfileScreen(
                 }
             },
             confirmButton = {
-                TextButton(onClick = { showSleepDialog = false }) { Text("Закрыть") }
+                TextButton(onClick = { showSleepDialog = false }) { Text(strings.close) }
             }
         )
     }
@@ -613,11 +613,11 @@ fun ProfileScreen(
                     modifier = Modifier.size(32.dp)
                 )
             },
-            title = { Text("Liquid Glass недоступен", fontWeight = FontWeight.Bold) },
+            title = { Text(strings.liquidGlassUnavailableTitle, fontWeight = FontWeight.Bold) },
             text = { Text(showLiquidGlassWarning ?: "") },
             confirmButton = {
                 TextButton(onClick = { showLiquidGlassWarning = null }) {
-                    Text("Понятно")
+                    Text(strings.understood)
                 }
             }
         )
@@ -648,7 +648,7 @@ fun ProfileScreen(
                                 }
                             )
                             Spacer(Modifier.width(12.dp))
-                            Text(lang.displayName, style = MaterialTheme.typography.bodyLarge)
+                            Text(lang.getLabel(strings), style = MaterialTheme.typography.bodyLarge)
                         }
                     }
                 }
@@ -664,21 +664,41 @@ fun ProfileScreen(
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("LorMusic 1.6.0") },
+            title = { Text(strings.appVersion) },
             text = {
-                Text(
-                    "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                        "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
-                        "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
-                        "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
-                        "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
-                        "• Получение бета-обновлений и редизайн окна автоапдейтера с Markdown\n" +
-                        "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
-                        "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
-                )
+                val aboutBody = when (strings) {
+                    com.lormusic.app.model.StringsEn ->
+                        "Music player styled with Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                            "• Redesigned YouTube Music with floating bubbles and 4-row recents scroll\n" +
+                            "• Launch animations: equalizer for Default, ball bounce for Classic, pulse for Minimalism\n" +
+                            "• Strict sequential track playback order when shuffle is off\n" +
+                            "• Liquid Glass (Apple) design on Android 13+\n" +
+                            "• Beta update notifications and Markdown changelog\n" +
+                            "• Automatic TagFix and Shazam track recognition\n" +
+                            "• Dynamic album art backdrop gradient and direct track downloads"
+                    com.lormusic.app.model.StringsUk ->
+                        "Музичний плеєр у стилі Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                            "• Новий дизайн YouTube Music з плаваючими баблами та 4-рядковим скролом недавніх\n" +
+                            "• Анімації запуску: еквалайзер для стандартної, політ кульки для класичної, підстрибування для мінімалізму\n" +
+                            "• Виправлено випадковий порядок треків при вимкненому перемішуванні\n" +
+                            "• Дизайн Liquid Glass (Apple) для Android 13+\n" +
+                            "• Отримання бета-оновлень та вікно автоапдейтера з Markdown\n" +
+                            "• Автоматичний TagFix та розпізнавання через Shazam\n" +
+                            "• Динамічний градієнт обкладинки та завантаження треків"
+                    else ->
+                        "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                            "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
+                            "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
+                            "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
+                            "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
+                            "• Получение бета-обновлений и редизайн окна автоапдейтера с Markdown\n" +
+                            "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
+                            "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
+                }
+                Text(aboutBody)
             },
             confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) { Text("Отлично") }
+                TextButton(onClick = { showAboutDialog = false }) { Text(strings.great) }
             }
         )
     }

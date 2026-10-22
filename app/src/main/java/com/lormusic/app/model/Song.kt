@@ -89,13 +89,49 @@ enum class RepeatMode {
 enum class ThemeMode(val label: String) {
     SYSTEM("Системная"),
     DARK("Тёмная"),
-    LIGHT("Светлая")
+    LIGHT("Светлая");
+
+    fun getDisplayName(strings: AppStrings): String {
+        return when (this) {
+            SYSTEM -> strings.themeSystem
+            DARK -> strings.themeDark
+            LIGHT -> strings.themeLight
+        }
+    }
 }
 
 enum class AppIconOption(val label: String, val subtitle: String, val aliasClassName: String) {
     MINIMAL("Минимализм", "Лавандовый цветок с нотой", "com.lormusic.app.MainActivityAliasMinimal"),
     REGULAR("Стандартная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),
-    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld")
+    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld");
+
+    fun getDisplayName(strings: AppStrings): String {
+        return when (this) {
+            MINIMAL -> strings.iconStyleMinimal
+            REGULAR -> strings.iconStyleDefault
+            OLD -> strings.iconStyleClassic
+        }
+    }
+
+    fun getDisplaySubtitle(strings: AppStrings): String {
+        return when (this) {
+            MINIMAL -> when (strings) {
+                StringsEn -> "Lavender flower with note"
+                StringsUk -> "Лавандова квітка з нотою"
+                else -> subtitle
+            }
+            REGULAR -> when (strings) {
+                StringsEn -> "3D flower with equalizer"
+                StringsUk -> "Об'ємна квітка з еквалайзером"
+                else -> subtitle
+            }
+            OLD -> when (strings) {
+                StringsEn -> "Classic original icon"
+                StringsUk -> "Класична стара іконка"
+                else -> subtitle
+            }
+        }
+    }
 }
 
 enum class LibraryFilter(val label: String) {
@@ -105,7 +141,27 @@ enum class LibraryFilter(val label: String) {
     FOLDERS("По папкам"),
     LOCAL("На устройстве"),
     HIDDEN("Скрытые"),
-    DEMO("Демо")
+    DEMO("Демо");
+
+    fun getDisplayName(strings: AppStrings): String {
+        return when (this) {
+            ALL -> when (strings) {
+                StringsEn -> "All"
+                StringsUk -> "Всі"
+                else -> "Все"
+            }
+            FAVORITES -> strings.favorites
+            RECENT -> strings.recentsTitle
+            FOLDERS -> when (strings) {
+                StringsEn -> "Folders"
+                StringsUk -> "Папки"
+                else -> "По папкам"
+            }
+            LOCAL -> strings.deviceMusicTitle
+            HIDDEN -> strings.hiddenFolderName
+            DEMO -> "Demo"
+        }
+    }
 }
 
 enum class SearchBarPlacement(
@@ -137,7 +193,49 @@ enum class SearchBarPlacement(
         subtitle = "Строка поиска всегда находится в верхней шапке",
         localAtTop = true,
         ytAtTop = true
-    )
+    );
+
+    fun getDisplayName(strings: AppStrings): String {
+        return when (this) {
+            LOCAL_TOP_YT_BOTTOM -> when (strings) {
+                StringsEn -> "Top in Library, bottom in YT Music"
+                StringsUk -> "Зверху в медіатеці, знизу в YT Music"
+                else -> label
+            }
+            LOCAL_BOTTOM_YT_TOP -> when (strings) {
+                StringsEn -> "Bottom in Library, top in YT Music"
+                StringsUk -> "Знизу в медіатеці, зверху в YT Music"
+                else -> label
+            }
+            ALWAYS_BOTTOM -> strings.searchPlacementBottom
+            ALWAYS_TOP -> strings.searchPlacementTop
+        }
+    }
+
+    fun getDisplaySubtitle(strings: AppStrings): String {
+        return when (this) {
+            LOCAL_TOP_YT_BOTTOM -> when (strings) {
+                StringsEn -> "In header of local library and separate bottom button in YT Music (default)"
+                StringsUk -> "У шапці локальної медіатеки та окремою кнопкою знизу в YT Music (за замовчуванням)"
+                else -> subtitle
+            }
+            LOCAL_BOTTOM_YT_TOP -> when (strings) {
+                StringsEn -> "Separate bottom button in local music and in top header of YT Music"
+                StringsUk -> "Окремою кнопкою знизу в локальній музиці та у верхній шапці YT Music"
+                else -> subtitle
+            }
+            ALWAYS_BOTTOM -> when (strings) {
+                StringsEn -> "Round search button next to bottom navigation bar in all modes"
+                StringsUk -> "Кругла кнопка пошуку праворуч від нижньої панелі в усіх режимах"
+                else -> subtitle
+            }
+            ALWAYS_TOP -> when (strings) {
+                StringsEn -> "Search bar is always located in top header"
+                StringsUk -> "Рядок пошуку завжди знаходиться у верхній шапці"
+                else -> subtitle
+            }
+        }
+    }
 }
 
 enum class SortOption(val label: String) {
@@ -145,5 +243,15 @@ enum class SortOption(val label: String) {
     TITLE_DESC("По названию (Я–А)"),
     DATE_DESC("Сначала новые"),
     ARTIST("По исполнителю"),
-    DURATION("По длительности")
+    DURATION("По длительности");
+
+    fun getDisplayName(strings: AppStrings): String {
+        return when (this) {
+            TITLE_ASC -> strings.sortOptionTitleAsc
+            TITLE_DESC -> strings.sortOptionTitleDesc
+            DATE_DESC -> strings.sortOptionDateDesc
+            ARTIST -> strings.sortOptionArtist
+            DURATION -> strings.sortOptionDuration
+        }
+    }
 }

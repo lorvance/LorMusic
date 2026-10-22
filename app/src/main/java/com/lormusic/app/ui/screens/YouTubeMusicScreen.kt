@@ -1,5 +1,7 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.model.LocalStrings
+
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.view.HapticFeedbackConstants
@@ -223,6 +225,7 @@ fun YouTubeMusicScreen(
         )
     }
 
+    val strings = LocalStrings.current
     if (showAccountMenuDialog && googleAccount != null) {
         AlertDialog(
             onDismissRequest = { showAccountMenuDialog = false },
@@ -249,7 +252,7 @@ fun YouTubeMusicScreen(
                         fontWeight = FontWeight.SemiBold
                     )
                     Text(
-                        text = "Аккаунт Google подключён к YouTube Music. История прослушиваний (Ресенты), лайки («Мне нравится») и рекомендации синхронизируются напрямую через YouTube Music Innertube API.",
+                        text = strings.googleConnectedDesc,
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                     )
@@ -262,7 +265,7 @@ fun YouTubeMusicScreen(
                     ) {
                         Icon(Icons.Filled.Sync, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Синхронизировать с YouTube Music")
+                        Text(strings.syncWithGoogle)
                     }
                     OutlinedButton(
                         onClick = {
@@ -273,13 +276,13 @@ fun YouTubeMusicScreen(
                     ) {
                         Icon(Icons.Filled.SwitchAccount, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Сменить аккаунт Google")
+                        Text(strings.switchAccount)
                     }
                 }
             },
             confirmButton = {
                 TextButton(onClick = { showAccountMenuDialog = false }) {
-                    Text("Закрыть")
+                    Text(strings.close)
                 }
             },
             dismissButton = {
@@ -293,7 +296,7 @@ fun YouTubeMusicScreen(
                         onSignOutGoogle()
                     }
                 ) {
-                    Text("Выйти", color = MaterialTheme.colorScheme.error)
+                    Text(strings.signOut, color = MaterialTheme.colorScheme.error)
                 }
             }
         )
@@ -314,6 +317,7 @@ private fun YtMusicRealWebLoginDialog(
         )
     }
     var hasCompletedAuth by remember { mutableStateOf(false) }
+    val strings = LocalStrings.current
 
     Dialog(
         onDismissRequest = onDismiss,
@@ -335,16 +339,16 @@ private fun YtMusicRealWebLoginDialog(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = "Закрыть")
+                        Icon(Icons.Filled.Close, contentDescription = strings.close)
                     }
                     Column(modifier = Modifier.weight(1f)) {
                         Text(
-                            text = "Вход в YouTube Music (Google)",
+                            text = strings.googleSignInTitle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold
                         )
                         Text(
-                            text = "Войдите в аккаунт Google — синхронизация включится автоматически",
+                            text = strings.googleSignInSubtitle,
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                             maxLines = 1,
@@ -367,7 +371,7 @@ private fun YtMusicRealWebLoginDialog(
                         shape = RoundedCornerShape(14.dp),
                         contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                     ) {
-                        Text("Готово")
+                        Text(strings.done)
                     }
                 }
 
@@ -448,31 +452,14 @@ private fun YtSignInRequiredGate(
     onSignInClick: () -> Unit,
     onBackToLocal: () -> Unit
 ) {
+    val strings = LocalStrings.current
     val surfaceColor = MaterialTheme.colorScheme.surface
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
-        val mod = if (useLiquidGlass && isLiquidGlassSupported()) {
-            Modifier.liquidGlass(shape)
-                .background(surfaceColor.copy(alpha = 0.35f), shape)
-        } else if (enableBlur) {
-            Modifier.hazeEffect(state = hazeState) {
-                blurEnabled = true
-                backgroundColor = surfaceColor
-                blurRadius = 24.dp
-                tints = listOf(HazeTint(surfaceColor.copy(alpha = 0.70f)))
-            }
-            .background(surfaceColor.copy(alpha = 0.60f), shape)
-        } else {
-            Modifier.background(surfaceColor.copy(alpha = 0.94f), shape)
-        }
-        mod.border(
-            width = 1.dp,
-            brush = Brush.verticalGradient(
-                listOf(
-                    Color.White.copy(alpha = 0.28f),
-                    Color.White.copy(alpha = 0.08f)
-                )
-            ),
-            shape = shape
+        Modifier.liquidGlassBubble(
+            shape = shape,
+            hazeState = hazeState,
+            enableBlur = enableBlur,
+            isLiquidGlass = useLiquidGlass
         )
     }
 
@@ -499,7 +486,7 @@ private fun YtSignInRequiredGate(
                         ExpressiveLoadingIndicator(size = 68.dp)
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = "Синхронизация с аккаунтом Google…",
+                            text = strings.syncingWithGoogle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center
@@ -521,14 +508,14 @@ private fun YtSignInRequiredGate(
                         }
                         Spacer(Modifier.height(16.dp))
                         Text(
-                            text = "Войдите в аккаунт Google",
+                            text = strings.googleRequiredTitle,
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.ExtraBold,
                             textAlign = TextAlign.Center
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Пока вы не войдёте в свой аккаунт Google, треки, рекомендации, история и «Моя волна» в YouTube Music недоступны.",
+                            text = strings.googleRequiredDesc,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
                             textAlign = TextAlign.Center
@@ -541,14 +528,14 @@ private fun YtSignInRequiredGate(
                         ) {
                             Icon(Icons.Filled.Login, contentDescription = null)
                             Spacer(Modifier.width(8.dp))
-                            Text("Войти через Google", fontWeight = FontWeight.Bold)
+                            Text(strings.signInGoogle, fontWeight = FontWeight.Bold)
                         }
                         Spacer(Modifier.height(8.dp))
                         TextButton(
                             onClick = onBackToLocal,
                             modifier = Modifier.fillMaxWidth()
                         ) {
-                            Text("Вернуться в локальную музыку")
+                            Text(strings.backToLocal)
                         }
                     }
                 }
@@ -579,7 +566,7 @@ private fun YtSignInRequiredGate(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = "Назад в локальную",
+                        contentDescription = strings.backToLocal,
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp)
                     )
@@ -630,6 +617,7 @@ private fun YtHomeTab(
     onSyncGoogle: () -> Unit,
     onBackToLocal: () -> Unit = {}
 ) {
+    val strings = LocalStrings.current
     val context = LocalContext.current
     var avatarBitmap by remember(googleAccount?.avatarUrl) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(googleAccount?.avatarUrl) {
@@ -682,12 +670,12 @@ private fun YtHomeTab(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Недавнее",
+                                    text = strings.recentsTitle,
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
-                                    text = "Синхронизировано с историей YouTube Music",
+                                    text = strings.recentsSubtitle,
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
@@ -697,7 +685,7 @@ private fun YtHomeTab(
                                     TextButton(onClick = { onPlayQueue(recentlyPlayed.take(22), 0, false) }) {
                                         Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(4.dp))
-                                        Text("Слушать всё", maxLines = 1)
+                                        Text(strings.playAll, maxLines = 1)
                                     }
                                 }
                                 IconButton(
@@ -708,7 +696,7 @@ private fun YtHomeTab(
                                 ) {
                                     Icon(
                                         imageVector = if (isGrid) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
-                                        contentDescription = if (isGrid) "Переключить на карусель" else "Переключить на список",
+                                        contentDescription = strings.switchLayout,
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -766,12 +754,12 @@ private fun YtHomeTab(
                     item(key = "radio_mixes_section") {
                         Column {
                             Text(
-                                text = "Радиостанции для тебя",
+                                text = strings.radioMixesTitle,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                text = "Подборки без рекламы по твоему вкусу",
+                                text = strings.radioMixesSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -821,7 +809,7 @@ private fun YtHomeTab(
                                                 overflow = TextOverflow.Ellipsis
                                             )
                                             Text(
-                                                text = tracks.joinToString(", ") { it.artist }.ifBlank { "Микс треков" },
+                                                text = tracks.joinToString(", ") { it.artist }.ifBlank { strings.mixMode },
                                                 style = MaterialTheme.typography.bodySmall,
                                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
                                                 maxLines = 2,
@@ -843,12 +831,12 @@ private fun YtHomeTab(
                     ) {
                         Column(modifier = Modifier.weight(1f)) {
                             Text(
-                                text = "Рекомендации для тебя",
+                                text = strings.recommendationsTitle,
                                 style = MaterialTheme.typography.titleLarge,
                                 fontWeight = FontWeight.ExtraBold
                             )
                             Text(
-                                text = "Скачивай любой трек в MP3 со всеми тегами и обложкой",
+                                text = strings.recommendationsSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                             )
@@ -857,7 +845,7 @@ private fun YtHomeTab(
                             if (isLoading) {
                                 ExpressiveLoadingIndicator(size = 28.dp)
                             } else {
-                                Icon(Icons.Filled.Refresh, contentDescription = "Обновить")
+                                Icon(Icons.Filled.Refresh, contentDescription = strings.refreshStream)
                             }
                         }
                     }
@@ -875,7 +863,7 @@ private fun YtHomeTab(
                                 ExpressiveLoadingIndicator(size = 64.dp)
                                 Spacer(Modifier.height(12.dp))
                                 Text(
-                                    text = "Загружаем персональную ленту YouTube Music…",
+                                    text = strings.loadingYtFeed,
                                     style = MaterialTheme.typography.bodyMedium,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                 )
@@ -927,7 +915,7 @@ private fun YtHomeTab(
                 ) {
                     Icon(
                         imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = "Назад в локальную",
+                        contentDescription = strings.backToLocal,
                         tint = MaterialTheme.colorScheme.onSurface,
                         modifier = Modifier.size(16.dp)
                     )
@@ -963,7 +951,7 @@ private fun YtHomeTab(
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Search,
-                            contentDescription = "Поиск",
+                            contentDescription = strings.searchTitle,
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(22.dp)
                         )
@@ -1010,7 +998,7 @@ private fun YtHomeTab(
                     } else {
                         Icon(
                             imageVector = Icons.Filled.AccountCircle,
-                            contentDescription = "Войти в Google",
+                            contentDescription = strings.signInGoogle,
                             tint = MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(32.dp)
                         )
@@ -1029,6 +1017,7 @@ private fun YtRecentGridItem(
     onClick: () -> Unit,
     onMoreClick: () -> Unit
 ) {
+    val strings = LocalStrings.current
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent,
@@ -1089,7 +1078,7 @@ private fun YtRecentGridItem(
             ) {
                 Icon(
                     imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Опции трека",
+                    contentDescription = strings.songActions,
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
                     modifier = Modifier.size(20.dp)
                 )
@@ -1107,6 +1096,7 @@ private fun YtRecentSongCard(
     onClick: () -> Unit,
     onDownload: () -> Unit
 ) {
+    val strings = LocalStrings.current
     Surface(
         shape = RoundedCornerShape(22.dp),
         color = if (isCurrent) {
@@ -1150,7 +1140,7 @@ private fun YtRecentSongCard(
                             } else {
                                 Icon(
                                     imageVector = Icons.Filled.Download,
-                                    contentDescription = "Скачать с тегами",
+                                    contentDescription = strings.downloadTrack,
                                     tint = Color.White,
                                     modifier = Modifier.size(16.dp)
                                 )
@@ -1197,6 +1187,7 @@ private fun YtLibrariesTab(
 ) {
     var showCreateDialog by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
+    val strings = LocalStrings.current
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
 
     Column(
@@ -1214,12 +1205,12 @@ private fun YtLibrariesTab(
         ) {
             Column {
                 Text(
-                    text = "Библиотеки YT Music",
+                    text = strings.ytLibrariesTitle,
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Text(
-                    text = "Твои плейлисты, избранное и сохранённые треки",
+                    text = strings.ytLibrariesSubtitle,
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                 )
@@ -1230,7 +1221,7 @@ private fun YtLibrariesTab(
             ) {
                 Icon(Icons.Filled.Add, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(6.dp))
-                Text("Плейлист")
+                Text(strings.playlistNameLabel)
             }
         }
 
@@ -1240,7 +1231,7 @@ private fun YtLibrariesTab(
         if (activePl != null) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 FilledTonalIconButton(onClick = { selectedPlaylist = null }) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                    Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
                 }
                 Spacer(Modifier.width(10.dp))
                 Column(modifier = Modifier.weight(1f)) {
@@ -1250,7 +1241,7 @@ private fun YtLibrariesTab(
                         fontWeight = FontWeight.Bold
                     )
                     Text(
-                        text = "${activePl.songs.size} треков",
+                        text = strings.tracksCountFormat.format(activePl.songs.size),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
@@ -1262,7 +1253,7 @@ private fun YtLibrariesTab(
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null)
                         Spacer(Modifier.width(4.dp))
-                        Text("Играть")
+                        Text(strings.playAction)
                     }
                 }
             }
@@ -1294,7 +1285,7 @@ private fun YtLibrariesTab(
             ) {
                 item(key = "playlists_grid_header") {
                     Text(
-                        text = "Мои плейлисты (${playlists.size})",
+                        text = strings.myPlaylistsCount.format(playlists.size),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
@@ -1336,7 +1327,7 @@ private fun YtLibrariesTab(
                                     fontWeight = FontWeight.Bold
                                 )
                                 Text(
-                                    text = "${pl.songs.size} треков",
+                                    text = strings.tracksCountFormat.format(pl.songs.size),
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                                 )
@@ -1345,14 +1336,14 @@ private fun YtLibrariesTab(
                                 FilledTonalIconButton(
                                     onClick = { onPlayQueue(pl.songs, 0, false) }
                                 ) {
-                                    Icon(Icons.Filled.PlayArrow, contentDescription = "Слушать")
+                                    Icon(Icons.Filled.PlayArrow, contentDescription = strings.playAction)
                                 }
                             }
                             if (!pl.isSystem) {
                                 IconButton(onClick = { onDeletePlaylist(pl.id) }) {
                                     Icon(
                                         imageVector = Icons.Filled.DeleteOutline,
-                                        contentDescription = "Удалить плейлист"
+                                        contentDescription = strings.deletePlaylist
                                     )
                                 }
                             }
@@ -1364,7 +1355,7 @@ private fun YtLibrariesTab(
                     item(key = "fav_tracks_header") {
                         Spacer(Modifier.height(6.dp))
                         Text(
-                            text = "Избранные и синхронизированные треки",
+                            text = strings.favoritesAndSynced,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.primary
@@ -1392,12 +1383,12 @@ private fun YtLibrariesTab(
     if (showCreateDialog) {
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Новый плейлист в Библиотеке") },
+            title = { Text(strings.newLibraryPlaylist) },
             text = {
                 OutlinedTextField(
                     value = newPlaylistName,
                     onValueChange = { newPlaylistName = it },
-                    label = { Text("Название плейлиста") },
+                    label = { Text(strings.playlistNameLabel) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.fillMaxWidth()
@@ -1413,12 +1404,12 @@ private fun YtLibrariesTab(
                         }
                     }
                 ) {
-                    Text("Создать")
+                    Text(strings.create)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Отмена")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -1440,14 +1431,15 @@ private fun YtMyWaveTab(
     onRefreshWave: (String?) -> Unit,
     onSongMoreClick: (Song) -> Unit
 ) {
-    var selectedMood by remember { mutableStateOf("Под твой вкус") }
-    val moods = listOf(
-        "Под твой вкус" to null,
-        "Энергичное" to "electronic dance",
-        "Спокойное" to "chill ambient",
-        "Ночной вайб" to "synthwave retrowave",
-        "Инструментал" to "instrumental piano"
+    val strings = LocalStrings.current
+    val moods: List<Pair<String, String?>> = listOf(
+        strings.moodForYourTaste to null,
+        strings.moodEnergetic to "electronic dance",
+        strings.moodCalm to "chill ambient",
+        strings.moodNightVibe to "synthwave retrowave",
+        strings.moodInstrumental to "instrumental piano"
     )
+    var selectedMood by remember(strings) { mutableStateOf(strings.moodForYourTaste) }
 
     val infiniteTransition = rememberInfiniteTransition(label = "myWaveGlow")
     val pulseScale by infiniteTransition.animateFloat(
@@ -1517,13 +1509,17 @@ private fun YtMyWaveTab(
                 }
 
                 Text(
-                    text = "Моя волна",
+                    text = strings.myWaveTitle,
                     style = MaterialTheme.typography.headlineLarge,
                     fontWeight = FontWeight.ExtraBold
                 )
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "Персональный поток на основе твоих любимых и недавно прослушанных треков",
+                    text = when (strings) {
+                    com.lormusic.app.model.StringsEn -> "Personal stream based on your favorites and listening history"
+                    com.lormusic.app.model.StringsUk -> "Персональний потік на основі твоїх улюблених та нещодавно прослуханих треків"
+                    else -> "Персональный поток на основе твоих любимых и недавно прослушанных треков"
+                },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
                     textAlign = TextAlign.Center
@@ -1561,14 +1557,14 @@ private fun YtMyWaveTab(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = "Сейчас в твоей волне (${waveSongs.size})",
+                    text = strings.nowInMyWaveFormat.format(waveSongs.size),
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold
                 )
                 TextButton(onClick = { onRefreshWave(moods.find { it.first == selectedMood }?.second) }) {
                     Icon(Icons.Filled.Refresh, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(4.dp))
-                    Text("Обновить поток")
+                    Text(strings.refreshStream)
                 }
             }
         }
@@ -1606,6 +1602,7 @@ private fun YtSearchTab(
     onSongMoreClick: (Song) -> Unit
 ) {
     val focusManager = LocalFocusManager.current
+    val strings = LocalStrings.current
     var query by remember { mutableStateOf("") }
 
     Column(
@@ -1617,7 +1614,7 @@ private fun YtSearchTab(
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
-            text = "Поиск YouTube Music",
+            text = strings.ytSearchHeader,
             style = MaterialTheme.typography.headlineMedium,
             fontWeight = FontWeight.ExtraBold
         )
@@ -1629,7 +1626,7 @@ private fun YtSearchTab(
                 query = it
                 onSearch(it)
             },
-            placeholder = { Text("Песня, исполнитель или альбом…") },
+            placeholder = { Text(strings.ytSearchPlaceholder) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {
                 if (isSearching) {
@@ -1639,7 +1636,7 @@ private fun YtSearchTab(
                         query = ""
                         onSearch("")
                     }) {
-                        Icon(Icons.Filled.Clear, contentDescription = "Очистить")
+                        Icon(Icons.Filled.Clear, contentDescription = strings.clear)
                     }
                 }
             },
@@ -1696,6 +1693,7 @@ private fun YtSongRowWithDownload(
 ) {
     val view = LocalView.current
     val context = LocalContext.current
+    val strings = LocalStrings.current
     Surface(
         shape = RoundedCornerShape(20.dp),
         color = if (isCurrentSong) {
@@ -1749,7 +1747,7 @@ private fun YtSongRowWithDownload(
             ) {
                 Icon(
                     imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                    contentDescription = "Избранное",
+                    contentDescription = strings.favorites,
                     tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                     modifier = Modifier.size(20.dp)
                 )
@@ -1764,7 +1762,7 @@ private fun YtSongRowWithDownload(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Share,
-                    contentDescription = "Поделиться ссылкой",
+                    contentDescription = strings.shareSongLink,
                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
                     modifier = Modifier.size(20.dp)
                 )
@@ -1780,7 +1778,7 @@ private fun YtSongRowWithDownload(
                 } else {
                     Icon(
                         imageVector = if (song.isLocal) Icons.Filled.DownloadDone else Icons.Filled.Download,
-                        contentDescription = "Скачать локально с тегами",
+                        contentDescription = strings.downloadTrack,
                         tint = if (song.isLocal) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f),
                         modifier = Modifier.size(20.dp)
                     )
@@ -1793,7 +1791,7 @@ private fun YtSongRowWithDownload(
             ) {
                 Icon(
                     imageVector = Icons.Filled.MoreVert,
-                    contentDescription = "Ещё",
+                    contentDescription = strings.more,
                     modifier = Modifier.size(20.dp)
                 )
             }

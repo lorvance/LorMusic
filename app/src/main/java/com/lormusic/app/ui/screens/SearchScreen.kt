@@ -15,6 +15,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Song
 import com.lormusic.app.ui.components.SongRow
 
@@ -29,6 +30,7 @@ fun SearchScreen(
     onSongMoreClick: (Song) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    val strings = LocalStrings.current
 
     val artists = remember(songs) {
         songs.map { it.artist }.distinct().take(8)
@@ -56,7 +58,7 @@ fun SearchScreen(
     ) {
         Spacer(Modifier.height(14.dp))
         Text(
-            text = "Поиск",
+            text = strings.searchTitle,
             style = MaterialTheme.typography.displayLarge,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
@@ -65,12 +67,12 @@ fun SearchScreen(
         OutlinedTextField(
             value = query,
             onValueChange = { query = it },
-            placeholder = { Text("Трек, исполнитель, альбом или папка") },
+            placeholder = { Text(strings.searchPlaceholder) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {
                 if (query.isNotEmpty()) {
                     IconButton(onClick = { query = "" }) {
-                        Icon(Icons.Filled.Clear, contentDescription = "Очистить")
+                        Icon(Icons.Filled.Clear, contentDescription = strings.clear)
                     }
                 }
             },
@@ -108,7 +110,7 @@ fun SearchScreen(
         Spacer(Modifier.height(10.dp))
 
         Text(
-            text = if (query.isBlank()) "Все треки (${results.size})" else "Найдено: ${results.size}",
+            text = if (query.isBlank()) strings.allTracksCount.format(results.size) else strings.foundCount.format(results.size),
             style = MaterialTheme.typography.titleMedium,
             fontWeight = FontWeight.Bold,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
@@ -123,7 +125,7 @@ fun SearchScreen(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = "Ничего не найдено по запросу «$query»",
+                    text = strings.nothingFoundQuery.format(query),
                     style = MaterialTheme.typography.bodyLarge,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                 )

@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
 import com.lormusic.app.ui.components.SongArtwork
@@ -46,6 +47,7 @@ fun PlaylistsScreen(
     onRemoveSongFromPlaylist: (String, String) -> Unit,
     onToggleFavorite: (Song) -> Unit
 ) {
+    val strings = LocalStrings.current
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
 
@@ -104,7 +106,7 @@ fun PlaylistsScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Плейлисты",
+                        text = strings.navPlaylists,
                         style = MaterialTheme.typography.displayLarge,
                         modifier = Modifier.weight(1f)
                     )
@@ -114,7 +116,7 @@ fun PlaylistsScreen(
                     ) {
                         Icon(Icons.Filled.Add, contentDescription = null)
                         Spacer(Modifier.width(6.dp))
-                        Text("Новый")
+                        Text(strings.newPlaylist)
                     }
                 }
 
@@ -146,20 +148,20 @@ fun PlaylistsScreen(
 
         AlertDialog(
             onDismissRequest = { showCreateDialog = false },
-            title = { Text("Новый плейлист") },
+            title = { Text(strings.newPlaylistDialogTitle) },
             text = {
                 Column(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = name,
                         onValueChange = { name = it },
-                        label = { Text("Название плейлиста") },
+                        label = { Text(strings.playlistNameLabel) },
                         singleLine = true,
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "Добавить треки (${selectedSongIds.size}):",
+                        text = "${strings.addTracksButton} (${selectedSongIds.size}):",
                         style = MaterialTheme.typography.labelLarge
                     )
                     Spacer(Modifier.height(6.dp))
@@ -206,12 +208,12 @@ fun PlaylistsScreen(
                         showCreateDialog = false
                     }
                 ) {
-                    Text("Создать")
+                    Text(strings.create)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false }) {
-                    Text("Отмена")
+                    Text(strings.cancel)
                 }
             }
         )
@@ -224,6 +226,7 @@ private fun PlaylistCard(
     onClick: () -> Unit,
     onQuickPlay: () -> Unit
 ) {
+    val strings = LocalStrings.current
     val firstSong = playlist.songs.firstOrNull()
     Column(
         modifier = Modifier
@@ -263,7 +266,7 @@ private fun PlaylistCard(
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
-                            text = "Авто",
+                            text = strings.autoPlaylistBadge,
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSecondary
                         )
@@ -278,7 +281,7 @@ private fun PlaylistCard(
                         .padding(10.dp)
                         .size(40.dp)
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = "Слушать плейлист")
+                    Icon(Icons.Filled.PlayArrow, contentDescription = strings.playPlaylist)
                 }
             }
         }
@@ -292,7 +295,7 @@ private fun PlaylistCard(
             modifier = Modifier.padding(horizontal = 4.dp)
         )
         Text(
-            text = "${playlist.songs.size} треков",
+            text = "${playlist.songs.size} ${strings.tracksCount}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             modifier = Modifier.padding(horizontal = 4.dp)
@@ -317,6 +320,7 @@ private fun PlaylistDetailContent(
 ) {
     BackHandler(onBack = onBack)
 
+    val strings = LocalStrings.current
     var showAddTracksDialog by remember { mutableStateOf(false) }
     val firstSong = playlist.songs.firstOrNull()
 
@@ -328,7 +332,7 @@ private fun PlaylistDetailContent(
             verticalAlignment = Alignment.CenterVertically
         ) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Назад")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
             }
             Text(
                 text = playlist.name,
@@ -340,10 +344,10 @@ private fun PlaylistDetailContent(
             )
             if (!playlist.isSystem) {
                 IconButton(onClick = { showAddTracksDialog = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = "Добавить треки")
+                    Icon(Icons.Filled.Add, contentDescription = strings.addTracksButton)
                 }
                 IconButton(onClick = onDeletePlaylist) {
-                    Icon(Icons.Filled.DeleteOutline, contentDescription = "Удалить плейлист")
+                    Icon(Icons.Filled.DeleteOutline, contentDescription = strings.deletePlaylist)
                 }
             }
         }
@@ -366,7 +370,7 @@ private fun PlaylistDetailContent(
                 Text(playlist.name, style = MaterialTheme.typography.headlineMedium)
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    text = "${playlist.songs.size} треков",
+                    text = "${playlist.songs.size} ${strings.tracksCount}",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                 )
@@ -379,7 +383,7 @@ private fun PlaylistDetailContent(
                     ) {
                         Icon(Icons.Filled.PlayArrow, contentDescription = null)
                         Spacer(Modifier.width(4.dp))
-                        Text("Играть")
+                        Text(strings.playAction)
                     }
                     FilledTonalButton(
                         enabled = playlist.songs.isNotEmpty(),
@@ -403,8 +407,8 @@ private fun PlaylistDetailContent(
             ) {
                 Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = if (playlist.isSystem) "Отмечайте треки сердечком, чтобы они появились здесь"
-                        else "В этом плейлисте пока нет треков",
+                        text = if (playlist.isSystem) strings.emptyFavoritesHint
+                        else strings.emptyPlaylistHint,
                         style = MaterialTheme.typography.bodyLarge,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
@@ -413,7 +417,7 @@ private fun PlaylistDetailContent(
                         FilledTonalButton(onClick = { showAddTracksDialog = true }) {
                             Icon(Icons.Filled.Add, contentDescription = null)
                             Spacer(Modifier.width(6.dp))
-                            Text("Добавить треки")
+                            Text(strings.addTracksButton)
                         }
                     }
                 }
@@ -439,7 +443,7 @@ private fun PlaylistDetailContent(
                             IconButton(onClick = { onRemoveSong(song.id) }) {
                                 Icon(
                                     imageVector = Icons.Filled.RemoveCircleOutline,
-                                    contentDescription = "Убрать из плейлиста",
+                                    contentDescription = strings.removeFromPlaylist,
                                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                                 )
                             }
@@ -457,10 +461,10 @@ private fun PlaylistDetailContent(
         }
         AlertDialog(
             onDismissRequest = { showAddTracksDialog = false },
-            title = { Text("Добавить в «${playlist.name}»") },
+            title = { Text("${strings.addToPlaylist}: «${playlist.name}»") },
             text = {
                 if (availableSongs.isEmpty()) {
-                    Text("Все треки медиатеки уже добавлены в этот плейлист.")
+                    Text(strings.allTracksAlreadyInPlaylist)
                 } else {
                     LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
                         itemsIndexed(availableSongs, key = { _, s -> s.id }) { _, song ->
@@ -469,7 +473,7 @@ private fun PlaylistDetailContent(
                                 supportingContent = { Text(song.artist) },
                                 trailingContent = {
                                     IconButton(onClick = { onAddSong(song) }) {
-                                        Icon(Icons.Filled.AddCircleOutline, contentDescription = "Добавить")
+                                        Icon(Icons.Filled.AddCircleOutline, contentDescription = strings.addTracksButton)
                                     }
                                 },
                                 modifier = Modifier.clickable { onAddSong(song) }
@@ -480,7 +484,7 @@ private fun PlaylistDetailContent(
             },
             confirmButton = {
                 TextButton(onClick = { showAddTracksDialog = false }) {
-                    Text("Готово")
+                    Text(strings.done)
                 }
             }
         )

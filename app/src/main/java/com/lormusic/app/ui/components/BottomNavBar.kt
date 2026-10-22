@@ -45,16 +45,33 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 
 enum class LorTab(val route: String, val label: String, val filled: ImageVector, val outline: ImageVector) {
-    LIBRARY("library", "Медиатека", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
-    PLAYLISTS("playlists", "Плейлисты", Icons.AutoMirrored.Filled.QueueMusic, Icons.AutoMirrored.Outlined.QueueMusic),
-    SETTINGS("settings", "Настройки", Icons.Filled.Settings, Icons.Outlined.Settings),
+    LIBRARY("library", "Library", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
+    PLAYLISTS("playlists", "Playlists", Icons.AutoMirrored.Filled.QueueMusic, Icons.AutoMirrored.Outlined.QueueMusic),
+    SETTINGS("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings);
+
+    fun getDisplayName(strings: com.lormusic.app.model.AppStrings): String {
+        return when (this) {
+            LIBRARY -> strings.navLibrary
+            PLAYLISTS -> strings.navPlaylists
+            SETTINGS -> strings.navSettings
+        }
+    }
 }
 
 enum class YtMusicTab(val label: String, val filled: ImageVector, val outline: ImageVector) {
-    HOME("Главная", Icons.Filled.Home, Icons.Outlined.Home),
-    LIBRARIES("Библиотеки", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
-    MY_WAVE("Моя волна", Icons.Filled.GraphicEq, Icons.Outlined.GraphicEq),
-    SEARCH("", Icons.Filled.Search, Icons.Outlined.Search)
+    HOME("Home", Icons.Filled.Home, Icons.Outlined.Home),
+    LIBRARIES("Libraries", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
+    MY_WAVE("My Wave", Icons.Filled.GraphicEq, Icons.Outlined.GraphicEq),
+    SEARCH("", Icons.Filled.Search, Icons.Outlined.Search);
+
+    fun getDisplayName(strings: com.lormusic.app.model.AppStrings): String {
+        return when (this) {
+            HOME -> strings.ytHome
+            LIBRARIES -> strings.ytLibraries
+            MY_WAVE -> strings.ytMyWave
+            SEARCH -> strings.searchTitle
+        }
+    }
 }
 
 @Composable
@@ -70,6 +87,7 @@ fun LorBottomNavBar(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current
     val navBarHeight = 64.dp
     val innerInset = 5.dp
@@ -240,7 +258,7 @@ fun LorBottomNavBar(
                         contentAlignment = Alignment.Center
                     ) {
                         LorTabItem(
-                            label = tab.label,
+                            label = tab.getDisplayName(strings),
                             filledIcon = tab.filled,
                             outlineIcon = tab.outline,
                             isSelected = idx == activeIndex,
@@ -316,7 +334,7 @@ fun LorBottomNavBar(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = "Поиск в медиатеке",
+                    contentDescription = strings.searchInLibrary,
                     tint = if (isLocalSearchActive) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(26.dp)
                 )
@@ -336,6 +354,7 @@ fun YtMusicBottomNavBar(
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
+    val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current
     val navBarHeight = 64.dp
     val innerInset = 5.dp
@@ -511,7 +530,7 @@ fun YtMusicBottomNavBar(
                         contentAlignment = Alignment.Center
                     ) {
                         LorTabItem(
-                            label = tab.label,
+                            label = tab.getDisplayName(strings),
                             filledIcon = tab.filled,
                             outlineIcon = tab.outline,
                             isSelected = idx == activeIndex,
@@ -588,7 +607,7 @@ fun YtMusicBottomNavBar(
             ) {
                 Icon(
                     imageVector = Icons.Filled.Search,
-                    contentDescription = "Поиск YouTube Music",
+                    contentDescription = strings.searchInYtMusic,
                     tint = if (searchSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(26.dp)
                 )

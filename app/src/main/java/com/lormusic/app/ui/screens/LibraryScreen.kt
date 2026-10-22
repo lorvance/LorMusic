@@ -45,7 +45,7 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
-private const val HIDDEN_FOLDER_NAME = "Скрытые"
+private const val HIDDEN_FOLDER_NAME = "__hidden__"
 
 @Composable
 fun LibraryScreen(
@@ -221,11 +221,11 @@ fun LibraryScreen(
                         Spacer(Modifier.height(10.dp))
                         Text(
                             text = when {
-                                searchQuery.isNotBlank() -> "По запросу «$searchQuery» ничего не найдено"
-                                selectedFilter == LibraryFilter.HIDDEN -> "В папке «Скрытые» пока нет треков"
-                                selectedFilter == LibraryFilter.FAVORITES -> "В «Избранном» пока нет треков"
-                                selectedFilter == LibraryFilter.LOCAL -> "Локальные аудиофайлы не найдены"
-                                else -> "Список треков пуст"
+                                searchQuery.isNotBlank() -> "«$searchQuery» — ${strings.emptyTrackList}"
+                                selectedFilter == LibraryFilter.HIDDEN -> strings.noTracksInHidden
+                                selectedFilter == LibraryFilter.FAVORITES -> strings.noTracksInFavorites
+                                selectedFilter == LibraryFilter.LOCAL -> strings.noTracksLocal
+                                else -> strings.emptyTrackList
                             },
                             style = MaterialTheme.typography.titleMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
@@ -266,18 +266,18 @@ fun LibraryScreen(
                                     Spacer(Modifier.width(10.dp))
                                     Column(modifier = Modifier.weight(1f)) {
                                         Text(
-                                            text = "Музыка с устройства",
+                                            text = strings.deviceMusicTitle,
                                             style = MaterialTheme.typography.titleMedium,
                                             fontWeight = FontWeight.Bold
                                         )
                                         Text(
-                                            text = "Разрешите доступ к аудиофайлам",
+                                            text = strings.deviceMusicPermissionDesc,
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                                         )
                                     }
                                     FilledTonalButton(onClick = onRequestPermissionAndScan) {
-                                        Text("Подключить")
+                                        Text(strings.grantPermission)
                                     }
                                 }
                             }
@@ -344,222 +344,215 @@ fun LibraryScreen(
                     Row(
                         modifier = Modifier.fillMaxWidth(),
                         horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.Top
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column(
-                            modifier = Modifier.weight(1f, fill = false),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                if (showTopSearchBar) {
-                                    Box(
-                                        modifier = Modifier
-                                            .size(44.dp)
-                                            .clip(CircleShape)
-                                            .clickable {
-                                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                                isTopSearchExpanded = !isTopSearchExpanded
-                                                if (!isTopSearchExpanded) searchQuery = ""
-                                            }
-                                            .then(bubbleModifier(CircleShape)),
-                                        contentAlignment = Alignment.Center
-                                    ) {
-                                        Icon(
-                                            imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
-                                            contentDescription = "Поиск",
-                                            tint = MaterialTheme.colorScheme.onSurface,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .height(44.dp)
-                                        .clip(RoundedCornerShape(22.dp))
-                                        .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                                        .padding(horizontal = 16.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Text(
-                                        text = strings.navLibrary,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold
-                                    )
-                                }
-                            }
-
-                            Row(
-                                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Box(
-                                    modifier = Modifier
-                                        .height(40.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .clickable {
-                                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                            onOpenYtMusic()
-                                        }
-                                        .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                        .padding(horizontal = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Surface(
-                                            shape = CircleShape,
-                                            color = Color.White,
-                                            modifier = Modifier.size(20.dp)
-                                        ) {
-                                            Box(contentAlignment = Alignment.Center) {
-                                                Icon(
-                                                    imageVector = Icons.Filled.PlayArrow,
-                                                    contentDescription = "YT Music",
-                                                    tint = Color(0xFF111111),
-                                                    modifier = Modifier.size(14.dp)
-                                                )
-                                            }
-                                        }
-                                        Text(
-                                            text = "YT Music",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-
-                                Box(
-                                    modifier = Modifier
-                                        .height(40.dp)
-                                        .clip(RoundedCornerShape(20.dp))
-                                        .clickable {
-                                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                            onOpenTagFix()
-                                        }
-                                        .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                        .padding(horizontal = 12.dp),
-                                    contentAlignment = Alignment.Center
-                                ) {
-                                    Row(
-                                        verticalAlignment = Alignment.CenterVertically,
-                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                    ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.AutoFixHigh,
-                                            contentDescription = "TagFix",
-                                            tint = MaterialTheme.colorScheme.primary,
-                                            modifier = Modifier.size(18.dp)
-                                        )
-                                        Text(
-                                            text = "TagFix",
-                                            style = MaterialTheme.typography.labelLarge,
-                                            fontWeight = FontWeight.Bold
-                                        )
-                                    }
-                                }
-                            }
-                        }
-
-                        Spacer(Modifier.width(8.dp))
-
-                        Column(
-                            verticalArrangement = Arrangement.spacedBy(8.dp),
-                            horizontalAlignment = Alignment.CenterHorizontally
-                        ) {
+                        if (showTopSearchBar) {
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        showMoreMenu = true
+                                        isTopSearchExpanded = !isTopSearchExpanded
+                                        if (!isTopSearchExpanded) searchQuery = ""
                                     }
                                     .then(bubbleModifier(CircleShape)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = Icons.Filled.MoreVert,
-                                    contentDescription = "Действия",
+                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                    contentDescription = strings.searchTitle,
                                     tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp)
                                 )
+                            }
+                        } else {
+                            Spacer(Modifier.size(44.dp))
+                        }
 
-                                DropdownMenu(
-                                    expanded = showMoreMenu,
-                                    onDismissRequest = { showMoreMenu = false }
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.navLibrary,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    showMoreMenu = true
+                                }
+                                .then(bubbleModifier(CircleShape)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = strings.actions,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = { showMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(strings.playAll) },
+                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onPlayQueue(filteredSongs, 0, false)
+                                    },
+                                    enabled = filteredSongs.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(strings.shuffleAll) },
+                                    leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onPlayQueue(filteredSongs, 0, true)
+                                    },
+                                    enabled = filteredSongs.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(strings.rescan) },
+                                    leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onRequestPermissionAndScan()
+                                    },
+                                    enabled = !isScanningLocal
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(20.dp))
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        onOpenYtMusic()
+                                    }
+                                    .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                    .padding(horizontal = 14.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    DropdownMenuItem(
-                                        text = { Text(strings.playAll) },
-                                        leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            onPlayQueue(filteredSongs, 0, false)
-                                        },
-                                        enabled = filteredSongs.isNotEmpty()
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(strings.shuffleAll) },
-                                        leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            onPlayQueue(filteredSongs, 0, true)
-                                        },
-                                        enabled = filteredSongs.isNotEmpty()
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text(strings.rescan) },
-                                        leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
-                                        onClick = {
-                                            showMoreMenu = false
-                                            onRequestPermissionAndScan()
-                                        },
-                                        enabled = !isScanningLocal
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = Color.White,
+                                        modifier = Modifier.size(22.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Icon(
+                                                imageVector = Icons.Filled.PlayArrow,
+                                                contentDescription = "YouTube Music",
+                                                tint = Color(0xFF111111),
+                                                modifier = Modifier.size(15.dp)
+                                            )
+                                        }
+                                    }
+                                    Text(
+                                        text = "YouTube Music",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
                                     )
                                 }
                             }
 
                             Box(
                                 modifier = Modifier
-                                    .size(40.dp)
-                                    .clip(CircleShape)
+                                    .height(40.dp)
+                                    .clip(RoundedCornerShape(20.dp))
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        showSortMenu = true
+                                        onOpenTagFix()
                                     }
-                                    .then(bubbleModifier(CircleShape)),
+                                    .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                    .padding(horizontal = 14.dp),
                                 contentAlignment = Alignment.Center
                             ) {
-                                Icon(
-                                    imageVector = Icons.AutoMirrored.Filled.Sort,
-                                    contentDescription = "Сортировка",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
-
-                                DropdownMenu(
-                                    expanded = showSortMenu,
-                                    onDismissRequest = { showSortMenu = false }
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    SortOption.entries.forEach { option ->
-                                        DropdownMenuItem(
-                                            text = { Text(option.label) },
-                                            leadingIcon = {
-                                                if (selectedSort == option) {
-                                                    Icon(Icons.Filled.Check, contentDescription = null)
-                                                }
-                                            },
-                                            onClick = {
-                                                onSelectSort(option)
-                                                showSortMenu = false
+                                    Icon(
+                                        imageVector = Icons.Filled.AutoFixHigh,
+                                        contentDescription = "TagFix",
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                    Text(
+                                        text = "TagFix",
+                                        style = MaterialTheme.typography.labelLarge,
+                                        fontWeight = FontWeight.Bold
+                                    )
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    showSortMenu = true
+                                }
+                                .then(bubbleModifier(CircleShape)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = strings.sorting,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                SortOption.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.getDisplayName(strings)) },
+                                        leadingIcon = {
+                                            if (selectedSort == option) {
+                                                Icon(Icons.Filled.Check, contentDescription = null)
                                             }
-                                        )
-                                    }
+                                        },
+                                        onClick = {
+                                            onSelectSort(option)
+                                            showSortMenu = false
+                                        }
+                                    )
                                 }
                             }
                         }
@@ -570,12 +563,12 @@ fun LibraryScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text("Поиск по названию, артисту, папке…") },
+                            placeholder = { Text(strings.searchPlaceholder) },
                             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {
                                     IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Filled.Clear, contentDescription = "Очистить")
+                                        Icon(Icons.Filled.Clear, contentDescription = strings.clear)
                                     }
                                 }
                             },
@@ -628,7 +621,7 @@ fun LibraryScreen(
                     verticalAlignment = Alignment.CenterVertically
                 ) {
                     Text(
-                        text = "Медиатека",
+                        text = strings.libraryTitle,
                         style = MaterialTheme.typography.headlineMedium,
                         fontWeight = FontWeight.ExtraBold,
                         modifier = Modifier.weight(1f)
@@ -644,7 +637,7 @@ fun LibraryScreen(
                         ) {
                             Icon(
                                 imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
-                                contentDescription = "Поиск",
+                                contentDescription = strings.searchTitle,
                                 modifier = Modifier.size(19.dp)
                             )
                         }
@@ -670,19 +663,12 @@ fun LibraryScreen(
                     AssistChip(
                         onClick = { showSortMenu = true },
                         label = {
-                            val shortLabel = when (selectedSort) {
-                                SortOption.TITLE_ASC -> "А–Я"
-                                SortOption.TITLE_DESC -> "Я–А"
-                                SortOption.DATE_DESC -> "Новые"
-                                SortOption.ARTIST -> "Артист"
-                                SortOption.DURATION -> "Время"
-                            }
-                            Text(shortLabel)
+                            Text(selectedSort.getDisplayName(strings))
                         },
                         leadingIcon = {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Сортировка",
+                                contentDescription = strings.sorting,
                                 modifier = Modifier.size(16.dp)
                             )
                         },
@@ -699,7 +685,7 @@ fun LibraryScreen(
                         } else {
                             Icon(
                                 Icons.Filled.Refresh,
-                                contentDescription = "Сканировать память",
+                                contentDescription = strings.rescanMemory,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
@@ -712,7 +698,7 @@ fun LibraryScreen(
                         ) {
                             SortOption.entries.forEach { option ->
                                 DropdownMenuItem(
-                                    text = { Text(option.label) },
+                                    text = { Text(option.getDisplayName(strings)) },
                                     leadingIcon = {
                                         if (selectedSort == option) {
                                             Icon(Icons.Filled.Check, contentDescription = null)
@@ -732,12 +718,12 @@ fun LibraryScreen(
                     OutlinedTextField(
                         value = searchQuery,
                         onValueChange = { searchQuery = it },
-                        placeholder = { Text("Поиск по названию, артисту, папке…") },
+                        placeholder = { Text(strings.searchPlaceholder) },
                         leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                         trailingIcon = {
                             if (searchQuery.isNotEmpty()) {
                                 IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Clear, contentDescription = "Очистить")
+                                    Icon(Icons.Filled.Clear, contentDescription = strings.clear)
                                 }
                             }
                         },
@@ -766,7 +752,7 @@ fun LibraryScreen(
                         ) {
                             Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(16.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Слушать (${filteredSongs.size})", style = MaterialTheme.typography.labelMedium)
+                            Text("${strings.playAction} (${filteredSongs.size})", style = MaterialTheme.typography.labelMedium)
                         }
                         FilledTonalButton(
                             onClick = { onPlayQueue(filteredSongs, 0, true) },
@@ -776,7 +762,7 @@ fun LibraryScreen(
                         ) {
                             Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(15.dp))
                             Spacer(Modifier.width(4.dp))
-                            Text("Микс", style = MaterialTheme.typography.labelMedium)
+                            Text(strings.mixMode, style = MaterialTheme.typography.labelMedium)
                         }
                     }
 
@@ -785,10 +771,11 @@ fun LibraryScreen(
                             selected = selectedFilter == filter,
                             onClick = { onSelectFilter(filter) },
                             label = {
+                                val baseLabel = filter.getDisplayName(strings)
                                 val labelText = if (filter == LibraryFilter.HIDDEN && hiddenSongIds.isNotEmpty()) {
-                                    "${filter.label} (${hiddenSongIds.size})"
+                                    "$baseLabel (${hiddenSongIds.size})"
                                 } else {
-                                    filter.label
+                                    baseLabel
                                 }
                                 Text(labelText, style = MaterialTheme.typography.labelMedium)
                             },
@@ -820,7 +807,7 @@ fun LibraryScreen(
                             val isHiddenFolder = folder == HIDDEN_FOLDER_NAME
                             AssistChip(
                                 onClick = { selectedFolder = folder },
-                                label = { Text(folder, style = MaterialTheme.typography.labelMedium) },
+                                label = { Text(if (isHiddenFolder) strings.hiddenFolderName else folder, style = MaterialTheme.typography.labelMedium) },
                                 leadingIcon = {
                                     Icon(
                                         imageVector = if (isHiddenFolder) Icons.Filled.VisibilityOff else Icons.Filled.Folder,

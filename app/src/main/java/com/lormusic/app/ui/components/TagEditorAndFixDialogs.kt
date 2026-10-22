@@ -1,5 +1,7 @@
 package com.lormusic.app.ui.components
 
+import com.lormusic.app.model.LocalStrings
+
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -36,6 +38,7 @@ fun TagEditorSheet(
     onSave: (SongTagOverride) -> Unit
 ) {
     val context = LocalContext.current
+    val strings = LocalStrings.current
     val scope = rememberCoroutineScope()
 
     var title by remember(song.id) { mutableStateOf(song.title) }
@@ -84,13 +87,13 @@ fun TagEditorSheet(
                 )
                 Spacer(Modifier.width(8.dp))
                 Text(
-                    text = "Редактор тегов",
+                    text = strings.tagEditorTitle,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     modifier = Modifier.weight(1f)
                 )
                 IconButton(onClick = onDismiss) {
-                    Icon(Icons.Filled.Close, contentDescription = "Закрыть")
+                    Icon(Icons.Filled.Close, contentDescription = strings.close)
                 }
             }
 
@@ -119,7 +122,7 @@ fun TagEditorSheet(
                     ) {
                         Icon(Icons.Filled.Image, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Обложка из галереи")
+                        Text(strings.coverFromGallery)
                     }
                     OutlinedButton(
                         onClick = {
@@ -149,7 +152,7 @@ fun TagEditorSheet(
                             Icon(Icons.Filled.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                         Spacer(Modifier.width(6.dp))
-                        Text("Автопоиск тегов")
+                        Text(strings.autoSearchTags)
                     }
                     Spacer(Modifier.height(6.dp))
                     FilledTonalButton(
@@ -173,7 +176,7 @@ fun TagEditorSheet(
                     ) {
                         Icon(Icons.Filled.Hearing, contentDescription = null, modifier = Modifier.size(18.dp))
                         Spacer(Modifier.width(6.dp))
-                        Text("Распознать через Shazam")
+                        Text(strings.recognizeViaShazam)
                     }
                 }
             }
@@ -183,7 +186,7 @@ fun TagEditorSheet(
             OutlinedTextField(
                 value = title,
                 onValueChange = { title = it },
-                label = { Text("Название трека") },
+                label = { Text(strings.trackTitleField) },
                 leadingIcon = { Icon(Icons.Filled.MusicNote, contentDescription = null) },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -194,7 +197,7 @@ fun TagEditorSheet(
             OutlinedTextField(
                 value = artist,
                 onValueChange = { artist = it },
-                label = { Text("Исполнитель") },
+                label = { Text(strings.artistField) },
                 leadingIcon = { Icon(Icons.Filled.Person, contentDescription = null) },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -205,7 +208,7 @@ fun TagEditorSheet(
             OutlinedTextField(
                 value = album,
                 onValueChange = { album = it },
-                label = { Text("Альбом") },
+                label = { Text(strings.albumField) },
                 leadingIcon = { Icon(Icons.Filled.Album, contentDescription = null) },
                 singleLine = true,
                 shape = RoundedCornerShape(16.dp),
@@ -220,7 +223,7 @@ fun TagEditorSheet(
                 OutlinedTextField(
                     value = genre,
                     onValueChange = { genre = it },
-                    label = { Text("Жанр") },
+                    label = { Text(strings.genreField) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.weight(1.3f)
@@ -228,7 +231,7 @@ fun TagEditorSheet(
                 OutlinedTextField(
                     value = year,
                     onValueChange = { year = it },
-                    label = { Text("Год") },
+                    label = { Text(strings.yearField) },
                     singleLine = true,
                     shape = RoundedCornerShape(16.dp),
                     modifier = Modifier.weight(0.9f)
@@ -248,7 +251,7 @@ fun TagEditorSheet(
             OutlinedTextField(
                 value = customLyrics,
                 onValueChange = { customLyrics = it },
-                label = { Text("Текст песни (обычный или LRC [мм:сс.хх])") },
+                label = { Text(strings.lyricsField) },
                 minLines = 3,
                 maxLines = 5,
                 shape = RoundedCornerShape(16.dp),
@@ -266,7 +269,7 @@ fun TagEditorSheet(
                     modifier = Modifier.weight(1f),
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Отмена")
+                    Text(strings.cancel)
                 }
                 Button(
                     onClick = {
@@ -290,7 +293,7 @@ fun TagEditorSheet(
                 ) {
                     Icon(Icons.Filled.Check, contentDescription = null, modifier = Modifier.size(18.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Сохранить")
+                    Text(strings.save)
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -306,6 +309,7 @@ fun TagFixModalSheet(
     onApplyProposals: (List<TagFixProposal>) -> Unit
 ) {
     val context = LocalContext.current
+    val strings = LocalStrings.current
     val scope = rememberCoroutineScope()
 
     val problematicIds = remember(songs) {
@@ -343,15 +347,15 @@ fun TagFixModalSheet(
                 Spacer(Modifier.width(8.dp))
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = if (proposals == null) "TagFix • Умное исправление тегов" else "Подтверждение TagFix",
+                        text = if (proposals == null) strings.tagFixTitle else strings.tagFixConfirmTitle,
                         style = MaterialTheme.typography.titleLarge,
                         fontWeight = FontWeight.ExtraBold
                     )
                     Text(
                         text = if (proposals == null) {
-                            "Чистка названий, поиск обложек и Shazam-распознавание"
+                            strings.tagFixSubtitle
                         } else {
-                            "Проверьте найденные названия и обложки перед сохранением"
+                            strings.tagFixConfirmSubtitle
                         },
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
@@ -373,13 +377,13 @@ fun TagFixModalSheet(
                             ExpressiveLoadingIndicator(size = 64.dp)
                             Spacer(Modifier.height(14.dp))
                             Text(
-                                text = "Анализируем треки и ищем обложки ($progressCurrent из $progressTotal)…",
+                                text = strings.tagFixProgressFormat.format(progressCurrent, progressTotal),
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.SemiBold
                             )
                             Spacer(Modifier.height(4.dp))
                             Text(
-                                text = "Для треков без имени выполняется Shazam-анализ аудио",
+                                text = strings.tagFixShazamHint,
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                             )
@@ -432,7 +436,7 @@ fun TagFixModalSheet(
                                                 shape = RoundedCornerShape(8.dp)
                                             ) {
                                                 Text(
-                                                    text = "🎵 Shazam-анализ: то ли это название и обложка?",
+                                                    text = strings.tagFixShazamMatchTitle,
                                                     style = MaterialTheme.typography.labelSmall,
                                                     color = MaterialTheme.colorScheme.onPrimary,
                                                     modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
@@ -441,7 +445,7 @@ fun TagFixModalSheet(
                                             Spacer(Modifier.height(4.dp))
                                         }
                                         Text(
-                                            text = "Было: ${prop.originalSong.title} (${prop.originalSong.artist})",
+                                            text = strings.tagFixWasFormat.format(prop.originalSong.title, prop.originalSong.artist),
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f),
                                             maxLines = 1,
@@ -482,7 +486,7 @@ fun TagFixModalSheet(
                                         } else {
                                             Icon(
                                                 imageVector = Icons.Filled.Hearing,
-                                                contentDescription = "Распознать через Shazam",
+                                                contentDescription = strings.recognizeViaShazam,
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
@@ -511,7 +515,7 @@ fun TagFixModalSheet(
                             modifier = Modifier.weight(1f),
                             shape = RoundedCornerShape(16.dp)
                         ) {
-                            Text("Назад")
+                            Text(strings.back)
                         }
                         val confirmed = currentProposals.filter { it.isSelected }
                         Button(
@@ -525,7 +529,7 @@ fun TagFixModalSheet(
                         ) {
                             Icon(Icons.Filled.DoneAll, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
-                            Text("Подтвердить (${confirmed.size})")
+                            Text(strings.tagFixConfirmCount.format(confirmed.size))
                         }
                     }
                 }
@@ -538,19 +542,19 @@ fun TagFixModalSheet(
                         FilterChip(
                             selected = selectedIds == problematicIds && problematicIds.isNotEmpty(),
                             onClick = { selectedIds = problematicIds },
-                            label = { Text("Проблемные (${problematicIds.size})") },
+                            label = { Text(strings.tagFixProblematicTab.format(problematicIds.size)) },
                             shape = RoundedCornerShape(14.dp)
                         )
                         FilterChip(
                             selected = selectedIds.size == songs.size,
                             onClick = { selectedIds = songs.map { it.id }.toSet() },
-                            label = { Text("Все (${songs.size})") },
+                            label = { Text(strings.tagFixAllTab.format(songs.size)) },
                             shape = RoundedCornerShape(14.dp)
                         )
                         FilterChip(
                             selected = selectedIds.isEmpty(),
                             onClick = { selectedIds = emptySet() },
-                            label = { Text("Сброс") },
+                            label = { Text(strings.reset) },
                             shape = RoundedCornerShape(14.dp)
                         )
                     }
@@ -606,8 +610,8 @@ fun TagFixModalSheet(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                         val hint = when {
-                                            isRandom -> "Рандомное имя • Будет применён Shazam-анализ"
-                                            isProb -> "${song.artist} • Нужна чистка тегов / обложка"
+                                            isRandom -> strings.tagFixRandomNameHint
+                                            isProb -> strings.tagFixNeedsCleaningHint.format(song.artist)
                                             else -> song.artist
                                         }
                                         Text(
@@ -636,7 +640,7 @@ fun TagFixModalSheet(
                                         } else {
                                             Icon(
                                                 imageVector = Icons.Filled.Hearing,
-                                                contentDescription = "Распознать через Shazam",
+                                                contentDescription = strings.recognizeViaShazam,
                                                 tint = MaterialTheme.colorScheme.primary
                                             )
                                         }
@@ -679,7 +683,7 @@ fun TagFixModalSheet(
                     ) {
                         Icon(Icons.Filled.AutoFixHigh, contentDescription = null)
                         Spacer(Modifier.width(8.dp))
-                        Text("Исправить выбранные треки (${selectedIds.size})")
+                        Text(strings.tagFixFixSelected.format(selectedIds.size))
                     }
                 }
             }

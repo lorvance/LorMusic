@@ -180,7 +180,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         override fun onPlayerError(error: PlaybackException) {
-            statusMessage.value = "Не удалось воспроизвести трек: ${error.localizedMessage ?: "ошибка источника"}"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Failed to play track: ${error.localizedMessage ?: "source error"}"
+                AppLanguage.UK -> "Не вдалося відтворити трек: ${error.localizedMessage ?: "помилка джерела"}"
+                else -> "Не удалось воспроизвести трек: ${error.localizedMessage ?: "ошибка источника"}"
+            }
             isPlaying.value = false
         }
     }
@@ -276,7 +280,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveTagOverrides(updatedMap)
         tagOverrides.value = updatedMap
         applyTagOverridesToState(updatedMap)
-        statusMessage.value = "Теги трека «${override.title}» сохранены"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Tags for «${override.title}» saved"
+            AppLanguage.UK -> "Теги треку «${override.title}» збережено"
+            else -> "Теги трека «${override.title}» сохранены"
+        }
     }
 
     fun applyTagFixProposals(proposals: List<TagFixProposal>) {
@@ -300,7 +308,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveTagOverrides(updatedMap)
         tagOverrides.value = updatedMap
         applyTagOverridesToState(updatedMap)
-        statusMessage.value = "TagFix успешно обновил теги и обложки (${proposals.size} треков)"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "TagFix successfully updated tags and artwork (${proposals.size} tracks)"
+            AppLanguage.UK -> "TagFix успішно оновив теги та обкладинки (${proposals.size} треків)"
+            else -> "TagFix успешно обновил теги и обложки (${proposals.size} треков)"
+        }
     }
 
     private fun applyTagOverridesToState(overrides: Map<String, SongTagOverride>) {
@@ -342,9 +354,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     PackageManager.DONT_KILL_APP
                 )
             }
-            statusMessage.value = "Иконка изменена на «${option.label}»"
+        val currentStrings = resolveStrings(appLanguage.value)
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Icon changed to «${option.getDisplayName(currentStrings)}»"
+            AppLanguage.UK -> "Іконку змінено на «${option.getDisplayName(currentStrings)}»"
+            else -> "Иконка изменена на «${option.getDisplayName(currentStrings)}»"
+        }
         } catch (_: Exception) {
-            statusMessage.value = "Выбрана иконка «${option.label}»"
+        val currentStrings = resolveStrings(appLanguage.value)
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Icon selected: «${option.getDisplayName(currentStrings)}»"
+            AppLanguage.UK -> "Обрано іконку: «${option.getDisplayName(currentStrings)}»"
+            else -> "Выбрана иконка «${option.getDisplayName(currentStrings)}»"
+        }
         }
     }
 
@@ -396,11 +418,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             ytRecommendations.value = recs
             val mixes = buildList {
                 if (recs.isNotEmpty()) {
-                    add("Микс для тебя" to recs.take(10))
+            val mixLabel = when (appLanguage.value) {
+                AppLanguage.EN -> "Mix for You"
+                AppLanguage.UK -> "Мікс для тебе"
+                else -> "Микс для тебя"
+            }
+            add(mixLabel to recs.take(10))
                 }
                 if (radioTracks.isNotEmpty()) {
-                    add("Радио YouTube Music" to radioTracks.take(10))
-                    add("Ночной вайб" to radioTracks.shuffled().take(8))
+            val radioLabel = when (appLanguage.value) {
+                AppLanguage.EN -> "YouTube Music Radio"
+                AppLanguage.UK -> "Радіо YouTube Music"
+                else -> "Радио YouTube Music"
+            }
+            add(radioLabel to radioTracks.take(10))
+            val nightLabel = when (appLanguage.value) {
+                AppLanguage.EN -> "Night Vibe"
+                AppLanguage.UK -> "Нічний вайб"
+                else -> "Ночной вайб"
+            }
+            add(nightLabel to radioTracks.shuffled().take(8))
                 }
             }
             ytRadioMixes.value = mixes
@@ -449,7 +486,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (downloadingSongIds.value.contains(song.id)) return
         viewModelScope.launch {
             downloadingSongIds.value = downloadingSongIds.value + song.id
-            statusMessage.value = "Скачивание «${song.title}» со всеми тегами ID3v2.3 и обложкой…"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Downloading «${song.title}» with ID3v2.3 tags and cover…"
+            AppLanguage.UK -> "Завантаження «${song.title}» з усіма тегами ID3v2.3 та обкладинкою…"
+            else -> "Скачивание «${song.title}» со всеми тегами ID3v2.3 и обложкой…"
+        }
             val result = YouTubeMusicRepository.downloadTrackToPhoneWithTags(getApplication(), song)
             downloadingSongIds.value = downloadingSongIds.value - song.id
 
@@ -470,9 +511,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 if (autoTagFixEnabled.value) {
                     checkBrokenTracksForAutoTagFix()
                 }
-                statusMessage.value = "Трек «${downloaded.title}» скачан локально со всеми тегами и обложкой!"
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Track «${downloaded.title}» downloaded locally with tags and artwork!"
+                    AppLanguage.UK -> "Трек «${downloaded.title}» завантажено локально з тегами та обкладинкою!"
+                    else -> "Трек «${downloaded.title}» скачан локально со всеми тегами и обложкой!"
+                }
             } else {
-                statusMessage.value = "Не удалось скачать трек «${song.title}»"
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Failed to download track «${song.title}»"
+                    AppLanguage.UK -> "Не вдалося завантажити трек «${song.title}»"
+                    else -> "Не удалось скачать трек «${song.title}»"
+                }
             }
         }
     }
@@ -484,7 +533,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             isLoadingYtFeed.value = true
             val syncData = YouTubeMusicRepository.syncAuthenticatedAccount(cookie)
             val profile = syncData.profile ?: GoogleAccountProfile(
-                displayName = "Аккаунт YouTube Music",
+            displayName = when (appLanguage.value) {
+                AppLanguage.EN -> "YouTube Music Account"
+                AppLanguage.UK -> "Обліковий запис YouTube Music"
+                else -> "Аккаунт YouTube Music"
+            },
                 email = "YouTube Music Sync"
             )
             googleAccount.value = profile
@@ -515,10 +568,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val radioPool = (syncData.likedSongs + syncData.homeRecommendations).distinctBy { it.id }
                 ytRecommendations.value = recs
                 ytRadioMixes.value = buildList {
-                    if (recs.isNotEmpty()) add("Микс для тебя" to recs.take(10))
+            val mixLabel = when (appLanguage.value) {
+                AppLanguage.EN -> "Mix for You"
+                AppLanguage.UK -> "Мікс для тебе"
+                else -> "Микс для тебя"
+            }
+            add(mixLabel to recs.take(10))
                     if (radioPool.isNotEmpty()) {
-                        add("Радио YouTube Music" to radioPool.take(10))
-                        add("Ночной вайб" to radioPool.shuffled().take(8))
+            val radioLabel = when (appLanguage.value) {
+                AppLanguage.EN -> "YouTube Music Radio"
+                AppLanguage.UK -> "Радіо YouTube Music"
+                else -> "Радио YouTube Music"
+            }
+            add(radioLabel to radioPool.take(10))
+            val nightLabel = when (appLanguage.value) {
+                AppLanguage.EN -> "Night Vibe"
+                AppLanguage.UK -> "Нічний вайб"
+                else -> "Ночной вайб"
+            }
+            add(nightLabel to radioPool.shuffled().take(8))
                     }
                 }
                 ytMyWaveSongs.value = radioPool.shuffled()
@@ -546,7 +614,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             android.webkit.CookieManager.getInstance().removeAllCookies(null)
         } catch (_: Exception) {
         }
-        statusMessage.value = "Вы вышли из аккаунта Google / YouTube Music"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Signed out of Google / YouTube Music"
+            AppLanguage.UK -> "Ви вийшли з облікового запису Google / YouTube Music"
+            else -> "Вы вышли из аккаунта Google / YouTube Music"
+        }
     }
 
     fun syncGoogleLibrary() {
@@ -594,10 +666,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (autoTagFixEnabled.value) {
                 checkBrokenTracksForAutoTagFix()
             }
-            statusMessage.value = if (scannedLocal.isEmpty()) {
-                "Локальные аудиофайлы не найдены на устройстве"
-            } else {
-                "Найдено локальных треков: ${scannedLocal.size}"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> if (scannedLocal.isEmpty()) "No local audio files found on device" else "Found local tracks: ${scannedLocal.size}"
+                AppLanguage.UK -> if (scannedLocal.isEmpty()) "Локальні аудіофайли не знайдено на пристрої" else "Знайдено локальних треків: ${scannedLocal.size}"
+                else -> if (scannedLocal.isEmpty()) "Локальные аудиофайлы не найдены на устройстве" else "Найдено локальных треков: ${scannedLocal.size}"
             }
         }
     }
@@ -641,7 +713,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val favSongs = pool.filter { favoriteIds.value.contains(it.id) }
         val favPlaylist = Playlist(
             id = "sys_favorites",
-            name = "Мне нравится",
+                    name = resolveStrings(appLanguage.value).favorites,
             songs = favSongs,
             coverColorSeed = 777,
             isSystem = true
@@ -673,9 +745,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         statusMessage.value = if (nowHidden) {
-            "Трек «${song.title}» скрыт из потока (перемещён в «Скрытые»)"
+            when (appLanguage.value) {
+                AppLanguage.EN -> "Track «${song.title}» hidden from stream"
+                AppLanguage.UK -> "Трек «${song.title}» приховано з потоку"
+                else -> "Трек «${song.title}» скрыт из потока"
+            }
         } else {
-            "Трек «${song.title}» возвращён в основной поток"
+            when (appLanguage.value) {
+                AppLanguage.EN -> "Track «${song.title}» restored to stream"
+                AppLanguage.UK -> "Трек «${song.title}» повернено до потоку"
+                else -> "Трек «${song.title}» возвращён в основной поток"
+            }
         }
     }
 
@@ -727,16 +807,28 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                         )
                         onNeedIntentSender(pi.intentSender)
                     }.onFailure {
-                        statusMessage.value = "Не удалось запросить удаление файла"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Failed to request file deletion"
+                AppLanguage.UK -> "Не вдалося запросити видалення файлу"
+                else -> "Не удалось запросить удаление файла"
+            }
                     }
                 } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q && secEx is RecoverableSecurityException) {
                     pendingDeleteSong = song
                     onNeedIntentSender(secEx.userAction.actionIntent.intentSender)
                 } else {
-                    statusMessage.value = "Нет прав для удаления файла с устройства"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Permission denied to delete file"
+                AppLanguage.UK -> "Немає прав для видалення файлу з пристрою"
+                else -> "Нет прав для удаления файла с устройства"
+            }
                 }
             } catch (_: Exception) {
-                statusMessage.value = "Ошибка при удалении файла с устройства"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Error deleting file from device"
+                AppLanguage.UK -> "Помилка при видаленні файлу з пристрою"
+                else -> "Ошибка при удалении файла с устройства"
+            }
             }
         }
     }
@@ -747,7 +839,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (granted) {
             finalizeSongDeletionFromState(song)
         } else {
-            statusMessage.value = "Удаление файла отменено"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "File deletion cancelled"
+            AppLanguage.UK -> "Видалення файлу скасовано"
+            else -> "Удаление файла отменено"
+        }
         }
     }
 
@@ -764,7 +860,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             currentSong.value = queue.value.firstOrNull() ?: allSongs.value.firstOrNull()
         }
         rebuildPlaylists(allSongs.value)
-        statusMessage.value = "Трек «${song.title}» удалён с устройства"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Track «${song.title}» deleted from device"
+                AppLanguage.UK -> "Трек «${song.title}» видалено з пристрою"
+                else -> "Трек «${song.title}» удалён с устройства"
+            }
     }
 
     fun toggleFavorite(song: Song) {
@@ -783,7 +883,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
         favoriteIds.value = updated
         prefs.saveFavoriteIds(updated)
-        statusMessage.value = if (added) "Добавлено в «Мне нравится»" else "Удалено из «Мне нравится»"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> if (added) "Added to Favorites" else "Removed from Favorites"
+            AppLanguage.UK -> if (added) "Додано до Улюбленого" else "Вилучено з Улюбленого"
+            else -> if (added) "Добавлено в «Мне нравится»" else "Удалено из «Мне нравится»"
+        }
     }
 
     fun createPlaylist(name: String, initialSongs: List<Song> = emptyList()) {
@@ -798,14 +902,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val updated = customPlaylists.value + newPlaylist
         customPlaylists.value = updated
         persistPlaylists(updated)
-        statusMessage.value = "Плейлист «$cleanName» создан"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Playlist «$cleanName» created"
+            AppLanguage.UK -> "Плейліст «$cleanName» створено"
+            else -> "Плейлист «$cleanName» создан"
+        }
     }
 
     fun deletePlaylist(playlistId: String) {
         val updated = customPlaylists.value.filterNot { it.id == playlistId }
         customPlaylists.value = updated
         persistPlaylists(updated)
-        statusMessage.value = "Плейлист удалён"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Playlist deleted"
+            AppLanguage.UK -> "Плейліст видалено"
+            else -> "Плейлист удалён"
+        }
     }
 
     fun addSongToPlaylist(playlistId: String, song: Song) {
@@ -821,10 +933,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val updated = customPlaylists.value.map { pl ->
             if (pl.id == playlistId) {
                 if (pl.songs.any { it.id == song.id }) {
-                    statusMessage.value = "Трек уже есть в плейлисте «${pl.name}»"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Track is already in playlist «${pl.name}»"
+                AppLanguage.UK -> "Трек уже є в плейлісті «${pl.name}»"
+                else -> "Трек уже есть в плейлисте «${pl.name}»"
+            }
                     pl
                 } else {
-                    statusMessage.value = "Добавлено в «${pl.name}»"
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Added to «${pl.name}»"
+                AppLanguage.UK -> "Додано до «${pl.name}»"
+                else -> "Добавлено в «${pl.name}»"
+            }
                     pl.copy(songs = pl.songs + song)
                 }
             } else pl
@@ -907,7 +1027,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         q.add(insertIdx, song)
         queue.value = q
         exoPlayer.addMediaItem(insertIdx, song.toMediaItem())
-        statusMessage.value = "«${song.title}» сыграет следующим"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "«${song.title}» will play next"
+            AppLanguage.UK -> "«${song.title}» гратиме наступним"
+            else -> "«${song.title}» сыграет следующим"
+        }
     }
 
     fun togglePlayPause() {
@@ -1027,12 +1151,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         sleepTimerJob?.cancel()
         if (minutes == null || minutes <= 0) {
             sleepTimerRemainingSec.value = null
-            statusMessage.value = "Таймер сна выключен"
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Sleep timer turned off"
+            AppLanguage.UK -> "Таймер сну вимкнено"
+            else -> "Таймер сна выключен"
+        }
             return
         }
         val totalSeconds = minutes * 60
         sleepTimerRemainingSec.value = totalSeconds
-        statusMessage.value = "Таймер сна установлен на $minutes мин."
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Sleep timer set for $minutes min."
+            AppLanguage.UK -> "Таймер сну встановлено на $minutes хв."
+            else -> "Таймер сна установлен на $minutes мин."
+        }
         sleepTimerJob = viewModelScope.launch {
             var rem = totalSeconds
             while (rem > 0) {
@@ -1045,7 +1177,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 exoPlayer.pause()
                 isPlaying.value = false
             }
-            statusMessage.value = "Воспроизведение остановлено по таймеру сна"
+                        statusMessage.value = when (appLanguage.value) {
+                            AppLanguage.EN -> "Playback stopped by sleep timer"
+                            AppLanguage.UK -> "Відтворення зупинено за таймером сну"
+                            else -> "Воспроизведение остановлено по таймеру сна"
+                        }
         }
     }
 
@@ -1211,7 +1347,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 showUpdateDialog.value = true
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
-                    statusMessage.value = "У вас установлена актуальная версия (1.6.0)"
+                    statusMessage.value = when (appLanguage.value) {
+                        AppLanguage.EN -> "You have the latest version installed (1.6.0)"
+                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.0)"
+                        else -> "У вас установлена последняя версия (1.6.0)"
+                    }
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message
                 }
@@ -1229,7 +1369,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 updateState.value = UpdateState.ReadyToInstall(file)
                 updateManager.installApk(file)
             } else {
-                updateState.value = UpdateState.Error("Не удалось скачать обновление")
+                updateState.value = UpdateState.Error(
+                    when (appLanguage.value) {
+                        AppLanguage.EN -> "Failed to download update"
+                        AppLanguage.UK -> "Не вдалося завантажити оновлення"
+                        else -> "Не удалось скачать обновление"
+                    }
+                )
             }
         }
     }

@@ -649,13 +649,13 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             },
             title = {
                 Text(
-                    text = "Автоматический TagFix",
+                    text = currentStrings.autoTagFixPromptTitle,
                     fontWeight = FontWeight.Bold
                 )
             },
             text = {
                 Text(
-                    text = "Обнаружено треков со сломанными тегами: $brokenCount.\n\nЗапустить TagFix для автоматического восстановления названий, исполнителей и обложек?"
+                    text = currentStrings.autoTagFixPromptMessage.format(brokenCount)
                 )
             },
             confirmButton = {
@@ -666,12 +666,12 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     },
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Исправить сейчас")
+                    Text(currentStrings.fixNow)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { playerViewModel.dismissAutoTagFixPrompt() }) {
-                    Text("Позже")
+                    Text(currentStrings.remindLaterBtn)
                 }
             }
         )

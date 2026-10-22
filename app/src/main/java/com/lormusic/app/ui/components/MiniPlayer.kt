@@ -53,6 +53,7 @@ fun MiniPlayer(
     onOpen: () -> Unit
 ) {
     val view = LocalView.current
+    val strings = com.lormusic.app.model.LocalStrings.current
     val shape = RoundedCornerShape(26.dp)
     val baseSurface = MaterialTheme.colorScheme.surfaceVariant
 
@@ -192,7 +193,7 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "В избранное",
+                        contentDescription = strings.favorites,
                         tint = if (isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
                         modifier = Modifier.size(20.dp)
                     )
@@ -206,7 +207,7 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SkipPrevious,
-                        contentDescription = "Предыдущий трек",
+                        contentDescription = strings.previousTrack,
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }
@@ -228,7 +229,7 @@ fun MiniPlayer(
                 ) {
                     Icon(
                         imageVector = Icons.Filled.SkipNext,
-                        contentDescription = "Следующий трек",
+                        contentDescription = strings.nextTrack,
                         tint = MaterialTheme.colorScheme.onSurface
                     )
                 }

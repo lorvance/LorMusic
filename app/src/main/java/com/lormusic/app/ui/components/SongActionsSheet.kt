@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.lormusic.app.data.YouTubeMusicRepository
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
 
@@ -34,6 +35,7 @@ fun SongRow(
     onMoreClick: (() -> Unit)? = null
 ) {
     val view = LocalView.current
+    val strings = LocalStrings.current
     val containerColor = if (isCurrentSong) {
         MaterialTheme.colorScheme.primary.copy(alpha = 0.14f)
     } else {
@@ -93,7 +95,7 @@ fun SongRow(
                 ) {
                     Icon(
                         imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                        contentDescription = "Избранное",
+                        contentDescription = strings.favorites,
                         tint = if (isFavorite) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.45f)
                     )
                 }
@@ -102,7 +104,7 @@ fun SongRow(
                 IconButton(onClick = onMoreClick) {
                     Icon(
                         imageVector = Icons.Filled.MoreVert,
-                        contentDescription = "Ещё",
+                        contentDescription = strings.more,
                         tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
                     )
                 }
@@ -134,6 +136,7 @@ fun SongActionsBottomSheet(
     var showTrackDetails by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
     var newPlaylistName by remember { mutableStateOf("") }
+    val strings = LocalStrings.current
     val context = LocalContext.current
     val ytShareUrl = remember(song) { YouTubeMusicRepository.getShareUrl(song) }
 
@@ -177,14 +180,14 @@ fun SongActionsBottomSheet(
                 showDeleteConfirm -> {
                     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 12.dp)) {
                         Text(
-                            text = "Удалить трек с устройства?",
+                            text = strings.deleteSongDialogTitle,
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.error
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "Файл «${song.title}» будет безвозвратно удалён из памяти вашего смартфона. Если вы хотите просто убрать его из общего списка, используйте функцию «Скрыть из потока».",
+                            text = "«${song.title}»: ${strings.deleteFromDeviceSubtitle}",
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.78f)
                         )
@@ -197,7 +200,7 @@ fun SongActionsBottomSheet(
                                 onClick = { showDeleteConfirm = false },
                                 modifier = Modifier.weight(1f)
                             ) {
-                                Text("Отмена")
+                                Text(strings.cancel)
                             }
                             Button(
                                 onClick = {
@@ -212,7 +215,7 @@ fun SongActionsBottomSheet(
                             ) {
                                 Icon(Icons.Filled.DeleteForever, contentDescription = null, modifier = Modifier.size(18.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text("Удалить")
+                                Text(strings.delete)
                             }
                         }
                     }
@@ -220,36 +223,36 @@ fun SongActionsBottomSheet(
 
                 showTrackDetails -> {
                     Column(modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)) {
-                        Text("Сведения о файле", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                        Text(strings.fileDetailsTitle, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
                         Spacer(Modifier.height(8.dp))
-                        Text("Название: ${song.title}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Исполнитель: ${song.artist}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Альбом: ${song.album}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${strings.trackTitleField}: ${song.title}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${strings.artistField}: ${song.artist}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${strings.albumField}: ${song.album}", style = MaterialTheme.typography.bodyMedium)
                         if (song.genre.isNotBlank()) {
-                            Text("Жанр: ${song.genre}", style = MaterialTheme.typography.bodyMedium)
+                            Text("${strings.genreField}: ${song.genre}", style = MaterialTheme.typography.bodyMedium)
                         }
                         if (song.year.isNotBlank()) {
-                            Text("Год: ${song.year}", style = MaterialTheme.typography.bodyMedium)
+                            Text("${strings.yearField}: ${song.year}", style = MaterialTheme.typography.bodyMedium)
                         }
-                        Text("Папка: ${if (isHidden) "Скрытые (${song.folderName})" else song.folderName}", style = MaterialTheme.typography.bodyMedium)
-                        Text("Длительность: ${formatDurationShort(song.durationMs)}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${strings.libraryTitle}: ${if (isHidden) "${strings.hiddenFolderName} (${song.folderName})" else song.folderName}", style = MaterialTheme.typography.bodyMedium)
+                        Text("${strings.sortOptionDuration}: ${formatDurationShort(song.durationMs)}", style = MaterialTheme.typography.bodyMedium)
                         if (!song.filePath.isNullOrBlank()) {
                             Text(
-                                "Путь: ${song.filePath}",
+                                "Path: ${song.filePath}",
                                 style = MaterialTheme.typography.bodyMedium,
                                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f)
                             )
                         }
                         Spacer(Modifier.height(12.dp))
                         FilledTonalButton(onClick = { showTrackDetails = false }) {
-                            Text("Назад")
+                            Text(strings.back)
                         }
                     }
                 }
 
                 !showPlaylistPicker -> {
                     ListItem(
-                        headlineContent = { Text("Воспроизвести сейчас") },
+                        headlineContent = { Text(strings.playNow) },
                         leadingContent = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
                         modifier = Modifier.clickable {
                             onPlayNow()
@@ -257,7 +260,7 @@ fun SongActionsBottomSheet(
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("Сыграть следующим в очереди") },
+                        headlineContent = { Text(strings.playNextInQueue) },
                         leadingContent = { Icon(Icons.Filled.QueuePlayNext, contentDescription = null) },
                         modifier = Modifier.clickable {
                             onPlayNext()
@@ -266,7 +269,7 @@ fun SongActionsBottomSheet(
                     )
                     if (onOpenArtistProfile != null && song.artist.isNotBlank()) {
                         ListItem(
-                            headlineContent = { Text("Исполнитель: ${song.artist}") },
+                            headlineContent = { Text("${strings.artistProfile}: ${song.artist}") },
                             leadingContent = { Icon(Icons.Filled.Person, contentDescription = null) },
                             modifier = Modifier.clickable {
                                 onDismiss()
@@ -276,8 +279,8 @@ fun SongActionsBottomSheet(
                     }
                     if (onOpenTagEditor != null) {
                         ListItem(
-                            headlineContent = { Text("Редактор тегов и обложки") },
-                            supportingContent = { Text("Изменить название, артиста, обложку, жанр, текст") },
+                            headlineContent = { Text(strings.editTagsAndCover) },
+                            supportingContent = { Text(strings.editTagsSubtitle) },
                             leadingContent = {
                                 Icon(
                                     Icons.Filled.EditNote,
@@ -293,8 +296,8 @@ fun SongActionsBottomSheet(
                     }
                     if (onDownloadSong != null && (song.isRemoteYt || song.uri.startsWith("http") || song.uri.startsWith("yt://"))) {
                         ListItem(
-                            headlineContent = { Text("Скачать на телефон (со всеми тегами)") },
-                            supportingContent = { Text("Сохранить аудио и обложку в локальную память") },
+                            headlineContent = { Text(strings.downloadToPhone) },
+                            supportingContent = { Text(strings.downloadSubtitle) },
                             leadingContent = {
                                 Icon(
                                     Icons.Filled.Download,
@@ -310,8 +313,8 @@ fun SongActionsBottomSheet(
                     }
                     if (ytShareUrl != null) {
                         ListItem(
-                            headlineContent = { Text("Поделиться песней") },
-                            supportingContent = { Text("Отправить ссылку: $ytShareUrl") },
+                            headlineContent = { Text(strings.shareSong) },
+                            supportingContent = { Text("${strings.share}: $ytShareUrl") },
                             leadingContent = {
                                 Icon(
                                     Icons.Filled.Share,
@@ -327,7 +330,7 @@ fun SongActionsBottomSheet(
                     }
                     ListItem(
                         headlineContent = {
-                            Text(if (isFavorite) "Убрать из «Мне нравится»" else "Добавить в «Мне нравится»")
+                            Text(if (isFavorite) strings.removeFromFavorites else strings.addToFavorites)
                         },
                         leadingContent = {
                             Icon(
@@ -342,7 +345,7 @@ fun SongActionsBottomSheet(
                         }
                     )
                     ListItem(
-                        headlineContent = { Text("Добавить в плейлист…") },
+                        headlineContent = { Text(strings.addToPlaylistAction) },
                         leadingContent = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null) },
                         modifier = Modifier.clickable {
                             showPlaylistPicker = true
@@ -351,12 +354,12 @@ fun SongActionsBottomSheet(
                     if (onToggleHidden != null) {
                         ListItem(
                             headlineContent = {
-                                Text(if (isHidden) "Вернуть в основной поток" else "Скрыть из потока")
+                                Text(if (isHidden) strings.unhideFromStream else strings.hideFromStream)
                             },
                             supportingContent = {
                                 Text(
-                                    if (isHidden) "Снова показывать трек во всех списках"
-                                    else "Переместить в папку «Скрытые» (останется на устройстве)"
+                                    if (isHidden) strings.unhideSubtitle
+                                    else strings.hideSubtitle
                                 )
                             },
                             leadingContent = {
@@ -372,7 +375,7 @@ fun SongActionsBottomSheet(
                         )
                     }
                     ListItem(
-                        headlineContent = { Text("Сведения о треке") },
+                        headlineContent = { Text(strings.trackDetailsAction) },
                         leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
                         modifier = Modifier.clickable {
                             showTrackDetails = true
@@ -382,13 +385,13 @@ fun SongActionsBottomSheet(
                         ListItem(
                             headlineContent = {
                                 Text(
-                                    text = "Удалить с устройства",
+                                    text = strings.deleteFromDevice,
                                     color = MaterialTheme.colorScheme.error,
                                     fontWeight = FontWeight.SemiBold
                                 )
                             },
                             supportingContent = {
-                                Text("Удалить аудиофайл из памяти телефона")
+                                Text(strings.deleteFromDeviceSubtitle)
                             },
                             leadingContent = {
                                 Icon(
@@ -406,7 +409,7 @@ fun SongActionsBottomSheet(
 
                 else -> {
                     Text(
-                        text = "Выберите плейлист",
+                        text = strings.selectPlaylist,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
@@ -415,7 +418,7 @@ fun SongActionsBottomSheet(
                         items(playlists.filter { !it.isSystem }) { pl ->
                             ListItem(
                                 headlineContent = { Text(pl.name) },
-                                supportingContent = { Text("${pl.songs.size} треков") },
+                                supportingContent = { Text("${pl.songs.size} ${strings.tracksCount}") },
                                 leadingContent = {
                                     SongArtwork(
                                         seed = pl.coverColorSeed,
@@ -439,7 +442,7 @@ fun SongActionsBottomSheet(
                         OutlinedTextField(
                             value = newPlaylistName,
                             onValueChange = { newPlaylistName = it },
-                            placeholder = { Text("Новый плейлист…") },
+                            placeholder = { Text(strings.newPlaylistPlaceholder) },
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.weight(1f)
@@ -452,7 +455,7 @@ fun SongActionsBottomSheet(
                                 onDismiss()
                             }
                         ) {
-                            Text("Создать")
+                            Text(strings.create)
                         }
                     }
                 }
