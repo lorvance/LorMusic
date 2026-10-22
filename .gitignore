@@ -26,5 +26,9 @@ app/build/
 *.jks
 *.keystore
 
+# Custom scripts
+*.bat
+!gradlew.bat
+
 # Google Services (if any)
 # google-services.json
