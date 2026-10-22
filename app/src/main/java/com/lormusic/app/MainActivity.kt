@@ -28,13 +28,18 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.ThemeMode
+import com.lormusic.app.model.resolveStrings
 import com.lormusic.app.ui.components.*
+import com.lormusic.app.ui.components.backdrop.backdrops.layerBackdrop
+import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import com.lormusic.app.ui.screens.*
 import com.lormusic.app.ui.theme.LorMusicTheme
 import com.lormusic.app.viewmodel.PlayerViewModel
@@ -165,6 +170,18 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     }
 
     val hazeState = remember { HazeState() }
+    val useLiquidGlass = playerViewModel.useLiquidGlass.value
+    val isGlassActive = useLiquidGlass && isLiquidGlassSupported()
+    val windowBackground = MaterialTheme.colorScheme.background
+    val paintBackdrop: ContentDrawScope.() -> Unit = remember(windowBackground) {
+        {
+            drawRect(windowBackground)
+            drawContent()
+        }
+    }
+    val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
+    val appLanguage by playerViewModel.appLanguage
+    val currentStrings = remember(appLanguage) { resolveStrings(appLanguage) }
 
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(statusMessage) {
@@ -174,47 +191,54 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         }
     }
 
-    Surface(
-        modifier = Modifier.fillMaxSize(),
-        color = MaterialTheme.colorScheme.background
+    CompositionLocalProvider(
+        LocalAppBackdrop provides appBackdrop,
+        LocalLiquidGlassEnabled provides isGlassActive,
+        LocalStrings provides currentStrings
     ) {
-        Box(modifier = Modifier.fillMaxSize()) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .background(MaterialTheme.colorScheme.background)
-            ) {
-                AnimatedContent(
-                    targetState = isYtMusicMode,
-                    transitionSpec = {
-                        (fadeIn(tween(260)) + scaleIn(initialScale = 0.97f, animationSpec = tween(260)))
-                            .togetherWith(fadeOut(tween(200)) + scaleOut(targetScale = 0.97f, animationSpec = tween(200)))
-                    },
-                    modifier = Modifier.fillMaxSize(),
-                    label = "modeSwitchTransition"
-                ) { ytMode ->
-                    if (ytMode) {
-                        YouTubeMusicScreen(
-                            activeTab = activeYtTab,
-                            recentlyPlayed = playerViewModel.getRecentlyPlayedSongs(),
-                            recommendations = ytRecommendations,
-                            radioMixes = ytRadioMixes,
-                            myWaveSongs = ytMyWaveSongs,
-                            searchResults = ytSearchResults,
-                            isLoadingFeed = isLoadingYtFeed,
-                            isSearching = isSearchingYt,
-                            downloadingSongIds = downloadingSongIds,
-                            currentSong = currentSong,
-                            isPlaying = isPlaying,
-                            favoriteIds = favoriteIds,
-                            playlists = playlists,
-                            savedYtSongs = savedYtSongs,
-                            googleAccount = googleAccount,
-                            hazeState = hazeState,
-                            enableBlur = enableBlur,
-                            showTopSearchBar = isYtSearchTop,
-                            recentsViewMode = playerViewModel.recentsViewMode.value,
-                            onToggleRecentsViewMode = playerViewModel::setRecentsViewMode,
+        Surface(
+            modifier = Modifier.fillMaxSize(),
+            color = MaterialTheme.colorScheme.background
+        ) {
+            Box(modifier = Modifier.fillMaxSize()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .background(MaterialTheme.colorScheme.background)
+                        .then(if (isGlassActive) Modifier.layerBackdrop(appBackdrop) else Modifier)
+                ) {
+                    AnimatedContent(
+                        targetState = isYtMusicMode,
+                        transitionSpec = {
+                            (fadeIn(tween(260)) + scaleIn(initialScale = 0.97f, animationSpec = tween(260)))
+                                .togetherWith(fadeOut(tween(200)) + scaleOut(targetScale = 0.97f, animationSpec = tween(200)))
+                        },
+                        modifier = Modifier.fillMaxSize(),
+                        label = "modeSwitchTransition"
+                    ) { ytMode ->
+                        if (ytMode) {
+                            YouTubeMusicScreen(
+                                activeTab = activeYtTab,
+                                recentlyPlayed = playerViewModel.getRecentlyPlayedSongs(),
+                                recommendations = ytRecommendations,
+                                radioMixes = ytRadioMixes,
+                                myWaveSongs = ytMyWaveSongs,
+                                searchResults = ytSearchResults,
+                                isLoadingFeed = isLoadingYtFeed,
+                                isSearching = isSearchingYt,
+                                downloadingSongIds = downloadingSongIds,
+                                currentSong = currentSong,
+                                isPlaying = isPlaying,
+                                favoriteIds = favoriteIds,
+                                playlists = playlists,
+                                savedYtSongs = savedYtSongs,
+                                googleAccount = googleAccount,
+                                hazeState = hazeState,
+                                enableBlur = enableBlur,
+                                useLiquidGlass = useLiquidGlass,
+                                showTopSearchBar = isYtSearchTop,
+                                recentsViewMode = playerViewModel.recentsViewMode.value,
+                                onToggleRecentsViewMode = playerViewModel::setRecentsViewMode,
                             onSelectTab = playerViewModel::selectYtTab,
                             onPlayQueue = { list, idx, shuffle ->
                                 playerViewModel.setQueueAndPlay(list, idx, shuffle)
@@ -332,6 +356,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
                                         useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                         autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
+                                        appLanguage = appLanguage,
                                         searchBarPlacement = searchBarPlacement,
                                         enablePlayerSwipe = enablePlayerSwipe,
                                         hideDemoTracks = hideDemoTracks,
@@ -346,6 +371,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
                                         onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                         onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
+                                        onSelectLanguage = playerViewModel::setAppLanguage,
                                         onChangeSearchBarPlacement = playerViewModel::setSearchBarPlacement,
                                         onTogglePlayerSwipe = playerViewModel::setEnablePlayerSwipe,
                                         onToggleHideDemoTracks = playerViewModel::setHideDemoTracks,
@@ -610,5 +636,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 playerViewModel.dismissUpdateDialog()
             }
         )
+    }
     }
 }

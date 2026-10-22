@@ -107,27 +107,30 @@ fun LorBottomNavBar(
                 )
                 .clip(capsuleShape)
                 .then(
-                    if (enableBlur) {
-                        Modifier.hazeEffect(state = hazeState) {
-                            blurEnabled = true
-                            backgroundColor = baseSurface
-                            blurRadius = 30.dp
-                            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
-                        }
+                    if (useLiquidGlass && isLiquidGlassSupported()) {
+                        Modifier.liquidGlass(capsuleShape)
                     } else {
-                        Modifier.background(baseSurface.copy(alpha = 0.96f))
-                    }
-                )
-                .liquidGlassSurface(shape = capsuleShape, isLiquidGlass = useLiquidGlass)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.05f)
+                        val baseMod = if (enableBlur) {
+                            Modifier.hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = baseSurface
+                                blurRadius = 30.dp
+                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
+                            }
+                        } else {
+                            Modifier.background(baseSurface.copy(alpha = 0.96f))
+                        }
+                        baseMod.border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.22f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            ),
+                            shape = capsuleShape
                         )
-                    ),
-                    shape = capsuleShape
+                    }
                 )
                 .padding(innerInset)
                 .onSizeChanged { innerWidthPx = it.width }
@@ -363,27 +366,30 @@ fun YtMusicBottomNavBar(
                 )
                 .clip(capsuleShape)
                 .then(
-                    if (enableBlur) {
-                        Modifier.hazeEffect(state = hazeState) {
-                            blurEnabled = true
-                            backgroundColor = baseSurface
-                            blurRadius = 30.dp
-                            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
-                        }
+                    if (useLiquidGlass && isLiquidGlassSupported()) {
+                        Modifier.liquidGlass(capsuleShape)
                     } else {
-                        Modifier.background(baseSurface.copy(alpha = 0.96f))
-                    }
-                )
-                .liquidGlassSurface(shape = capsuleShape, isLiquidGlass = useLiquidGlass)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.22f),
-                            Color.White.copy(alpha = 0.05f)
+                        val baseMod = if (enableBlur) {
+                            Modifier.hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = baseSurface
+                                blurRadius = 30.dp
+                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
+                            }
+                        } else {
+                            Modifier.background(baseSurface.copy(alpha = 0.96f))
+                        }
+                        baseMod.border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.22f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            ),
+                            shape = capsuleShape
                         )
-                    ),
-                    shape = capsuleShape
+                    }
                 )
                 .padding(innerInset)
                 .onSizeChanged { innerWidthPx = it.width }

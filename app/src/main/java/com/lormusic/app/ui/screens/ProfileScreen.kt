@@ -39,6 +39,7 @@ fun ProfileScreen(
     enableBetaUpdates: Boolean = false,
     useAlbumArtGradient: Boolean = false,
     autoTagFixEnabled: Boolean = false,
+    appLanguage: com.lormusic.app.model.AppLanguage = com.lormusic.app.model.AppLanguage.SYSTEM,
     searchBarPlacement: SearchBarPlacement,
     enablePlayerSwipe: Boolean,
     hideDemoTracks: Boolean,
@@ -53,6 +54,7 @@ fun ProfileScreen(
     onToggleBetaUpdates: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
     onToggleAutoTagFix: (Boolean) -> Unit = {},
+    onSelectLanguage: (com.lormusic.app.model.AppLanguage) -> Unit = {},
     onChangeSearchBarPlacement: (SearchBarPlacement) -> Unit,
     onTogglePlayerSwipe: (Boolean) -> Unit,
     onToggleHideDemoTracks: (Boolean) -> Unit,
@@ -68,6 +70,7 @@ fun ProfileScreen(
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showSleepDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showLanguageDialog by remember { mutableStateOf(false) }
     var showLiquidGlassWarning by remember { mutableStateOf<String?>(null) }
     val isLiquidGlassSupported = Build.VERSION.SDK_INT >= 33
 
@@ -305,6 +308,13 @@ fun ProfileScreen(
                             onCheckedChange = onToggleSquigglySlider
                         )
                     }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text("Язык / Language / Мова") },
+                    supportingContent = { Text(appLanguage.displayName) },
+                    leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
+                    modifier = Modifier.clickable { showLanguageDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
@@ -592,6 +602,44 @@ fun ProfileScreen(
             confirmButton = {
                 TextButton(onClick = { showLiquidGlassWarning = null }) {
                     Text("Понятно")
+                }
+            }
+        )
+    }
+
+    if (showLanguageDialog) {
+        AlertDialog(
+            onDismissRequest = { showLanguageDialog = false },
+            title = { Text("Выберите язык / Select Language", fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    com.lormusic.app.model.AppLanguage.entries.forEach { lang ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clickable {
+                                    onSelectLanguage(lang)
+                                    showLanguageDialog = false
+                                }
+                                .padding(vertical = 10.dp, horizontal = 4.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            RadioButton(
+                                selected = (appLanguage == lang),
+                                onClick = {
+                                    onSelectLanguage(lang)
+                                    showLanguageDialog = false
+                                }
+                            )
+                            Spacer(Modifier.width(12.dp))
+                            Text(lang.displayName, style = MaterialTheme.typography.bodyLarge)
+                        }
+                    }
+                }
+            },
+            confirmButton = {
+                TextButton(onClick = { showLanguageDialog = false }) {
+                    Text("Закрыть")
                 }
             }
         )

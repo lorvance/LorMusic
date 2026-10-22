@@ -21,6 +21,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -79,6 +80,7 @@ fun YouTubeMusicScreen(
     googleAccount: GoogleAccountProfile?,
     hazeState: HazeState,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     showTopSearchBar: Boolean = false,
     recentsViewMode: String = "grid",
     onToggleRecentsViewMode: (String) -> Unit = {},
@@ -100,11 +102,6 @@ fun YouTubeMusicScreen(
 ) {
     var showWebLoginDialog by remember { mutableStateOf(false) }
     var showAccountMenuDialog by remember { mutableStateOf(false) }
-    var showLoginRequiredAlert by remember { mutableStateOf(googleAccount == null) }
-
-    LaunchedEffect(googleAccount) {
-        showLoginRequiredAlert = (googleAccount == null)
-    }
 
     Box(
         modifier = Modifier
@@ -117,6 +114,7 @@ fun YouTubeMusicScreen(
                 isSyncing = isLoadingFeed,
                 hazeState = hazeState,
                 enableBlur = enableBlur,
+                useLiquidGlass = useLiquidGlass,
                 onSignInClick = { showWebLoginDialog = true },
                 onBackToLocal = onSwitchToLocal
             )
@@ -141,6 +139,7 @@ fun YouTubeMusicScreen(
                         googleAccount = googleAccount,
                         hazeState = hazeState,
                         enableBlur = enableBlur,
+                        useLiquidGlass = useLiquidGlass,
                         showTopSearchBar = showTopSearchBar,
                         recentsViewMode = recentsViewMode,
                         onToggleRecentsViewMode = onToggleRecentsViewMode,
@@ -214,56 +213,7 @@ fun YouTubeMusicScreen(
         }
     }
 
-    if (googleAccount == null && showLoginRequiredAlert && !showWebLoginDialog) {
-        AlertDialog(
-            onDismissRequest = { showLoginRequiredAlert = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.AccountCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(40.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = "Требуется вход в Google",
-                    fontWeight = FontWeight.ExtraBold,
-                    textAlign = TextAlign.Center
-                )
-            },
-            text = {
-                Text(
-                    text = "Чтобы пользоваться YouTube Music (слушать полные треки, синхронизировать историю прослушиваний, избранное и «Мою волну»), необходимо войти в аккаунт Google.\n\nПока вход не выполнен, раздел YouTube Music пуст.",
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.8f)
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        showLoginRequiredAlert = false
-                        showWebLoginDialog = true
-                    },
-                    shape = RoundedCornerShape(16.dp)
-                ) {
-                    Icon(Icons.Filled.Login, contentDescription = null, modifier = Modifier.size(18.dp))
-                    Spacer(Modifier.width(8.dp))
-                    Text("Войти через Google")
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        showLoginRequiredAlert = false
-                        onSwitchToLocal()
-                    }
-                ) {
-                    Text("Назад в локальную")
-                }
-            }
-        )
-    }
+
 
     if (showWebLoginDialog) {
         YtMusicRealWebLoginDialog(
@@ -496,20 +446,24 @@ private fun YtSignInRequiredGate(
     isSyncing: Boolean,
     hazeState: HazeState,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     onSignInClick: () -> Unit,
     onBackToLocal: () -> Unit
 ) {
     val surfaceColor = MaterialTheme.colorScheme.surface
-    val topHeaderShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
-    val gateBlurMod = if (enableBlur) {
-        Modifier.hazeEffect(state = hazeState) {
-            blurEnabled = true
-            backgroundColor = surfaceColor
-            blurRadius = 30.dp
-            tints = listOf(HazeTint(surfaceColor.copy(alpha = 0.52f)))
+    val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
+        if (useLiquidGlass && isLiquidGlassSupported()) {
+            Modifier.lightweightLiquidGlass(shape, surfaceColor.copy(alpha = 0.92f))
+        } else if (enableBlur) {
+            Modifier.hazeEffect(state = hazeState) {
+                blurEnabled = true
+                backgroundColor = surfaceColor
+                blurRadius = 24.dp
+                tints = listOf(HazeTint(surfaceColor.copy(alpha = 0.65f)))
+            }
+        } else {
+            Modifier.background(surfaceColor.copy(alpha = 0.92f))
         }
-    } else {
-        Modifier.background(surfaceColor.copy(alpha = 0.96f))
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -591,57 +545,56 @@ private fun YtSignInRequiredGate(
             }
         }
 
-        Box(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .shadow(
-                    elevation = 16.dp,
-                    shape = topHeaderShape,
-                    ambientColor = Color.Black.copy(alpha = 0.55f),
-                    spotColor = Color.Black.copy(alpha = 0.55f)
-                )
-                .clip(topHeaderShape)
-                .then(gateBlurMod)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.06f),
-                            Color.White.copy(alpha = 0.20f)
-                        )
-                    ),
-                    shape = topHeaderShape
-                )
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Surface(
-                    shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                ) {
-                    Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
+            Surface(
+                shape = CircleShape,
+                color = Color.Transparent,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .then(bubbleModifier(CircleShape))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFFFF0000),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = "YouTube Music",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column {
-                    Text(
-                        text = "YouTube Music",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Синхронизация и скачивание со всеми тегами",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+            }
+
+            Surface(
+                shape = CircleShape,
+                color = Color.Transparent,
+                modifier = Modifier
+                    .size(46.dp)
+                    .clip(CircleShape)
+                    .clickable { onBackToLocal() }
+                    .then(bubbleModifier(CircleShape))
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Icon(
+                        imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                        contentDescription = "Назад",
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(22.dp)
                     )
                 }
             }
@@ -662,6 +615,7 @@ private fun YtHomeTab(
     googleAccount: GoogleAccountProfile?,
     hazeState: HazeState,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     showTopSearchBar: Boolean = false,
     recentsViewMode: String = "grid",
     onToggleRecentsViewMode: (String) -> Unit = {},
@@ -678,15 +632,19 @@ private fun YtHomeTab(
     val accentColor = MaterialTheme.colorScheme.primary
     val topHeaderShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
     val smoothFling = rememberSmoothFlingBehavior()
-    val homeBlurMod = if (enableBlur) {
-        Modifier.hazeEffect(state = hazeState) {
-            blurEnabled = true
-            backgroundColor = surfaceColor
-            blurRadius = 30.dp
-            tints = listOf(HazeTint(surfaceColor.copy(alpha = 0.52f)))
+    val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
+        if (useLiquidGlass && isLiquidGlassSupported()) {
+            Modifier.lightweightLiquidGlass(shape, surfaceColor.copy(alpha = 0.92f))
+        } else if (enableBlur) {
+            Modifier.hazeEffect(state = hazeState) {
+                blurEnabled = true
+                backgroundColor = surfaceColor
+                blurRadius = 24.dp
+                tints = listOf(HazeTint(surfaceColor.copy(alpha = 0.65f)))
+            }
+        } else {
+            Modifier.background(surfaceColor.copy(alpha = 0.92f))
         }
-    } else {
-        Modifier.background(surfaceColor.copy(alpha = 0.96f))
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -710,6 +668,7 @@ private fun YtHomeTab(
             ) {
 
                 item(key = "recents_section") {
+                    val isGrid = recentsViewMode.equals("grid", ignoreCase = true)
                     Column {
                         Row(
                             modifier = Modifier.fillMaxWidth(),
@@ -738,13 +697,13 @@ private fun YtHomeTab(
                                 }
                                 IconButton(
                                     onClick = {
-                                        val nextMode = if (recentsViewMode == "grid") "carousel" else "grid"
+                                        val nextMode = if (isGrid) "carousel" else "grid"
                                         onToggleRecentsViewMode(nextMode)
                                     }
                                 ) {
                                     Icon(
-                                        imageVector = if (recentsViewMode == "grid") Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
-                                        contentDescription = if (recentsViewMode == "grid") "Переключить на карусель" else "Переключить на список",
+                                        imageVector = if (isGrid) Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
+                                        contentDescription = if (isGrid) "Переключить на карусель" else "Переключить на список",
                                         tint = MaterialTheme.colorScheme.primary
                                     )
                                 }
@@ -754,7 +713,7 @@ private fun YtHomeTab(
 
                         val recents22 = recentlyPlayed.take(22).ifEmpty { recommendations.take(12) }
 
-                        if (recentsViewMode == "grid") {
+                        if (isGrid) {
                             val chunkedColumns = recents22.chunked(4)
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(16.dp)
@@ -950,11 +909,11 @@ private fun YtHomeTab(
         ) {
             Surface(
                 shape = CircleShape,
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                shadowElevation = 8.dp,
+                color = Color.Transparent,
                 modifier = Modifier
                     .size(46.dp)
-                    .then(if (enableBlur) Modifier.hazeEffect(state = hazeState) else Modifier)
+                    .clip(CircleShape)
+                    .then(bubbleModifier(CircleShape))
             ) {
                 Box(contentAlignment = Alignment.Center) {
                     Surface(
@@ -981,13 +940,12 @@ private fun YtHomeTab(
                 if (showTopSearchBar) {
                     Surface(
                         shape = CircleShape,
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                        shadowElevation = 8.dp,
+                        color = Color.Transparent,
                         modifier = Modifier
                             .size(46.dp)
                             .clip(CircleShape)
                             .clickable { onOpenTopSearch() }
-                            .then(if (enableBlur) Modifier.hazeEffect(state = hazeState) else Modifier)
+                            .then(bubbleModifier(CircleShape))
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
@@ -1002,13 +960,12 @@ private fun YtHomeTab(
 
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
-                    shadowElevation = 8.dp,
+                    color = Color.Transparent,
                     modifier = Modifier
                         .size(46.dp)
                         .clip(CircleShape)
                         .clickable { onOpenGoogleAuth() }
-                        .then(if (enableBlur) Modifier.hazeEffect(state = hazeState) else Modifier)
+                        .then(bubbleModifier(CircleShape))
                 ) {
                     Box(contentAlignment = Alignment.Center) {
                         if (googleAccount != null) {

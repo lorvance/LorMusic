@@ -70,6 +70,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
     val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
     val autoTagFixEnabled = mutableStateOf<Boolean>(prefs.getAutoTagFixEnabled())
+    val appLanguage = mutableStateOf(prefs.getAppLanguage())
     val recentsViewMode = mutableStateOf(prefs.getRecentsViewMode())
     val autoTagFixDetectedSongs = mutableStateOf<List<Song>>(emptyList())
     val showAutoTagFixPrompt = mutableStateOf(false)
@@ -424,7 +425,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 YouTubeMusicRepository.loadMyWaveTracks(seedSongs, YouTubeMusicRepository.WaveMood.FOR_YOU, cookie = cookie)
             }
             ytMyWaveSongs.value = wave
-            statusMessage.value = "«Моя волна» обновлена под твой вкус (${wave.size} треков)"
         }
     }
 
@@ -482,7 +482,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveYtMusicCookie(cookie)
         viewModelScope.launch {
             isLoadingYtFeed.value = true
-            statusMessage.value = "Синхронизация с аккаунтом YouTube Music…"
             val syncData = YouTubeMusicRepository.syncAuthenticatedAccount(cookie)
             val profile = syncData.profile ?: GoogleAccountProfile(
                 displayName = "Аккаунт YouTube Music",
@@ -529,7 +528,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             isLoadingYtFeed.value = false
             rebuildPlaylists(allSongs.value)
-            statusMessage.value = "Синхронизировано с YouTube Music (${profile.displayName}): ${syncData.likedSongs.size} любимых, ${syncData.historySongs.size} из истории"
         }
     }
 
@@ -1160,6 +1158,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setRecentsViewMode(mode: String) {
         recentsViewMode.value = mode
         prefs.saveRecentsViewMode(mode)
+    }
+
+    fun setAppLanguage(lang: com.lormusic.app.model.AppLanguage) {
+        appLanguage.value = lang
+        prefs.saveAppLanguage(lang)
     }
 
     fun dismissAutoTagFixPrompt() {

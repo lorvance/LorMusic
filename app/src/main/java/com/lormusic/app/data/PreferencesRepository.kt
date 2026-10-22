@@ -351,11 +351,20 @@ class PreferencesRepository(context: Context) {
     fun saveAutoTagFix(enabled: Boolean) = saveAutoTagFixEnabled(enabled)
 
     fun getRecentsViewMode(): String {
-        return prefs.getString(KEY_RECENTS_VIEW_MODE, "GRID") ?: "GRID"
+        return prefs.getString(KEY_RECENTS_VIEW_MODE, "grid") ?: "grid"
     }
 
     fun saveRecentsViewMode(mode: String) {
         prefs.edit().putString(KEY_RECENTS_VIEW_MODE, mode).apply()
+    }
+
+    fun getAppLanguage(): com.lormusic.app.model.AppLanguage {
+        val code = prefs.getString(KEY_APP_LANGUAGE, null)
+        return com.lormusic.app.model.AppLanguage.fromCode(code)
+    }
+
+    fun saveAppLanguage(lang: com.lormusic.app.model.AppLanguage) {
+        prefs.edit().putString(KEY_APP_LANGUAGE, lang.code).apply()
     }
 
     companion object {
@@ -385,5 +394,6 @@ class PreferencesRepository(context: Context) {
         private const val KEY_ALBUM_ART_GRADIENT = "use_album_art_gradient"
         private const val KEY_AUTO_TAGFIX = "auto_tagfix_enabled"
         private const val KEY_RECENTS_VIEW_MODE = "yt_recents_view_mode"
+        private const val KEY_APP_LANGUAGE = "app_language"
     }
 }

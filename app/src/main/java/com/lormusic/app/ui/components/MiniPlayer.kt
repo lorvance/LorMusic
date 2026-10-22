@@ -77,6 +77,21 @@ fun MiniPlayer(
         Modifier.background(baseSurface.copy(alpha = 0.96f))
     }
 
+    val glassMod = if (useLiquidGlass && isLiquidGlassSupported()) {
+        Modifier.liquidGlass(shape)
+    } else {
+        blurModifier.border(
+            width = 1.dp,
+            brush = Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = 0.20f),
+                    Color.White.copy(alpha = 0.04f)
+                )
+            ),
+            shape = shape
+        )
+    }
+
     Box(
         modifier = Modifier
             .fillMaxWidth()
@@ -91,18 +106,7 @@ fun MiniPlayer(
                 spotColor = Color.Black.copy(alpha = 0.55f)
             )
             .clip(shape)
-            .then(blurModifier)
-            .liquidGlassSurface(shape = shape, isLiquidGlass = useLiquidGlass)
-            .border(
-                width = 1.dp,
-                brush = Brush.verticalGradient(
-                    listOf(
-                        Color.White.copy(alpha = 0.20f),
-                        Color.White.copy(alpha = 0.04f)
-                    )
-                ),
-                shape = shape
-            )
+            .then(glassMod)
             .pointerInput(enableSwipe) {
                 if (!enableSwipe) return@pointerInput
                 var totalDrag = 0f
