@@ -67,8 +67,8 @@ class PreferencesRepository(context: Context) {
     }
 
     fun getThemeMode(): ThemeMode {
-        val raw = prefs.getString(KEY_THEME_MODE, ThemeMode.DARK.name) ?: ThemeMode.DARK.name
-        return ThemeMode.entries.find { it.name == raw } ?: ThemeMode.DARK
+        val raw = prefs.getString(KEY_THEME_MODE, ThemeMode.SYSTEM.name) ?: ThemeMode.SYSTEM.name
+        return ThemeMode.entries.find { it.name == raw } ?: ThemeMode.SYSTEM
     }
 
     fun saveThemeMode(mode: ThemeMode) {
@@ -349,7 +349,7 @@ class PreferencesRepository(context: Context) {
     }
 
     fun getAutoTagFixEnabled(): Boolean {
-        return prefs.getBoolean(KEY_AUTO_TAGFIX, true)
+        return prefs.getBoolean(KEY_AUTO_TAGFIX, false)
     }
 
     fun getAutoTagFix(): Boolean = getAutoTagFixEnabled()

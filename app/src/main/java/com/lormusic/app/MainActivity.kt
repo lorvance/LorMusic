@@ -43,7 +43,11 @@ import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import com.lormusic.app.ui.screens.*
 import com.lormusic.app.ui.theme.LorMusicTheme
 import com.lormusic.app.viewmodel.PlayerViewModel
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
 class MainActivity : ComponentActivity() {
@@ -400,71 +404,98 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 }
             }
 
-            Column(
+            Box(
                 modifier = Modifier
                     .align(Alignment.BottomCenter)
                     .fillMaxWidth()
             ) {
-                SnackbarHost(
-                    hostState = snackbarHostState,
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                )
-                AnimatedVisibility(
-                    visible = currentSong != null,
-                    enter = fadeIn(tween(220)) + slideInVertically { it / 2 },
-                    exit = fadeOut(tween(180)) + slideOutVertically { it / 2 }
+                if (enableBlur) {
+                    val bottomScrimColor = MaterialTheme.colorScheme.background
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = bottomScrimColor
+                                blurRadius = 32.dp
+                                tints = listOf(HazeTint(bottomScrimColor.copy(alpha = 0.65f)))
+                            }
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        Color.Transparent,
+                                        bottomScrimColor.copy(alpha = 0.40f),
+                                        bottomScrimColor.copy(alpha = 0.85f)
+                                    )
+                                )
+                            )
+                    )
+                }
+
+                Column(
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    currentSong?.let { song ->
-                        val effectiveDur = (if (durationMs > 0) durationMs else song.durationMs).coerceAtLeast(1L)
-                        MiniPlayer(
-                            song = song,
-                            isPlaying = isPlaying,
-                            isFavorite = favoriteIds.contains(song.id),
-                            progress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f),
+                    SnackbarHost(
+                        hostState = snackbarHostState,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
+                    )
+                    AnimatedVisibility(
+                        visible = currentSong != null,
+                        enter = fadeIn(tween(220)) + slideInVertically { it / 2 },
+                        exit = fadeOut(tween(180)) + slideOutVertically { it / 2 }
+                    ) {
+                        currentSong?.let { song ->
+                            val effectiveDur = (if (durationMs > 0) durationMs else song.durationMs).coerceAtLeast(1L)
+                            MiniPlayer(
+                                song = song,
+                                isPlaying = isPlaying,
+                                isFavorite = favoriteIds.contains(song.id),
+                                progress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f),
+                                hazeState = hazeState,
+                                enableBlur = enableBlur,
+                                useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                enableSwipe = enablePlayerSwipe,
+                                onTogglePlay = playerViewModel::togglePlayPause,
+                                onPrevious = playerViewModel::skipPrevious,
+                                onNext = playerViewModel::skipNext,
+                                onToggleFavorite = { playerViewModel.toggleFavorite(song) },
+                                onOpen = { showNowPlaying = true }
+                            )
+                        }
+                    }
+
+                    if (isYtMusicMode) {
+                        YtMusicBottomNavBar(
+                            selected = activeYtTab,
+                            onSelect = { tab ->
+                                playerViewModel.selectYtTab(tab)
+                            },
                             hazeState = hazeState,
                             enableBlur = enableBlur,
                             useLiquidGlass = playerViewModel.useLiquidGlass.value,
-                            enableSwipe = enablePlayerSwipe,
-                            onTogglePlay = playerViewModel::togglePlayPause,
-                            onPrevious = playerViewModel::skipPrevious,
-                            onNext = playerViewModel::skipNext,
-                            onToggleFavorite = { playerViewModel.toggleFavorite(song) },
-                            onOpen = { showNowPlaying = true }
+                            showBottomSearchButton = !isYtSearchTop
+                        )
+                    } else {
+                        LorBottomNavBar(
+                            selected = selectedTab,
+                            onSelect = { tab ->
+                                selectedTab = tab
+                            },
+                            hazeState = hazeState,
+                            enableBlur = enableBlur,
+                            useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                            showBottomSearchButton = !isLocalSearchTop,
+                            isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
+                            onToggleLocalSearch = {
+                                if (selectedTab != LorTab.LIBRARY) {
+                                    selectedTab = LorTab.LIBRARY
+                                    isBottomLocalSearchActive = true
+                                } else {
+                                    isBottomLocalSearchActive = !isBottomLocalSearchActive
+                                }
+                            }
                         )
                     }
-                }
-
-                if (isYtMusicMode) {
-                    YtMusicBottomNavBar(
-                        selected = activeYtTab,
-                        onSelect = { tab ->
-                            playerViewModel.selectYtTab(tab)
-                        },
-                        hazeState = hazeState,
-                        enableBlur = enableBlur,
-                        useLiquidGlass = playerViewModel.useLiquidGlass.value,
-                        showBottomSearchButton = !isYtSearchTop
-                    )
-                } else {
-                    LorBottomNavBar(
-                        selected = selectedTab,
-                        onSelect = { tab ->
-                            selectedTab = tab
-                        },
-                        hazeState = hazeState,
-                        enableBlur = enableBlur,
-                        useLiquidGlass = playerViewModel.useLiquidGlass.value,
-                        showBottomSearchButton = !isLocalSearchTop,
-                        isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
-                        onToggleLocalSearch = {
-                            if (selectedTab != LorTab.LIBRARY) {
-                                selectedTab = LorTab.LIBRARY
-                                isBottomLocalSearchActive = true
-                            } else {
-                                isBottomLocalSearchActive = !isBottomLocalSearchActive
-                            }
-                        }
-                    )
                 }
             }
 

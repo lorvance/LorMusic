@@ -304,253 +304,288 @@ fun LibraryScreen(
         }
 
         if (!classicLibraryDesign) {
-            Column(
+            Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
                     .onGloballyPositioned { coords ->
                         headerHeightDp = with(density) { coords.size.height.toDp() }
                     }
-                    .statusBarsPadding()
-                    .padding(horizontal = 14.dp, vertical = 8.dp)
             ) {
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                if (enableBlur) {
+                    val topScrimColor = MaterialTheme.colorScheme.background
                     Box(
                         modifier = Modifier
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = strings.navLibrary,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
+                            .matchParentSize()
+                            .hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = topScrimColor
+                                blurRadius = 30.dp
+                                tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
+                            }
+                            .background(
+                                Brush.verticalGradient(
+                                    listOf(
+                                        topScrimColor.copy(alpha = 0.75f),
+                                        topScrimColor.copy(alpha = 0.35f),
+                                        Color.Transparent
+                                    )
+                                )
+                            )
+                    )
+                }
 
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 14.dp, vertical = 8.dp)
+                ) {
                     Row(
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.Top
                     ) {
-                        if (showTopSearchBar) {
+                        Column(
+                            modifier = Modifier.weight(1f, fill = false),
+                            verticalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                if (showTopSearchBar) {
+                                    Box(
+                                        modifier = Modifier
+                                            .size(44.dp)
+                                            .clip(CircleShape)
+                                            .clickable {
+                                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                                isTopSearchExpanded = !isTopSearchExpanded
+                                                if (!isTopSearchExpanded) searchQuery = ""
+                                            }
+                                            .then(bubbleModifier(CircleShape)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                            contentDescription = "Поиск",
+                                            tint = MaterialTheme.colorScheme.onSurface,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .height(44.dp)
+                                        .clip(RoundedCornerShape(22.dp))
+                                        .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                                        .padding(horizontal = 16.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Text(
+                                        text = strings.navLibrary,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold
+                                    )
+                                }
+                            }
+
+                            Row(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                            onOpenYtMusic()
+                                        }
+                                        .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                        .padding(horizontal = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = Color.White,
+                                            modifier = Modifier.size(20.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.PlayArrow,
+                                                    contentDescription = "YT Music",
+                                                    tint = Color(0xFF111111),
+                                                    modifier = Modifier.size(14.dp)
+                                                )
+                                            }
+                                        }
+                                        Text(
+                                            text = "YT Music",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+
+                                Box(
+                                    modifier = Modifier
+                                        .height(40.dp)
+                                        .clip(RoundedCornerShape(20.dp))
+                                        .clickable {
+                                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                            onOpenTagFix()
+                                        }
+                                        .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                        .padding(horizontal = 12.dp),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.AutoFixHigh,
+                                            contentDescription = "TagFix",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                        Text(
+                                            text = "TagFix",
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Spacer(Modifier.width(8.dp))
+
+                        Column(
+                            verticalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
                                     .clip(CircleShape)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        isTopSearchExpanded = !isTopSearchExpanded
-                                        if (!isTopSearchExpanded) searchQuery = ""
+                                        showMoreMenu = true
                                     }
                                     .then(bubbleModifier(CircleShape)),
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
-                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
-                                    contentDescription = "Поиск",
+                                    imageVector = Icons.Filled.MoreVert,
+                                    contentDescription = "Действия",
                                     tint = MaterialTheme.colorScheme.onSurface,
                                     modifier = Modifier.size(20.dp)
                                 )
-                            }
-                        }
 
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    showSortMenu = true
-                                }
-                                .then(bubbleModifier(CircleShape)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = "Сортировка",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
-                            )
-
-                            DropdownMenu(
-                                expanded = showSortMenu,
-                                onDismissRequest = { showSortMenu = false }
-                            ) {
-                                SortOption.entries.forEach { option ->
+                                DropdownMenu(
+                                    expanded = showMoreMenu,
+                                    onDismissRequest = { showMoreMenu = false }
+                                ) {
                                     DropdownMenuItem(
-                                        text = { Text(option.label) },
-                                        leadingIcon = {
-                                            if (selectedSort == option) {
-                                                Icon(Icons.Filled.Check, contentDescription = null)
-                                            }
-                                        },
+                                        text = { Text(strings.playAll) },
+                                        leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
                                         onClick = {
-                                            onSelectSort(option)
-                                            showSortMenu = false
-                                        }
+                                            showMoreMenu = false
+                                            onPlayQueue(filteredSongs, 0, false)
+                                        },
+                                        enabled = filteredSongs.isNotEmpty()
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(strings.shuffleAll) },
+                                        leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            onPlayQueue(filteredSongs, 0, true)
+                                        },
+                                        enabled = filteredSongs.isNotEmpty()
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text(strings.rescan) },
+                                        leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            onRequestPermissionAndScan()
+                                        },
+                                        enabled = !isScanningLocal
                                     )
                                 }
                             }
-                        }
 
-                        Box(
+                            Box(
+                                modifier = Modifier
+                                    .size(40.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        showSortMenu = true
+                                    }
+                                    .then(bubbleModifier(CircleShape)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = Icons.AutoMirrored.Filled.Sort,
+                                    contentDescription = "Сортировка",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+
+                                DropdownMenu(
+                                    expanded = showSortMenu,
+                                    onDismissRequest = { showSortMenu = false }
+                                ) {
+                                    SortOption.entries.forEach { option ->
+                                        DropdownMenuItem(
+                                            text = { Text(option.label) },
+                                            leadingIcon = {
+                                                if (selectedSort == option) {
+                                                    Icon(Icons.Filled.Check, contentDescription = null)
+                                                }
+                                            },
+                                            onClick = {
+                                                onSelectSort(option)
+                                                showSortMenu = false
+                                            }
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    AnimatedVisibility(visible = isSearchVisible) {
+                        Spacer(Modifier.height(8.dp))
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text("Поиск по названию, артисту, папке…") },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Filled.Clear, contentDescription = "Очистить")
+                                    }
+                                }
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(18.dp),
                             modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    showMoreMenu = true
-                                }
-                                .then(bubbleModifier(CircleShape)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = "Действия",
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
-                            )
-
-                            DropdownMenu(
-                                expanded = showMoreMenu,
-                                onDismissRequest = { showMoreMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.playAll) },
-                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onPlayQueue(filteredSongs, 0, false)
-                                    },
-                                    enabled = filteredSongs.isNotEmpty()
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(strings.shuffleAll) },
-                                    leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onPlayQueue(filteredSongs, 0, true)
-                                    },
-                                    enabled = filteredSongs.isNotEmpty()
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(strings.rescan) },
-                                    leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onRequestPermissionAndScan()
-                                    },
-                                    enabled = !isScanningLocal
-                                )
-                            }
-                        }
+                                .fillMaxWidth()
+                                .then(bubbleModifier(RoundedCornerShape(18.dp)))
+                        )
                     }
-                }
-
-                Spacer(Modifier.height(8.dp))
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .horizontalScroll(rememberScrollState()),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                onOpenYtMusic()
-                            }
-                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                            .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = Color.White,
-                                modifier = Modifier.size(22.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = Icons.Filled.PlayArrow,
-                                        contentDescription = "YT Music",
-                                        tint = Color(0xFF111111),
-                                        modifier = Modifier.size(15.dp)
-                                    )
-                                }
-                            }
-                            Text(
-                                text = "YouTube Music",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .height(40.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                onOpenTagFix()
-                            }
-                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                            .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.AutoFixHigh,
-                                contentDescription = "TagFix",
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(18.dp)
-                            )
-                            Text(
-                                text = "TagFix",
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
-                    }
-                }
-
-                AnimatedVisibility(visible = isSearchVisible) {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text("Поиск по названию, артисту, папке…") },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Clear, contentDescription = "Очистить")
-                                }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(bubbleModifier(RoundedCornerShape(18.dp)))
-                    )
                 }
             }
         } else {

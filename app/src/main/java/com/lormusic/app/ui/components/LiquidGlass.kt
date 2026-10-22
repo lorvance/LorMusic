@@ -137,13 +137,21 @@ fun Modifier.liquidGlassBubble(
         Modifier
     }
 
+    val isLight = baseSurface.luminance() > 0.5f
     val borderModifier = Modifier.border(
         width = if (useGlass) 1.2.dp else 1.dp,
         brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-            listOf(
-                Color.White.copy(alpha = if (useGlass) 0.38f else 0.22f),
-                Color.White.copy(alpha = if (useGlass) 0.12f else 0.06f)
-            )
+            if (isLight) {
+                listOf(
+                    Color.Black.copy(alpha = if (useGlass) 0.12f else 0.08f),
+                    Color.Black.copy(alpha = if (useGlass) 0.04f else 0.02f)
+                )
+            } else {
+                listOf(
+                    Color.White.copy(alpha = if (useGlass) 0.38f else 0.22f),
+                    Color.White.copy(alpha = if (useGlass) 0.12f else 0.06f)
+                )
+            }
         ),
         shape = shape
     )
