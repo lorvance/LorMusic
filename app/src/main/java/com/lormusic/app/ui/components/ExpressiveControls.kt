@@ -355,7 +355,7 @@ fun MaterialYouLaunchSplash(
                 stiffness = Spring.StiffnessMediumLow
             )
         )
-        delay(520)
+        delay(1450)
         visible = false
     }
 
@@ -384,25 +384,262 @@ fun MaterialYouLaunchSplash(
                 )
             }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Box(
-                    modifier = Modifier.scale(scaleAnim.value),
-                    contentAlignment = Alignment.Center
-                ) {
-                    AppIconVectorPreview(
-                        option = iconOption,
-                        size = 118.dp,
-                        cornerRadius = 34.dp
+            Box(
+                modifier = Modifier.scale(scaleAnim.value),
+                contentAlignment = Alignment.Center
+            ) {
+                AnimatedSplashIcon(
+                    option = iconOption,
+                    size = 126.dp,
+                    cornerRadius = 36.dp
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun AnimatedSplashIcon(
+    option: AppIconOption,
+    modifier: Modifier = Modifier,
+    size: Dp = 126.dp,
+    cornerRadius: Dp = 36.dp
+) {
+    Box(
+        modifier = modifier
+            .size(size)
+            .clip(RoundedCornerShape(cornerRadius)),
+        contentAlignment = Alignment.Center
+    ) {
+        when (option) {
+            AppIconOption.REGULAR -> {
+                val transition = rememberInfiniteTransition(label = "regularEqualizer")
+                val h1 by transition.animateFloat(
+                    initialValue = 0.22f,
+                    targetValue = 0.70f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(420, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "bar1"
+                )
+                val h2 by transition.animateFloat(
+                    initialValue = 0.78f,
+                    targetValue = 0.28f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(360, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "bar2"
+                )
+                val h3 by transition.animateFloat(
+                    initialValue = 0.35f,
+                    targetValue = 0.85f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(480, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "bar3"
+                )
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = this.size.width
+                    val h = this.size.height
+                    val cx = w / 2f
+                    val cy = h / 2f
+
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF2E1948), Color(0xFF1B0E2E))
+                        )
+                    )
+
+                    val cookiePath = buildSmoothCookiePath(
+                        cx = cx,
+                        cy = cy,
+                        baseRadius = w * 0.38f,
+                        amplitude = w * 0.045f,
+                        lobes = 12
+                    )
+                    drawPath(
+                        path = cookiePath,
+                        color = Color(0xFFCDB4FF)
+                    )
+
+                    val barColor = Color(0xFF1C1124)
+                    val barWidth = w * 0.065f
+                    val maxBarHeight = h * 0.36f
+                    val cornerR = CornerRadius(barWidth / 2f)
+
+                    val b1H = maxBarHeight * h1
+                    val b1Left = cx - w * 0.13f - barWidth / 2f
+                    val b1Top = cy - b1H / 2f
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(b1Left, b1Top),
+                        size = Size(barWidth, b1H),
+                        cornerRadius = cornerR
+                    )
+
+                    val b2H = maxBarHeight * h2
+                    val b2Left = cx - barWidth / 2f
+                    val b2Top = cy - b2H / 2f
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(b2Left, b2Top),
+                        size = Size(barWidth, b2H),
+                        cornerRadius = cornerR
+                    )
+
+                    val b3H = maxBarHeight * h3
+                    val b3Left = cx + w * 0.13f - barWidth / 2f
+                    val b3Top = cy - b3H / 2f
+                    drawRoundRect(
+                        color = barColor,
+                        topLeft = Offset(b3Left, b3Top),
+                        size = Size(barWidth, b3H),
+                        cornerRadius = cornerR
                     )
                 }
-                Spacer(Modifier.height(18.dp))
-                Text(
-                    text = "LorMusic",
-                    style = MaterialTheme.typography.headlineMedium,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.onBackground,
-                    letterSpacing = 0.5.sp
+            }
+
+            AppIconOption.OLD -> {
+                val flyAnim = remember { Animatable(0f) }
+                LaunchedEffect(Unit) {
+                    delay(120)
+                    flyAnim.animateTo(
+                        targetValue = 1f,
+                        animationSpec = spring(
+                            dampingRatio = 0.58f,
+                            stiffness = 140f
+                        )
+                    )
+                }
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = this.size.width
+                    val h = this.size.height
+                    val cx = w / 2f
+                    val cy = h / 2f
+
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(
+                                Color(0xFF0E0B16),
+                                Color(0xFF2D1B69),
+                                Color(0xFF6750FF)
+                            )
+                        )
+                    )
+
+                    val teal = Color(0xFF00D5B8)
+                    val pink = Color(0xFFFF4D8D)
+
+                    drawCircle(
+                        color = teal,
+                        radius = w * 0.085f,
+                        center = Offset(cx - w * 0.06f, cy + h * 0.10f)
+                    )
+                    drawLine(
+                        color = teal,
+                        start = Offset(cx + w * 0.01f, cy + h * 0.10f),
+                        end = Offset(cx + w * 0.01f, cy - h * 0.16f),
+                        strokeWidth = w * 0.05f,
+                        cap = StrokeCap.Round
+                    )
+                    drawRoundRect(
+                        color = teal,
+                        topLeft = Offset(cx + w * 0.01f, cy - h * 0.18f),
+                        size = Size(w * 0.15f, h * 0.07f),
+                        cornerRadius = CornerRadius(w * 0.02f)
+                    )
+
+                    val flyFraction = flyAnim.value
+                    val startX = cx + w * 0.85f
+                    val startY = cy - h * 0.85f
+                    val targetX = cx + w * 0.12f
+                    val targetY = cy + h * 0.05f
+
+                    val currentX = startX + (targetX - startX) * flyFraction
+                    val currentY = startY + (targetY - startY) * flyFraction
+                    val ballRadius = (w * 0.055f) * (0.3f + 0.7f * flyFraction.coerceIn(0f, 1f))
+
+                    drawCircle(
+                        color = pink,
+                        radius = ballRadius,
+                        center = Offset(currentX, currentY)
+                    )
+                }
+            }
+
+            AppIconOption.MINIMAL -> {
+                val transition = rememberInfiniteTransition(label = "minimalHop")
+                val hopOffset by transition.animateFloat(
+                    initialValue = 0f,
+                    targetValue = -16f,
+                    animationSpec = infiniteRepeatable(
+                        animation = tween(380, easing = FastOutSlowInEasing),
+                        repeatMode = RepeatMode.Reverse
+                    ),
+                    label = "noteHop"
                 )
+
+                Canvas(modifier = Modifier.fillMaxSize()) {
+                    val w = this.size.width
+                    val h = this.size.height
+                    val cx = w / 2f
+                    val cy = h / 2f
+
+                    drawRect(
+                        brush = Brush.linearGradient(
+                            colors = listOf(Color(0xFF2E1948), Color(0xFF1B0E2E))
+                        )
+                    )
+
+                    val cookiePath = buildSmoothCookiePath(
+                        cx = cx,
+                        cy = cy,
+                        baseRadius = w * 0.38f,
+                        amplitude = w * 0.045f,
+                        lobes = 12
+                    )
+                    drawPath(
+                        path = cookiePath,
+                        color = Color(0xFFCDB4FF)
+                    )
+
+                    val noteColor = Color(0xFF1C1124)
+                    val noteYShift = (hopOffset / 108f) * h
+
+                    val noteScale = w / 108f
+                    val p = Path().apply {
+                        moveTo(49.0f * noteScale, (43.0f * noteScale) + noteYShift)
+                        lineTo(63.5f * noteScale, (39.8f * noteScale) + noteYShift)
+                        lineTo(63.5f * noteScale, (58.2f * noteScale) + noteYShift)
+                        addOval(
+                            androidx.compose.ui.geometry.Rect(
+                                left = (53.9f * noteScale),
+                                top = ((53.4f * noteScale) + noteYShift),
+                                right = (63.5f * noteScale),
+                                bottom = ((63.0f * noteScale) + noteYShift)
+                            )
+                        )
+                        moveTo(51.8f * noteScale, (47.2f * noteScale) + noteYShift)
+                        lineTo(51.8f * noteScale, (60.5f * noteScale) + noteYShift)
+                        addOval(
+                            androidx.compose.ui.geometry.Rect(
+                                left = (42.2f * noteScale),
+                                top = ((55.7f * noteScale) + noteYShift),
+                                right = (51.8f * noteScale),
+                                bottom = ((65.3f * noteScale) + noteYShift)
+                            )
+                        )
+                    }
+                    drawPath(
+                        path = p,
+                        color = noteColor
+                    )
+                }
             }
         }
     }

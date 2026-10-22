@@ -19,12 +19,16 @@ import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ElectricBolt
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.lormusic.app.model.SearchBarPlacement
@@ -209,6 +213,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             hazeState = hazeState,
                             enableBlur = enableBlur,
                             showTopSearchBar = isYtSearchTop,
+                            recentsViewMode = playerViewModel.recentsViewMode.value,
+                            onToggleRecentsViewMode = playerViewModel::setRecentsViewMode,
                             onSelectTab = playerViewModel::selectYtTab,
                             onPlayQueue = { list, idx, shuffle ->
                                 playerViewModel.setQueueAndPlay(list, idx, shuffle)
@@ -322,6 +328,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         useDynamicColor = useDynamicColor,
                                         useSquigglySlider = useSquigglySlider,
                                         enableBlur = enableBlur,
+                                        useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                        enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
+                                        useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
+                                        autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
                                         searchBarPlacement = searchBarPlacement,
                                         enablePlayerSwipe = enablePlayerSwipe,
                                         hideDemoTracks = hideDemoTracks,
@@ -332,6 +342,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleDynamicColor = playerViewModel::setUseDynamicColor,
                                         onToggleSquigglySlider = playerViewModel::setUseSquigglySlider,
                                         onToggleBlur = playerViewModel::setEnableBlur,
+                                        onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
+                                        onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
+                                        onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
+                                        onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
                                         onChangeSearchBarPlacement = playerViewModel::setSearchBarPlacement,
                                         onTogglePlayerSwipe = playerViewModel::setEnablePlayerSwipe,
                                         onToggleHideDemoTracks = playerViewModel::setHideDemoTracks,
@@ -378,6 +392,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             progress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f),
                             hazeState = hazeState,
                             enableBlur = enableBlur,
+                            useLiquidGlass = playerViewModel.useLiquidGlass.value,
                             enableSwipe = enablePlayerSwipe,
                             onTogglePlay = playerViewModel::togglePlayPause,
                             onPrevious = playerViewModel::skipPrevious,
@@ -396,6 +411,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         },
                         hazeState = hazeState,
                         enableBlur = enableBlur,
+                        useLiquidGlass = playerViewModel.useLiquidGlass.value,
                         showBottomSearchButton = !isYtSearchTop
                     )
                 } else {
@@ -410,6 +426,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         },
                         hazeState = hazeState,
                         enableBlur = enableBlur,
+                        useLiquidGlass = playerViewModel.useLiquidGlass.value,
                         showBottomSearchButton = !isLocalSearchTop,
                         isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
                         onToggleLocalSearch = {
@@ -451,7 +468,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             lyrics = currentLyrics,
                             isLoadingLyrics = isLoadingLyrics,
                             useSquigglySlider = useSquigglySlider,
+                            useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                             enableSwipe = enablePlayerSwipe,
+                            onDownloadTrack = { playerViewModel.downloadYtSongWithTags(song) },
                             onTogglePlay = playerViewModel::togglePlayPause,
                             onNext = playerViewModel::skipNext,
                             onPrevious = playerViewModel::skipPrevious,
@@ -531,6 +550,48 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             onApplyProposals = { proposals ->
                 playerViewModel.applyTagFixProposals(proposals)
                 showTagFixSheet = false
+            }
+        )
+    }
+
+    if (playerViewModel.showAutoTagFixPrompt.value && playerViewModel.autoTagFixDetectedSongs.value.isNotEmpty()) {
+        val brokenCount = playerViewModel.autoTagFixDetectedSongs.value.size
+        AlertDialog(
+            onDismissRequest = { playerViewModel.dismissAutoTagFixPrompt() },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.ElectricBolt,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = "Автоматический TagFix",
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = "Обнаружено треков со сломанными тегами: $brokenCount.\n\nЗапустить TagFix для автоматического восстановления названий, исполнителей и обложек?"
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        playerViewModel.dismissAutoTagFixPrompt()
+                        showTagFixSheet = true
+                    },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Исправить сейчас")
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { playerViewModel.dismissAutoTagFixPrompt() }) {
+                    Text("Позже")
+                }
             }
         )
     }

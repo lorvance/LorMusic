@@ -149,7 +149,31 @@ fun TagEditorSheet(
                             Icon(Icons.Filled.AutoFixHigh, contentDescription = null, modifier = Modifier.size(18.dp))
                         }
                         Spacer(Modifier.width(6.dp))
-                        Text("Автопоиск тегов и обложки")
+                        Text("Автопоиск тегов")
+                    }
+                    Spacer(Modifier.height(6.dp))
+                    FilledTonalButton(
+                        onClick = {
+                            if (!isSearchingOnline) {
+                                isSearchingOnline = true
+                                scope.launch {
+                                    val found = TagFixEngine.recognizeTrackShazam(context, song)
+                                    title = found.proposedTitle
+                                    artist = found.proposedArtist
+                                    album = found.proposedAlbum
+                                    if (found.proposedYear.isNotBlank()) year = found.proposedYear
+                                    if (found.proposedGenre.isNotBlank()) genre = found.proposedGenre
+                                    if (!found.proposedCoverUri.isNullOrBlank()) coverUri = found.proposedCoverUri
+                                    isSearchingOnline = false
+                                }
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(14.dp)
+                    ) {
+                        Icon(Icons.Filled.Hearing, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text("Распознать через Shazam")
                     }
                 }
             }
@@ -292,6 +316,7 @@ fun TagFixModalSheet(
     }
 
     var isAnalyzing by remember { mutableStateOf(false) }
+    var recognizingSongId by remember { mutableStateOf<String?>(null) }
     var progressCurrent by remember { mutableIntStateOf(0) }
     var progressTotal by remember { mutableIntStateOf(0) }
     var proposals by remember { mutableStateOf<List<TagFixProposal>?>(null) }
@@ -438,6 +463,30 @@ fun TagFixModalSheet(
                                             overflow = TextOverflow.Ellipsis
                                         )
                                     }
+                                    IconButton(
+                                        onClick = {
+                                            if (recognizingSongId == null) {
+                                                recognizingSongId = prop.originalSong.id
+                                                scope.launch {
+                                                    val shazamRes = TagFixEngine.recognizeTrackShazam(context, prop.originalSong)
+                                                    val updated = currentProposals.toMutableList()
+                                                    updated[idx] = shazamRes.copy(isSelected = true)
+                                                    proposals = updated
+                                                    recognizingSongId = null
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        if (recognizingSongId == prop.originalSong.id) {
+                                            ExpressiveLoadingIndicator(size = 20.dp)
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Filled.Hearing,
+                                                contentDescription = "Распознать через Shazam",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
+                                    }
                                     Checkbox(
                                         checked = prop.isSelected,
                                         onCheckedChange = { checked ->
@@ -569,6 +618,28 @@ fun TagFixModalSheet(
                                             maxLines = 1,
                                             overflow = TextOverflow.Ellipsis
                                         )
+                                    }
+                                    IconButton(
+                                        onClick = {
+                                            if (recognizingSongId == null) {
+                                                recognizingSongId = song.id
+                                                scope.launch {
+                                                    val shazamRes = TagFixEngine.recognizeTrackShazam(context, song)
+                                                    proposals = listOf(shazamRes.copy(isSelected = true))
+                                                    recognizingSongId = null
+                                                }
+                                            }
+                                        }
+                                    ) {
+                                        if (recognizingSongId == song.id) {
+                                            ExpressiveLoadingIndicator(size = 20.dp)
+                                        } else {
+                                            Icon(
+                                                imageVector = Icons.Filled.Hearing,
+                                                contentDescription = "Распознать через Shazam",
+                                                tint = MaterialTheme.colorScheme.primary
+                                            )
+                                        }
                                     }
                                     Checkbox(
                                         checked = isSelected,

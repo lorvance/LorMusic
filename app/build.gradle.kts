@@ -12,8 +12,8 @@ android {
         applicationId = "com.lormusic.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 13
-        versionName = "1.5.6"
+        versionCode = 14
+        versionName = "1.6.0"
     }
 
     buildFeatures {
@@ -34,23 +34,19 @@ dependencies {
     implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.4")
     implementation("androidx.activity:activity-compose:1.9.1")
 
-    // Compose BOM
     implementation(platform("androidx.compose:compose-bom:2024.09.00"))
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-graphics")
     implementation("androidx.compose.ui:ui-tooling-preview")
 
-    // Material 3 (Expressive lives in the 1.4+ alpha line)
     implementation("androidx.compose.material3:material3:1.4.0-alpha10")
     implementation("androidx.compose.material:material-icons-extended:1.7.1")
 
-    // Настоящий Backdrop Blur (Glassmorphism) для Jetpack Compose
     implementation("dev.chrisbanes.haze:haze:1.2.0")
 
     implementation("androidx.navigation:navigation-compose:2.8.0")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.4")
 
-    // Плеер (ExoPlayer / Media3)
     implementation("androidx.media3:media3-exoplayer:1.4.1")
     implementation("androidx.media3:media3-session:1.4.1")
     implementation("androidx.media3:media3-common:1.4.1")

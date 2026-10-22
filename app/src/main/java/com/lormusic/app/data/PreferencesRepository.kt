@@ -314,6 +314,50 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putString(KEY_CUSTOM_PLAYLISTS, arr.toString()).apply()
     }
 
+    fun getUseLiquidGlass(): Boolean {
+        return prefs.getBoolean(KEY_LIQUID_GLASS, false)
+    }
+
+    fun saveUseLiquidGlass(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_LIQUID_GLASS, enabled).apply()
+    }
+
+    fun getEnableBetaUpdates(): Boolean {
+        return prefs.getBoolean(KEY_BETA_UPDATES, false)
+    }
+
+    fun saveEnableBetaUpdates(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_UPDATES, enabled).apply()
+    }
+
+    fun getUseAlbumArtGradient(): Boolean {
+        return prefs.getBoolean(KEY_ALBUM_ART_GRADIENT, false)
+    }
+
+    fun saveUseAlbumArtGradient(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_ALBUM_ART_GRADIENT, enabled).apply()
+    }
+
+    fun getAutoTagFixEnabled(): Boolean {
+        return prefs.getBoolean(KEY_AUTO_TAGFIX, true)
+    }
+
+    fun getAutoTagFix(): Boolean = getAutoTagFixEnabled()
+
+    fun saveAutoTagFixEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_AUTO_TAGFIX, enabled).apply()
+    }
+
+    fun saveAutoTagFix(enabled: Boolean) = saveAutoTagFixEnabled(enabled)
+
+    fun getRecentsViewMode(): String {
+        return prefs.getString(KEY_RECENTS_VIEW_MODE, "GRID") ?: "GRID"
+    }
+
+    fun saveRecentsViewMode(mode: String) {
+        prefs.edit().putString(KEY_RECENTS_VIEW_MODE, mode).apply()
+    }
+
     companion object {
         private const val KEY_FAVORITES = "favorite_song_ids"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"
@@ -336,5 +380,10 @@ class PreferencesRepository(context: Context) {
         private const val KEY_TAG_OVERRIDES = "song_tag_overrides_json"
         private const val KEY_SAVED_YT_SONGS = "saved_yt_music_songs_json"
         private const val KEY_CUSTOM_PLAYLISTS = "custom_playlists_json"
+        private const val KEY_LIQUID_GLASS = "use_liquid_glass"
+        private const val KEY_BETA_UPDATES = "enable_beta_updates"
+        private const val KEY_ALBUM_ART_GRADIENT = "use_album_art_gradient"
+        private const val KEY_AUTO_TAGFIX = "auto_tagfix_enabled"
+        private const val KEY_RECENTS_VIEW_MODE = "yt_recents_view_mode"
     }
 }

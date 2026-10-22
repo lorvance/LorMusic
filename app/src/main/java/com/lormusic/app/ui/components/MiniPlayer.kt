@@ -44,6 +44,7 @@ fun MiniPlayer(
     progress: Float,
     hazeState: HazeState,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     enableSwipe: Boolean = true,
     onTogglePlay: () -> Unit,
     onPrevious: () -> Unit = {},
@@ -91,6 +92,7 @@ fun MiniPlayer(
             )
             .clip(shape)
             .then(blurModifier)
+            .liquidGlassSurface(shape = shape, isLiquidGlass = useLiquidGlass)
             .border(
                 width = 1.dp,
                 brush = Brush.verticalGradient(

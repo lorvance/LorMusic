@@ -66,6 +66,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val useDynamicColor = mutableStateOf(prefs.getUseDynamicColor())
     val useSquigglySlider = mutableStateOf(prefs.getUseSquigglySlider())
     val enableBlur = mutableStateOf(prefs.getEnableBlur())
+    val useLiquidGlass = mutableStateOf(prefs.getUseLiquidGlass())
+    val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
+    val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
+    val autoTagFixEnabled = mutableStateOf<Boolean>(prefs.getAutoTagFixEnabled())
+    val recentsViewMode = mutableStateOf(prefs.getRecentsViewMode())
+    val autoTagFixDetectedSongs = mutableStateOf<List<Song>>(emptyList())
+    val showAutoTagFixPrompt = mutableStateOf(false)
     val searchBarPlacement = mutableStateOf(prefs.getSearchBarPlacement())
     val enablePlayerSwipe = mutableStateOf(prefs.getEnablePlayerSwipe())
     val hideDemoTracks = mutableStateOf(prefs.getHideDemoTracks())
@@ -210,6 +217,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 syncGoogleLibrary()
             }
 
+            if (autoTagFixEnabled.value) {
+                checkBrokenTracksForAutoTagFix()
+            }
+
             delay(2000)
             checkForUpdates(silent = true)
         }
@@ -232,17 +243,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (googleAccount.value == null || !YouTubeMusicRepository.hasValidAuthCookie(ytMusicCookie.value)) {
             return emptyList()
         }
-        val pool = (savedYtSongs.value + ytRecommendations.value + ytMyWaveSongs.value + allSongs.value)
-            .filterNot { isLegacyPreviewSong(it) }
+        val pool = (savedYtSongs.value + ytRecommendations.value + ytMyWaveSongs.value)
+            .filterNot { isLegacyPreviewSong(it) || it.isLocal }
             .distinctBy { it.id }
             .associateBy { it.id }
-        return recentlyPlayedIds.value.mapNotNull { pool[it] }
+        return recentlyPlayedIds.value
+            .mapNotNull { pool[it] }
+            .filterNot { it.isLocal }
+            .take(22)
     }
 
     private fun recordRecentlyPlayed(song: Song) {
-        prefs.addRecentlyPlayedId(song.id)
-        recentlyPlayedIds.value = prefs.getRecentlyPlayedIds()
         if (!song.isLocal && (song.isRemoteYt || song.id.startsWith("yt_"))) {
+            prefs.addRecentlyPlayedId(song.id)
+            recentlyPlayedIds.value = prefs.getRecentlyPlayedIds()
             val updatedSaved = (listOf(song) + savedYtSongs.value)
                 .distinctBy { it.id }
                 .take(60)
@@ -453,6 +467,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val updatedSaved = listOf(downloaded) + savedYtSongs.value.filterNot { it.id == song.id || it.id == downloaded.id }
                 savedYtSongs.value = updatedSaved
                 prefs.saveYtSongs(updatedSaved)
+                if (autoTagFixEnabled.value) {
+                    checkBrokenTracksForAutoTagFix()
+                }
                 statusMessage.value = "Трек «${downloaded.title}» скачан локально со всеми тегами и обложкой!"
             } else {
                 statusMessage.value = "Не удалось скачать трек «${song.title}»"
@@ -576,6 +593,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             rawAllSongs = combinedRaw
             applyTagOverridesToState(tagOverrides.value)
             isScanningLocal.value = false
+            if (autoTagFixEnabled.value) {
+                checkBrokenTracksForAutoTagFix()
+            }
             statusMessage.value = if (scannedLocal.isEmpty()) {
                 "Локальные аудиофайлы не найдены на устройстве"
             } else {
@@ -841,13 +861,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setQueueAndPlay(songs: List<Song>, startIndex: Int, shuffle: Boolean = false) {
         if (songs.isEmpty()) return
-        val effectiveQueue = if (shuffle) songs.shuffled() else songs
-        val targetIdx = if (shuffle) 0 else startIndex.coerceIn(0, effectiveQueue.lastIndex)
+        val effectiveShuffle = shuffle || shuffleOn.value
+        shuffleOn.value = effectiveShuffle
+        exoPlayer.shuffleModeEnabled = effectiveShuffle
 
-        if (shuffle && !shuffleOn.value) {
-            shuffleOn.value = true
-            exoPlayer.shuffleModeEnabled = true
-        }
+        val effectiveQueue = if (effectiveShuffle) songs.shuffled() else songs
+        val targetIdx = if (effectiveShuffle) 0 else startIndex.coerceIn(0, effectiveQueue.lastIndex)
 
         queue.value = effectiveQueue
         val targetSong = effectiveQueue[targetIdx]
@@ -924,14 +943,30 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun skipNext() {
         val q = queue.value
         if (q.isEmpty()) return
-        if (exoPlayer.hasNextMediaItem()) {
-            exoPlayer.seekToNextMediaItem()
-            exoPlayer.play()
+        if (shuffleOn.value) {
+            if (exoPlayer.hasNextMediaItem()) {
+                exoPlayer.seekToNextMediaItem()
+                exoPlayer.play()
+            } else {
+                val nextIdx = q.indices.random()
+                setQueueAndPlay(q, nextIdx, shuffle = true)
+            }
         } else {
-            val current = currentSong.value ?: return
-            val idx = q.indexOfFirst { it.id == current.id }
-            val nextIdx = if (shuffleOn.value) q.indices.random() else (idx + 1) % q.size
-            setQueueAndPlay(q, nextIdx)
+            val current = currentSong.value
+            val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
+            val nextIdx = if (idx >= 0 && idx < q.lastIndex) idx + 1 else 0
+            if (nextIdx == 0 && repeatMode.value == RepeatMode.OFF && idx == q.lastIndex) {
+                isPlaying.value = false
+                positionMs.value = 0L
+                seekTo(0L)
+            } else {
+                if (nextIdx in 0 until exoPlayer.mediaItemCount && !exoPlayer.shuffleModeEnabled) {
+                    exoPlayer.seekToDefaultPosition(nextIdx)
+                    exoPlayer.play()
+                } else {
+                    setQueueAndPlay(q, nextIdx, shuffle = false)
+                }
+            }
         }
     }
 
@@ -942,14 +977,24 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
         val q = queue.value
         if (q.isEmpty()) return
-        if (exoPlayer.hasPreviousMediaItem()) {
-            exoPlayer.seekToPreviousMediaItem()
-            exoPlayer.play()
+        if (shuffleOn.value) {
+            if (exoPlayer.hasPreviousMediaItem()) {
+                exoPlayer.seekToPreviousMediaItem()
+                exoPlayer.play()
+            } else {
+                val prevIdx = q.indices.random()
+                setQueueAndPlay(q, prevIdx, shuffle = true)
+            }
         } else {
-            val current = currentSong.value ?: return
-            val idx = q.indexOfFirst { it.id == current.id }
-            val prevIdx = if (idx > 0) idx - 1 else q.lastIndex
-            setQueueAndPlay(q, prevIdx)
+            val current = currentSong.value
+            val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
+            val prevIdx = if (idx > 0) idx - 1 else (if (repeatMode.value == RepeatMode.ALL) q.lastIndex else 0)
+            if (prevIdx in 0 until exoPlayer.mediaItemCount && !exoPlayer.shuffleModeEnabled) {
+                exoPlayer.seekToDefaultPosition(prevIdx)
+                exoPlayer.play()
+            } else {
+                setQueueAndPlay(q, prevIdx, shuffle = false)
+            }
         }
     }
 
@@ -1088,17 +1133,66 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             .build()
     }
 
+    fun setUseLiquidGlass(enabled: Boolean) {
+        useLiquidGlass.value = enabled
+        prefs.saveUseLiquidGlass(enabled)
+    }
+
+    fun setEnableBetaUpdates(enabled: Boolean) {
+        enableBetaUpdates.value = enabled
+        prefs.saveEnableBetaUpdates(enabled)
+        checkForUpdates(silent = true)
+    }
+
+    fun setUseAlbumArtGradient(enabled: Boolean) {
+        useAlbumArtGradient.value = enabled
+        prefs.saveUseAlbumArtGradient(enabled)
+    }
+
+    fun setAutoTagFixEnabled(enabled: Boolean) {
+        autoTagFixEnabled.value = enabled
+        prefs.saveAutoTagFix(enabled)
+        if (enabled) {
+            checkBrokenTracksForAutoTagFix()
+        }
+    }
+
+    fun setRecentsViewMode(mode: String) {
+        recentsViewMode.value = mode
+        prefs.saveRecentsViewMode(mode)
+    }
+
+    fun dismissAutoTagFixPrompt() {
+        showAutoTagFixPrompt.value = false
+    }
+
+    fun checkBrokenTracksForAutoTagFix() {
+        if (!autoTagFixEnabled.value) return
+        val broken = allSongs.value.filter { it.isLocal && TagFixEngine.isBrokenTrack(it) }
+        autoTagFixDetectedSongs.value = broken
+        if (broken.isNotEmpty()) {
+            showAutoTagFixPrompt.value = true
+        }
+    }
+
+    fun recognizeSongWithShazam(song: Song, onResult: (TagFixProposal?) -> Unit) {
+        viewModelScope.launch {
+            val proposal = TagFixEngine.recognizeTrackShazam(getApplication(), song)
+            onResult(proposal)
+        }
+    }
+
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.5.6")
+            val result = updateManager.checkForUpdates("1.6.0", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
                 showUpdateDialog.value = true
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
-                    statusMessage.value = "У вас установлена актуальная версия (1.5.6)"
+                    statusMessage.value = "У вас установлена актуальная версия (1.6.0)"
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message
                 }

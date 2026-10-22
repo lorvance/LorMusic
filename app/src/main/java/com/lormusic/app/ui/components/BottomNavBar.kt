@@ -65,6 +65,7 @@ fun LorBottomNavBar(
     onSelect: (LorTab) -> Unit,
     hazeState: HazeState,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = false,
     isLocalSearchActive: Boolean = false,
     onToggleLocalSearch: () -> Unit = {},
@@ -117,6 +118,7 @@ fun LorBottomNavBar(
                         Modifier.background(baseSurface.copy(alpha = 0.96f))
                     }
                 )
+                .liquidGlassSurface(shape = capsuleShape, isLiquidGlass = useLiquidGlass)
                 .border(
                     width = 1.dp,
                     brush = Brush.verticalGradient(
@@ -314,6 +316,7 @@ fun YtMusicBottomNavBar(
     onSelect: (YtMusicTab) -> Unit,
     hazeState: HazeState,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = true,
     modifier: Modifier = Modifier
 ) {
@@ -371,6 +374,7 @@ fun YtMusicBottomNavBar(
                         Modifier.background(baseSurface.copy(alpha = 0.96f))
                     }
                 )
+                .liquidGlassSurface(shape = capsuleShape, isLiquidGlass = useLiquidGlass)
                 .border(
                     width = 1.dp,
                     brush = Brush.verticalGradient(

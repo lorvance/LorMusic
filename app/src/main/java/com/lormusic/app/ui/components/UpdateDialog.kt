@@ -163,12 +163,7 @@ fun UpdateDialog(
                                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                                     modifier = Modifier.padding(bottom = 10.dp)
                                 )
-                                Text(
-                                    text = updateInfo.changelog,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                                    lineHeight = MaterialTheme.typography.bodyMedium.lineHeight
-                                )
+                                MarkdownText(markdown = updateInfo.changelog)
                             }
                         }
                     }

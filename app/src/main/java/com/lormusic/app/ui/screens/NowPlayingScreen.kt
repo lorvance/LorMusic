@@ -66,7 +66,9 @@ fun NowPlayingScreen(
     lyrics: List<LyricLine>,
     isLoadingLyrics: Boolean,
     useSquigglySlider: Boolean,
+    useAlbumArtGradient: Boolean = false,
     enableSwipe: Boolean = true,
+    onDownloadTrack: (() -> Unit)? = null,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
     onPrevious: () -> Unit,
@@ -124,10 +126,20 @@ fun NowPlayingScreen(
         }
     }
 
+    val gradientColors = rememberAlbumArtGradient(song, useAlbumArtGradient, accentColor)
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .background(MaterialTheme.colorScheme.background)
+            .then(
+                if (useAlbumArtGradient) {
+                    Modifier.background(
+                        Brush.verticalGradient(gradientColors)
+                    )
+                } else {
+                    Modifier.background(MaterialTheme.colorScheme.background)
+                }
+            )
     ) {
 
         Box(
@@ -352,7 +364,7 @@ fun NowPlayingScreen(
                             }
                         }
                         Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
                             if (ytShareUrl != null) {
@@ -365,6 +377,19 @@ fun NowPlayingScreen(
                                     Icon(
                                         imageVector = Icons.Filled.Share,
                                         contentDescription = "Поделиться ссылкой на песню"
+                                    )
+                                }
+                            }
+                            if (onDownloadTrack != null) {
+                                FilledTonalIconButton(
+                                    onClick = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        onDownloadTrack()
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Download,
+                                        contentDescription = "Скачать трек"
                                     )
                                 }
                             }
@@ -1213,4 +1238,75 @@ private fun InstrumentalDotsIndicator(
             )
         }
     }
+}
+
+@Composable
+private fun rememberAlbumArtGradient(
+    song: Song,
+    enabled: Boolean,
+    fallbackColor: Color
+): List<Color> {
+    val context = LocalContext.current
+    val surfaceColor = MaterialTheme.colorScheme.background
+    return produceState(
+        initialValue = listOf(surfaceColor, surfaceColor),
+        key1 = song.id,
+        key2 = song.albumArtUri,
+        key3 = enabled
+    ) {
+        if (!enabled) {
+            value = listOf(surfaceColor, surfaceColor)
+            return@produceState
+        }
+        kotlinx.coroutines.withContext(kotlinx.coroutines.Dispatchers.IO) {
+            val extracted = extractSongGradientColors(context, song, fallbackColor)
+            value = listOf(extracted.first, extracted.second, surfaceColor)
+        }
+    }.value
+}
+
+private fun extractSongGradientColors(
+    context: android.content.Context,
+    song: Song,
+    fallback: Color
+): Pair<Color, Color> {
+    val art = song.albumArtUri
+    if (!art.isNullOrBlank()) {
+        try {
+            val bmp = if (art.startsWith("content://") || art.startsWith("file://")) {
+                val stream = context.contentResolver.openInputStream(android.net.Uri.parse(art))
+                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
+                val b = android.graphics.BitmapFactory.decodeStream(stream, null, opts)
+                stream?.close()
+                b
+            } else if (art.startsWith("http://") || art.startsWith("https://")) {
+                val conn = java.net.URL(art).openConnection() as java.net.HttpURLConnection
+                conn.connectTimeout = 2500
+                conn.readTimeout = 2500
+                val stream = conn.inputStream
+                val b = android.graphics.BitmapFactory.decodeStream(stream)
+                stream.close()
+                conn.disconnect()
+                b
+            } else null
+
+            if (bmp != null) {
+                val p1 = bmp.getPixel(bmp.width / 4, bmp.height / 4)
+                val p2 = bmp.getPixel((bmp.width * 3) / 4, (bmp.height * 3) / 4)
+                bmp.recycle()
+                return Pair(
+                    Color(p1).copy(alpha = 0.55f),
+                    Color(p2).copy(alpha = 0.40f)
+                )
+            }
+        } catch (_: Exception) {
+        }
+    }
+    val hash = kotlin.math.abs((song.title + song.artist).hashCode())
+    val hue1 = (hash % 360).toFloat()
+    val hue2 = ((hash + 130) % 360).toFloat()
+    return Pair(
+        Color.hsv(hue1, 0.70f, 0.50f).copy(alpha = 0.50f),
+        Color.hsv(hue2, 0.60f, 0.40f).copy(alpha = 0.40f)
+    )
 }

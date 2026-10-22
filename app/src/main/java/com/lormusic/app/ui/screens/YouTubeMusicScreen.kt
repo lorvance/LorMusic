@@ -27,6 +27,7 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
+import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -79,6 +80,8 @@ fun YouTubeMusicScreen(
     hazeState: HazeState,
     enableBlur: Boolean = true,
     showTopSearchBar: Boolean = false,
+    recentsViewMode: String = "grid",
+    onToggleRecentsViewMode: (String) -> Unit = {},
     onSelectTab: (YtMusicTab) -> Unit = {},
     onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
     onTogglePlay: () -> Unit,
@@ -139,6 +142,8 @@ fun YouTubeMusicScreen(
                         hazeState = hazeState,
                         enableBlur = enableBlur,
                         showTopSearchBar = showTopSearchBar,
+                        recentsViewMode = recentsViewMode,
+                        onToggleRecentsViewMode = onToggleRecentsViewMode,
                         onOpenTopSearch = { onSelectTab(YtMusicTab.SEARCH) },
                         onPlayQueue = onPlayQueue,
                         onToggleFavorite = onToggleFavorite,
@@ -658,6 +663,8 @@ private fun YtHomeTab(
     hazeState: HazeState,
     enableBlur: Boolean = true,
     showTopSearchBar: Boolean = false,
+    recentsViewMode: String = "grid",
+    onToggleRecentsViewMode: (String) -> Unit = {},
     onOpenTopSearch: () -> Unit = {},
     onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
     onToggleFavorite: (Song) -> Unit,
@@ -694,81 +701,13 @@ private fun YtHomeTab(
                 flingBehavior = smoothFling,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = 118.dp,
+                    top = 76.dp,
                     bottom = 225.dp,
                     start = 16.dp,
                     end = 16.dp
                 ),
                 verticalArrangement = Arrangement.spacedBy(16.dp)
             ) {
-
-                item(key = "google_sync_banner") {
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.65f),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .clickable { onOpenGoogleAuth() }
-                    ) {
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(horizontal = 16.dp, vertical = 12.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Surface(
-                                shape = CircleShape,
-                                color = accentColor.copy(alpha = 0.22f),
-                                modifier = Modifier.size(44.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Icon(
-                                        imageVector = if (googleAccount != null) Icons.Filled.CloudDone else Icons.Filled.AccountCircle,
-                                        contentDescription = null,
-                                        tint = accentColor
-                                    )
-                                }
-                            }
-                            Spacer(Modifier.width(12.dp))
-                            Column(modifier = Modifier.weight(1f)) {
-                                Text(
-                                    text = googleAccount?.displayName ?: "Войти в Google (YouTube Music)",
-                                    style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.Bold
-                                )
-                                Text(
-                                    text = if (googleAccount != null) {
-                                        "${googleAccount.email} • Реальная синхронизация YouTube Music"
-                                    } else {
-                                        "Настоящий вход через Google для синхронизации истории, лайков и волны"
-                                    },
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f)
-                                )
-                            }
-                            if (googleAccount != null) {
-                                IconButton(onClick = onSyncGoogle) {
-                                    if (isLoading) {
-                                        ExpressiveLoadingIndicator(size = 24.dp)
-                                    } else {
-                                        Icon(
-                                            imageVector = Icons.Filled.Sync,
-                                            contentDescription = "Синхронизировать",
-                                            tint = accentColor
-                                        )
-                                    }
-                                }
-                            }
-                            FilledTonalButton(
-                                onClick = onOpenGoogleAuth,
-                                shape = RoundedCornerShape(16.dp),
-                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                            ) {
-                                Text(if (googleAccount != null) "Аккаунт" else "Войти")
-                            }
-                        }
-                    }
-                }
 
                 item(key = "recents_section") {
                     Column {
@@ -779,43 +718,81 @@ private fun YtHomeTab(
                         ) {
                             Column(modifier = Modifier.weight(1f)) {
                                 Text(
-                                    text = "Недавно прослушано",
+                                    text = "Недавнее",
                                     style = MaterialTheme.typography.titleLarge,
                                     fontWeight = FontWeight.ExtraBold
                                 )
                                 Text(
-                                    text = if (googleAccount != null) {
-                                        "Синхронизировано с историей твоего YouTube Music"
-                                    } else {
-                                        "Твои последние треки (Ресенты)"
-                                    },
+                                    text = "Синхронизировано с историей YouTube Music",
                                     style = MaterialTheme.typography.bodySmall,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                                 )
                             }
-                            if (recentlyPlayed.isNotEmpty()) {
-                                TextButton(onClick = { onPlayQueue(recentlyPlayed, 0, false) }) {
-                                    Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
-                                    Spacer(Modifier.width(4.dp))
-                                    Text("Слушать всё", maxLines = 1)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                if (recentlyPlayed.isNotEmpty()) {
+                                    TextButton(onClick = { onPlayQueue(recentlyPlayed.take(22), 0, false) }) {
+                                        Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
+                                        Spacer(Modifier.width(4.dp))
+                                        Text("Слушать всё", maxLines = 1)
+                                    }
+                                }
+                                IconButton(
+                                    onClick = {
+                                        val nextMode = if (recentsViewMode == "grid") "carousel" else "grid"
+                                        onToggleRecentsViewMode(nextMode)
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = if (recentsViewMode == "grid") Icons.Filled.GridView else Icons.AutoMirrored.Filled.ViewList,
+                                        contentDescription = if (recentsViewMode == "grid") "Переключить на карусель" else "Переключить на список",
+                                        tint = MaterialTheme.colorScheme.primary
+                                    )
                                 }
                             }
                         }
                         Spacer(Modifier.height(10.dp))
 
-                        val recentsList = recentlyPlayed.ifEmpty { recommendations.take(6) }
-                        LazyRow(
-                            horizontalArrangement = Arrangement.spacedBy(12.dp)
-                        ) {
-                            itemsIndexed(recentsList, key = { idx, s -> "rec_${s.id}_$idx" }) { index, song ->
-                                YtRecentSongCard(
-                                    song = song,
-                                    isCurrent = currentSong?.id == song.id,
-                                    isPlaying = isPlaying,
-                                    onClick = { onPlayQueue(recentsList, index, false) },
-                                    onDownload = { onDownloadSong(song) },
-                                    isDownloading = downloadingSongIds.contains(song.id)
-                                )
+                        val recents22 = recentlyPlayed.take(22).ifEmpty { recommendations.take(12) }
+
+                        if (recentsViewMode == "grid") {
+                            val chunkedColumns = recents22.chunked(4)
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(16.dp)
+                            ) {
+                                itemsIndexed(chunkedColumns, key = { colIdx, _ -> "rec_col_$colIdx" }) { _, columnSongs ->
+                                    Column(
+                                        modifier = Modifier.width(300.dp),
+                                        verticalArrangement = Arrangement.spacedBy(6.dp)
+                                    ) {
+                                        columnSongs.forEach { song ->
+                                            YtRecentGridItem(
+                                                song = song,
+                                                isCurrent = currentSong?.id == song.id,
+                                                isPlaying = isPlaying,
+                                                onClick = {
+                                                    val flatIndex = recents22.indexOfFirst { it.id == song.id }
+                                                    onPlayQueue(recents22, flatIndex.coerceAtLeast(0), false)
+                                                },
+                                                onMoreClick = { onSongMoreClick(song) }
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        } else {
+                            LazyRow(
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                itemsIndexed(recents22, key = { idx, s -> "rec_${s.id}_$idx" }) { index, song ->
+                                    YtRecentSongCard(
+                                        song = song,
+                                        isCurrent = currentSong?.id == song.id,
+                                        isPlaying = isPlaying,
+                                        onClick = { onPlayQueue(recents22, index, false) },
+                                        onDownload = { onDownloadSong(song) },
+                                        isDownloading = downloadingSongIds.contains(song.id)
+                                    )
+                                }
                             }
                         }
                     }
@@ -962,74 +939,182 @@ private fun YtHomeTab(
             }
         }
 
-        Box(
+        Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .shadow(
-                    elevation = 16.dp,
-                    shape = topHeaderShape,
-                    ambientColor = Color.Black.copy(alpha = 0.55f),
-                    spotColor = Color.Black.copy(alpha = 0.55f)
-                )
-                .clip(topHeaderShape)
-                .then(homeBlurMod)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.06f),
-                            Color.White.copy(alpha = 0.20f)
-                        )
-                    ),
-                    shape = topHeaderShape
-                )
                 .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 12.dp)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically
         ) {
+            Surface(
+                shape = CircleShape,
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                shadowElevation = 8.dp,
+                modifier = Modifier
+                    .size(46.dp)
+                    .then(if (enableBlur) Modifier.hazeEffect(state = hazeState) else Modifier)
+            ) {
+                Box(contentAlignment = Alignment.Center) {
+                    Surface(
+                        shape = CircleShape,
+                        color = Color(0xFFFF0000),
+                        modifier = Modifier.size(32.dp)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.PlayArrow,
+                                contentDescription = "YouTube Music",
+                                tint = Color.White,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    }
+                }
+            }
+
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
+                if (showTopSearchBar) {
+                    Surface(
+                        shape = CircleShape,
+                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                        shadowElevation = 8.dp,
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .clickable { onOpenTopSearch() }
+                            .then(if (enableBlur) Modifier.hazeEffect(state = hazeState) else Modifier)
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Search,
+                                contentDescription = "Поиск",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(22.dp)
+                            )
+                        }
+                    }
+                }
+
                 Surface(
                     shape = CircleShape,
-                    color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.85f),
+                    shadowElevation = 8.dp,
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .clickable { onOpenGoogleAuth() }
+                        .then(if (enableBlur) Modifier.hazeEffect(state = hazeState) else Modifier)
                 ) {
                     Box(contentAlignment = Alignment.Center) {
-                        Icon(
-                            imageVector = Icons.Filled.PlayArrow,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier.size(22.dp)
-                        )
+                        if (googleAccount != null) {
+                            val initial = (googleAccount.displayName.ifBlank { googleAccount.email })
+                                .firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = initial,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.AccountCircle,
+                                contentDescription = "Войти в Google",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(32.dp)
+                            )
+                        }
                     }
                 }
-                Spacer(Modifier.width(12.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(
-                        text = "YouTube Music",
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.ExtraBold
-                    )
-                    Text(
-                        text = "Синхронизация и скачивание со всеми тегами",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
-                    )
-                }
-                if (showTopSearchBar) {
-                    FilledTonalIconButton(
-                        onClick = onOpenTopSearch,
-                        modifier = Modifier.size(38.dp)
+            }
+        }
+    }
+}
+
+@Composable
+private fun YtRecentGridItem(
+    song: Song,
+    isCurrent: Boolean,
+    isPlaying: Boolean,
+    onClick: () -> Unit,
+    onMoreClick: () -> Unit
+) {
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = if (isCurrent) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent,
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable { onClick() }
+    ) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp, horizontal = 4.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Box(modifier = Modifier.size(48.dp)) {
+                SongArtwork(
+                    seed = song.coverColorSeed,
+                    albumArtUri = song.albumArtUri,
+                    songUri = song.uri,
+                    cornerRadius = 10.dp,
+                    modifier = Modifier.fillMaxSize()
+                )
+                if (isCurrent && isPlaying) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .clip(RoundedCornerShape(10.dp))
+                            .background(Color.Black.copy(alpha = 0.45f)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = "Поиск в YouTube Music",
-                            modifier = Modifier.size(20.dp)
+                        AnimatedEqualizerBars(
+                            modifier = Modifier.size(16.dp),
+                            color = Color.White
                         )
                     }
                 }
+            }
+            Spacer(Modifier.width(10.dp))
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = song.title,
+                    style = MaterialTheme.typography.bodyMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = song.artist,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            IconButton(
+                onClick = onMoreClick,
+                modifier = Modifier.size(36.dp)
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = "Опции трека",
+                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    modifier = Modifier.size(20.dp)
+                )
             }
         }
     }

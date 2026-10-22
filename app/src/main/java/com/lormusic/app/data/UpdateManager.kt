@@ -29,16 +29,20 @@ sealed interface UpdateState {
 
 class UpdateManager(private val context: Context) {
 
-    suspend fun checkForUpdates(currentVersion: String = "1.5.6"): UpdateState = withContext(Dispatchers.IO) {
-        val endpoints = listOf(
-            "https://api.github.com/repos/Lorvance/LorMusic/releases/latest",
-            "https://api.github.com/repos/Lorvance/LorMuisc/releases/latest"
+    suspend fun checkForUpdates(
+        currentVersion: String = "1.6.0",
+        includeBeta: Boolean = false
+    ): UpdateState = withContext(Dispatchers.IO) {
+        val baseRepos = listOf(
+            "https://api.github.com/repos/Lorvance/LorMusic",
+            "https://api.github.com/repos/Lorvance/LorMuisc"
         )
 
         var lastException: Exception? = null
 
-        for (endpoint in endpoints) {
+        for (base in baseRepos) {
             try {
+                val endpoint = if (includeBeta) "$base/releases" else "$base/releases/latest"
                 val url = URL(endpoint)
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
@@ -52,15 +56,23 @@ class UpdateManager(private val context: Context) {
                     val body = conn.inputStream.bufferedReader().use { it.readText() }
                     conn.disconnect()
 
-                    val json = JSONObject(body)
-                    val rawTag = json.optString("tag_name", "").ifBlank { json.optString("name", "") }
+                    val targetRelease = if (includeBeta) {
+                        val array = org.json.JSONArray(body)
+                        if (array.length() > 0) array.getJSONObject(0) else null
+                    } else {
+                        JSONObject(body)
+                    }
+
+                    if (targetRelease == null) continue
+
+                    val rawTag = targetRelease.optString("tag_name", "").ifBlank { targetRelease.optString("name", "") }
                     val remoteVersion = rawTag.removePrefix("v").trim()
-                    val changelog = json.optString("body", "").trim().ifBlank {
+                    val changelog = targetRelease.optString("body", "").trim().ifBlank {
                         "Улучшения производительности и исправления ошибок."
                     }
 
                     var apkDownloadUrl = ""
-                    val assets = json.optJSONArray("assets")
+                    val assets = targetRelease.optJSONArray("assets")
                     if (assets != null) {
                         for (i in 0 until assets.length()) {
                             val asset = assets.getJSONObject(i)
@@ -73,7 +85,7 @@ class UpdateManager(private val context: Context) {
                     }
 
                     if (apkDownloadUrl.isBlank()) {
-                        apkDownloadUrl = json.optString("html_url", "")
+                        apkDownloadUrl = targetRelease.optString("html_url", "")
                     }
 
                     if (isNewerVersion(remoteVersion, currentVersion)) {

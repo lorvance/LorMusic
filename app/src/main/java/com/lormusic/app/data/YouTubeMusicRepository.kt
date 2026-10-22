@@ -694,13 +694,6 @@ object YouTubeMusicRepository {
         }
         currentAuthCookie = cookie
 
-        if (mood == WaveMood.FOR_YOU) {
-            val fromAccount = fetchBrowseTracks("FEmusic_home", cookie, limit = 20)
-            if (fromAccount.isNotEmpty()) {
-                return@withContext fromAccount.shuffled()
-            }
-        }
-
         val userArtists = seedSongs
             .map { it.artist.trim() }
             .filter {
@@ -711,19 +704,37 @@ object YouTubeMusicRepository {
             }
             .distinct()
             .shuffled()
-            .take(2)
+
+        val selectedArtists = userArtists.take(3)
+
+        val dynamicGenres = listOf(
+            "Indie Pop Hits",
+            "Synthwave Retrowave",
+            "Phonk Drift Mix",
+            "Lo-Fi Beats Chill",
+            "Deep House Vocal",
+            "Alternative Rock Radio",
+            "Hip Hop Rap New",
+            "Pop New Wave Hits"
+        )
+        val randomGenre = dynamicGenres.random()
 
         val query = when (mood) {
-            WaveMood.FOR_YOU -> if (userArtists.isNotEmpty()) {
-                userArtists.joinToString(" ")
+            WaveMood.FOR_YOU -> if (selectedArtists.isNotEmpty()) {
+                "${selectedArtists.joinToString(" ")} mix"
             } else {
-                "Дайте танк Где Фантом Сироткин Буерак"
+                "$randomGenre 2024"
             }
-            else -> mood.queryHint
+            else -> "${mood.queryHint} $randomGenre"
         }
 
-        val fetched = searchYtMusic(query, limit = 18, cookie = cookie)
-        if (fetched.isNotEmpty()) fetched.shuffled() else emptyList()
+        val accountHome = if (mood == WaveMood.FOR_YOU) {
+            fetchBrowseTracks("FEmusic_home", cookie, limit = 20)
+        } else emptyList()
+
+        val searchResults = searchYtMusic(query, limit = 18, cookie = cookie)
+        val combined = (accountHome + searchResults).distinctBy { it.id }.shuffled()
+        if (combined.isNotEmpty()) combined.take(22) else emptyList()
     }
 
     fun getShareUrl(song: Song): String? {

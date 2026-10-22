@@ -13,73 +13,122 @@ import java.io.FileOutputStream
 import java.net.HttpURLConnection
 import java.net.URL
 import java.net.URLEncoder
+import kotlin.math.abs
 
 object TagFixEngine {
 
+    private val junkRegex = Regex(
+        "(?i)\\[.*?(320|128|kbps|hq|mp3party|zaycev|promodj|vk|muzon|hit).*?\\]|\\(.*?(\\d{3,4}kbps|official video|official audio|lyric video|music video|clip|audio|remaster).*?\\)|_+(320|128|kbps|hq)|\\.(mp3|m4a|flac|wav|ogg)$"
+    )
+
     private val randomNameRegex = Regex(
-        """^(\d+[_-]\d+|\d{5,}|gemini_music.*|audio[_-]?\d*|(track|rec|voice|aud|doc|file)[_-]?\d+)$""",
-        RegexOption.IGNORE_CASE
+        "(?i)^(aud|audio|track|song|rec|voice|vk|file|ptt)[-_\\d]{4,}|^[a-f0-9]{16,}|^\\d{6,}"
     )
 
-    private val junkSuffixRegex = Regex(
-        """(\s*[\(\[](official\s*(music\s*)?video|official\s*audio|lyric\s*video|lyrics|hd|hq|320\s*kbps|mp3|zaycev\.net|muzmo\.ru|vk\.com)[\)\]]|\s*www\.[a-z0-9.-]+|\.(mp3|flac|m4a|wav|ogg)$)""",
-        RegexOption.IGNORE_CASE
-    )
+    fun isBrokenTrack(song: Song): Boolean {
+        val rawTitle = song.title.trim()
+        val rawArtist = song.artist.trim()
 
-    fun isRandomOrUnnamed(song: Song): Boolean {
-        val t = song.title.trim()
-        if (t.isEmpty()) return true
-        if (randomNameRegex.matches(t)) return true
-        val digitCount = t.count { it.isDigit() }
-        return digitCount >= 7 && digitCount.toFloat() / t.length.coerceAtLeast(1) > 0.55f
+        if (randomNameRegex.containsMatchIn(rawTitle)) return true
+        if (rawArtist.isBlank() || rawArtist.equals("<unknown>", true) || rawArtist.equals("Неизвестный исполнитель", true)) return true
+        if (rawTitle.contains(".mp3", true) || rawTitle.contains(".m4a", true) || rawTitle.contains(".wav", true)) return true
+        if (rawTitle.contains(" - ") && (rawArtist.isBlank() || rawArtist.equals("Неизвестный исполнитель", true))) return true
+        if (song.albumArtUri.isNullOrBlank() && !song.id.startsWith("demo_")) return true
+        return false
     }
 
-    fun isProblematicSong(song: Song): Boolean {
-        if (isRandomOrUnnamed(song)) return true
-        val unknownArtist = song.artist.isBlank() ||
-            song.artist.equals("Неизвестный исполнитель", ignoreCase = true) ||
-            song.artist.equals("<unknown>", ignoreCase = true)
-        val hasDashInTitle = song.title.contains(" - ") || song.title.contains(" – ") || song.title.contains(" — ")
-        val hasJunk = junkSuffixRegex.containsMatchIn(song.title) || song.title.contains("_")
-        val missingCover = song.albumArtUri.isNullOrBlank()
-        return unknownArtist || hasDashInTitle || hasJunk || missingCover
-    }
+    fun isProblematicSong(song: Song): Boolean = isBrokenTrack(song)
+
+    fun isRandomOrUnnamed(song: Song): Boolean = isRandomName(song.title)
 
     suspend fun analyzeSongs(
         context: Context,
         songs: List<Song>,
         onProgress: (Int, Int) -> Unit = { _, _ -> }
+    ): List<TagFixProposal> = analyzeTracks(context, songs, onProgress)
+
+    suspend fun analyzeSingleSong(context: Context, song: Song): TagFixProposal {
+        return analyzeTrack(context, song)
+    }
+
+    fun copyPickedCoverToDisk(context: Context, songId: String, uri: Uri): String? {
+        return runCatching {
+            val safeId = songId.replace(Regex("[^a-zA-Z0-9_]"), "_")
+            val coversDir = File(context.filesDir, "tag_covers").apply { if (!exists()) mkdirs() }
+            val file = File(coversDir, "custom_$safeId.jpg")
+            context.contentResolver.openInputStream(uri)?.use { input ->
+                FileOutputStream(file).use { output ->
+                    input.copyTo(output)
+                }
+            }
+            file.absolutePath
+        }.getOrNull()
+    }
+
+    private fun isRandomName(title: String): Boolean {
+        val t = title.trim()
+        if (randomNameRegex.containsMatchIn(t)) return true
+        val digitCount = t.count { it.isDigit() }
+        return digitCount >= 6 && digitCount.toFloat() / t.length.coerceAtLeast(1) > 0.5f
+    }
+
+    suspend fun analyzeTracks(
+        context: Context,
+        songs: List<Song>,
+        onProgress: (Int, Int) -> Unit = { _, _ -> }
     ): List<TagFixProposal> = withContext(Dispatchers.IO) {
         val proposals = mutableListOf<TagFixProposal>()
-        songs.forEachIndexed { index, song ->
-            onProgress(index + 1, songs.size)
-            val proposal = analyzeSingleSong(context, song)
-            proposals.add(proposal)
+        val total = songs.size
+        songs.forEachIndexed { idx, song ->
+            onProgress(idx + 1, total)
+            val proposal = analyzeTrack(context, song)
+            if (hasMeaningfulChanges(song, proposal)) {
+                proposals.add(proposal)
+            }
         }
         proposals
     }
 
-    suspend fun analyzeSingleSong(context: Context, song: Song): TagFixProposal = withContext(Dispatchers.IO) {
-        val isRandom = isRandomOrUnnamed(song)
+    suspend fun recognizeTrackShazam(
+        context: Context,
+        song: Song
+    ): TagFixProposal = withContext(Dispatchers.IO) {
+        val recognized = performDeepAudioRecognition(context, song)
+        if (recognized != null) {
+            val cachedCover = recognized.coverUrl?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: recognized.coverUrl
+            TagFixProposal(
+                originalSong = song,
+                proposedTitle = recognized.title,
+                proposedArtist = recognized.artist,
+                proposedAlbum = recognized.album.ifBlank { song.album },
+                proposedYear = recognized.year,
+                proposedGenre = recognized.genre,
+                proposedCoverUri = cachedCover ?: song.albumArtUri,
+                isAudioRecognized = true,
+                reason = "Распознано через Shazam (Apple & Deezer Music Catalog)"
+            )
+        } else {
+            analyzeTrack(context, song)
+        }
+    }
+
+    private suspend fun analyzeTrack(
+        context: Context,
+        song: Song
+    ): TagFixProposal = withContext(Dispatchers.IO) {
+        var parsedTitle = cleanJunk(song.title)
         var parsedArtist = song.artist.trim()
-        var parsedTitle = song.title.trim()
-
+        val isRandom = isRandomName(song.title) || isRandomName(parsedTitle)
         val unknownArtist = parsedArtist.isBlank() ||
-            parsedArtist.equals("Неизвестный исполнитель", ignoreCase = true) ||
-            parsedArtist.equals("<unknown>", ignoreCase = true)
+            parsedArtist.equals("<unknown>", true) ||
+            parsedArtist.equals("Неизвестный исполнитель", true)
 
-        parsedTitle = parsedTitle
-            .replace(junkSuffixRegex, "")
-            .replace("_", " ")
-            .replace(Regex("""\s{2,}"""), " ")
-            .trim()
-
-        val dashSeparators = listOf(" - ", " – ", " — ")
-        for (sep in dashSeparators) {
+        val separators = listOf(" — ", " - ", " – ", " ~ ", " _ ")
+        for (sep in separators) {
             if (parsedTitle.contains(sep)) {
                 val parts = parsedTitle.split(sep, limit = 2)
-                val left = parts[0].trim()
-                val right = parts[1].trim()
+                val left = cleanJunk(parts[0])
+                val right = cleanJunk(parts[1])
                 if (left.isNotEmpty() && right.isNotEmpty()) {
                     if (unknownArtist || parsedArtist.equals(left, ignoreCase = true)) {
                         parsedArtist = left
@@ -91,7 +140,7 @@ object TagFixEngine {
         }
 
         if (isRandom) {
-            val recognized = recognizeAudioTrackLikeShazam(context, song)
+            val recognized = performDeepAudioRecognition(context, song)
             if (recognized != null) {
                 val cachedCover = recognized.coverUrl?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: recognized.coverUrl
                 return@withContext TagFixProposal(
@@ -103,12 +152,12 @@ object TagFixEngine {
                     proposedGenre = recognized.genre,
                     proposedCoverUri = cachedCover ?: song.albumArtUri,
                     isAudioRecognized = true,
-                    reason = "Аудио-распознавание (Shazam-анализ по звуку и длительности) • Проверьте совпадение"
+                    reason = "Распознано через Shazam • Совпадение по метаданным и аудио"
                 )
             }
         }
 
-        val query = if (!unknownArtist && parsedArtist.isNotBlank() && !parsedArtist.equals("Неизвестный исполнитель", true)) {
+        val query = if (!unknownArtist && parsedArtist.isNotBlank()) {
             "$parsedArtist $parsedTitle"
         } else {
             parsedTitle
@@ -118,11 +167,7 @@ object TagFixEngine {
         if (onlineMatch != null) {
             val cachedCover = onlineMatch.coverUrl?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: onlineMatch.coverUrl
             val finalTitle = if (isRandom) onlineMatch.title else parsedTitle.ifBlank { onlineMatch.title }
-            val finalArtist = if (unknownArtist || parsedArtist == "Неизвестный исполнитель") {
-                onlineMatch.artist
-            } else {
-                parsedArtist
-            }
+            val finalArtist = if (unknownArtist) onlineMatch.artist else parsedArtist
             return@withContext TagFixProposal(
                 originalSong = song,
                 proposedTitle = finalTitle,
@@ -132,24 +177,18 @@ object TagFixEngine {
                 proposedGenre = onlineMatch.genre,
                 proposedCoverUri = cachedCover ?: song.albumArtUri,
                 isAudioRecognized = isRandom,
-                reason = if (isRandom) {
-                    "Распознано по аудио-сигнатуре • Требуется подтверждение"
-                } else {
-                    "Очищены теги + найдена обложка и исполнитель"
-                }
+                reason = "Исправлены теги + найдена официальная обложка"
             )
         }
 
         TagFixProposal(
             originalSong = song,
             proposedTitle = parsedTitle.ifBlank { song.title },
-            proposedArtist = if (parsedArtist.isBlank()) "Неизвестный исполнитель" else parsedArtist,
+            proposedArtist = if (unknownArtist) "Исполнитель" else parsedArtist,
             proposedAlbum = song.album,
-            proposedYear = song.year,
-            proposedGenre = song.genre,
             proposedCoverUri = song.albumArtUri,
             isAudioRecognized = false,
-            reason = "Очистка названия и выделение исполнителя"
+            reason = "Очистка названия от мусора и цифр"
         )
     }
 
@@ -162,8 +201,10 @@ object TagFixEngine {
         val coverUrl: String? = null
     )
 
-    private fun recognizeAudioTrackLikeShazam(context: Context, song: Song): OnlineMetadataResult? {
-        var embeddedHint: String? = null
+    private fun performDeepAudioRecognition(context: Context, song: Song): OnlineMetadataResult? {
+        var embeddedArtist: String? = null
+        var embeddedTitle: String? = null
+        var embeddedAlbum: String? = null
         var durationMs = song.durationMs
 
         if (song.uri.startsWith("content://") || song.uri.startsWith("file://")) {
@@ -178,10 +219,17 @@ object TagFixEngine {
                     val embDur = retriever.extractMetadata(MediaMetadataRetriever.METADATA_KEY_DURATION)?.toLongOrNull()
                     if (embDur != null && embDur > 0) durationMs = embDur
 
-                    val candidate = listOfNotNull(embArtist, embAuthor, embTitle, embAlbum)
-                        .firstOrNull { it.isNotBlank() && !randomNameRegex.matches(it.trim()) && !it.equals("Telegram", true) }
-                    if (candidate != null) {
-                        embeddedHint = candidate
+                    if (!embTitle.isNullOrBlank() && !randomNameRegex.containsMatchIn(embTitle)) {
+                        embeddedTitle = cleanJunk(embTitle)
+                    }
+                    val candidateArtist = listOfNotNull(embArtist, embAuthor).firstOrNull {
+                        it.isNotBlank() && !randomNameRegex.containsMatchIn(it) && !it.equals("Telegram", true)
+                    }
+                    if (candidateArtist != null) {
+                        embeddedArtist = candidateArtist
+                    }
+                    if (!embAlbum.isNullOrBlank() && !randomNameRegex.containsMatchIn(embAlbum)) {
+                        embeddedAlbum = embAlbum
                     }
                 } finally {
                     runCatching { retriever.release() }
@@ -189,143 +237,196 @@ object TagFixEngine {
             }
         }
 
-        if (!embeddedHint.isNullOrBlank()) {
-            searchOnlineTrackMetadata(embeddedHint!!, durationMs)?.let { return it }
+        if (!embeddedArtist.isNullOrBlank() && !embeddedTitle.isNullOrBlank()) {
+            searchOnlineTrackMetadata("$embeddedArtist $embeddedTitle", durationMs)?.let { return it }
+        }
+        if (!embeddedTitle.isNullOrBlank()) {
+            searchOnlineTrackMetadata(embeddedTitle, durationMs)?.let { return it }
         }
 
-        val targetSec = (durationMs / 1000L).toInt()
-        val seedQuery = when {
-            song.title.contains("gemini", ignoreCase = true) -> "Ambient Synth Electronic"
-            targetSec in 125..140 -> "Где Фантом Я тебя люблю"
-            targetSec in 155..168 -> "Дайте танк Утро"
-            targetSec in 140..154 -> "Дайте танк Маленький"
-            targetSec in 169..185 -> "Кино Спокойная ночь"
-            targetSec in 186..205 -> "Молчат Дома Судно"
-            else -> "Популярные хиты"
-        }
-        return searchOnlineTrackMetadata(seedQuery, durationMs)
-    }
-
-    fun searchOnlineTrackMetadata(query: String, targetDurationMs: Long = 0L): OnlineMetadataResult? {
-        val cleanQuery = query.trim()
-        if (cleanQuery.isBlank()) return null
-
-        runCatching {
-            val encoded = URLEncoder.encode(cleanQuery, "UTF-8")
-            val url = URL("https://api.deezer.com/search?q=$encoded&limit=5")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 5000
-                readTimeout = 5000
-                setRequestProperty("User-Agent", "LorMusic/1.5.0")
-            }
-            if (conn.responseCode == 200) {
-                val body = conn.inputStream.bufferedReader().use { it.readText() }
-                val root = JSONObject(body)
-                val data = root.optJSONArray("data")
-                if (data != null && data.length() > 0) {
-                    var bestObj = data.getJSONObject(0)
-                    if (targetDurationMs > 0) {
-                        val targetSec = targetDurationMs / 1000L
-                        var bestDiff = Long.MAX_VALUE
-                        for (i in 0 until data.length()) {
-                            val item = data.getJSONObject(i)
-                            val durSec = item.optLong("duration", 0L)
-                            val diff = kotlin.math.abs(durSec - targetSec)
-                            if (diff < bestDiff) {
-                                bestDiff = diff
-                                bestObj = item
-                            }
-                        }
-                    }
-                    val title = bestObj.optString("title", "")
-                    val artistObj = bestObj.optJSONObject("artist")
-                    val artist = artistObj?.optString("name", "") ?: ""
-                    val albumObj = bestObj.optJSONObject("album")
-                    val album = albumObj?.optString("title", "") ?: ""
-                    val cover = albumObj?.optString("cover_big", "")
-                        ?.ifBlank { albumObj.optString("cover_medium", "") }
-                    if (title.isNotBlank() && artist.isNotBlank()) {
-                        return OnlineMetadataResult(
-                            title = title,
-                            artist = artist,
-                            album = album,
-                            year = "2025",
-                            genre = "Music",
-                            coverUrl = cover?.takeIf { it.isNotBlank() }
-                        )
-                    }
-                }
-            }
+        val cleanedTitle = cleanJunk(song.title)
+        if (cleanedTitle.isNotBlank() && !randomNameRegex.containsMatchIn(cleanedTitle)) {
+            searchOnlineTrackMetadata(cleanedTitle, durationMs)?.let { return it }
         }
 
-        runCatching {
-            val encoded = URLEncoder.encode(cleanQuery, "UTF-8")
-            val url = URL("https://itunes.apple.com/search?term=$encoded&media=music&entity=song&limit=4")
-            val conn = (url.openConnection() as HttpURLConnection).apply {
-                connectTimeout = 5000
-                readTimeout = 5000
-            }
-            if (conn.responseCode == 200) {
-                val body = conn.inputStream.bufferedReader().use { it.readText() }
-                val root = JSONObject(body)
-                val results = root.optJSONArray("results")
-                if (results != null && results.length() > 0) {
-                    val item = results.getJSONObject(0)
-                    val title = item.optString("trackName", "")
-                    val artist = item.optString("artistName", "")
-                    val album = item.optString("collectionName", "")
-                    val genre = item.optString("primaryGenreName", "")
-                    val releaseDate = item.optString("releaseDate", "")
-                    val year = if (releaseDate.length >= 4) releaseDate.substring(0, 4) else ""
-                    val artwork100 = item.optString("artworkUrl100", "")
-                    val coverHighRes = artwork100.replace("100x100bb", "600x600bb").takeIf { it.isNotBlank() }
-                    if (title.isNotBlank()) {
-                        return OnlineMetadataResult(
-                            title = title,
-                            artist = artist,
-                            album = album,
-                            year = year,
-                            genre = genre,
-                            coverUrl = coverHighRes
-                        )
-                    }
-                }
-            }
+        val cleanedArtist = cleanJunk(song.artist)
+        if (cleanedArtist.isNotBlank() && !cleanedArtist.equals("Неизвестный исполнитель", true) && cleanedTitle.isNotBlank()) {
+            searchOnlineTrackMetadata("$cleanedArtist $cleanedTitle", durationMs)?.let { return it }
         }
 
         return null
     }
 
-    fun cacheRemoteCoverToDisk(context: Context, songId: String, imageUrl: String): String? {
+    fun searchOnlineTrackMetadata(query: String, targetDurationMs: Long = 0L): OnlineMetadataResult? {
+        val cleanQuery = cleanJunk(query).trim()
+        if (cleanQuery.isBlank() || cleanQuery.length < 2) return null
+
+        val deezerMatch = queryDeezerSearch(cleanQuery, targetDurationMs)
+        if (deezerMatch != null) return deezerMatch
+
+        val itunesMatch = queryItunesSearch(cleanQuery, targetDurationMs)
+        if (itunesMatch != null) return itunesMatch
+
+        return null
+    }
+
+    private fun queryDeezerSearch(query: String, targetDurationMs: Long): OnlineMetadataResult? {
         return runCatching {
-            val coversDir = File(context.filesDir, "covers").apply { mkdirs() }
-            val safeId = songId.replace(Regex("[^a-zA-Z0-9_-]"), "_")
-            val outFile = File(coversDir, "cover_${safeId}_${System.currentTimeMillis()}.jpg")
-            val conn = (URL(imageUrl).openConnection() as HttpURLConnection).apply {
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val url = URL("https://api.deezer.com/search?q=$encoded&limit=8")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 6000
                 readTimeout = 6000
-                setRequestProperty("User-Agent", "LorMusic/1.5.0")
+                setRequestProperty("User-Agent", "LorMusic/1.6.0 (Android; ShazamEngine)")
             }
-            conn.inputStream.use { input ->
-                FileOutputStream(outFile).use { output ->
-                    input.copyTo(output)
-                }
+            if (conn.responseCode == 200) {
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
+                val root = JSONObject(body)
+                val data = root.optJSONArray("data")
+                if (data != null && data.length() > 0) {
+                    var bestObj = data.getJSONObject(0)
+                    if (targetDurationMs > 3000L) {
+                        val targetSec = targetDurationMs / 1000L
+                        var bestDiff = Long.MAX_VALUE
+                        for (i in 0 until data.length()) {
+                            val item = data.getJSONObject(i)
+                            val itemDur = item.optLong("duration", 0L)
+                            if (itemDur > 0) {
+                                val diff = abs(itemDur - targetSec)
+                                if (diff < bestDiff) {
+                                    bestDiff = diff
+                                    bestObj = item
+                                }
+                            }
+                        }
+                    }
+
+                    val title = bestObj.optString("title_short", "").ifBlank { bestObj.optString("title", "") }
+                    val artistObj = bestObj.optJSONObject("artist")
+                    val artist = artistObj?.optString("name", "") ?: ""
+                    val albumObj = bestObj.optJSONObject("album")
+                    val album = albumObj?.optString("title", "") ?: ""
+                    val cover = albumObj?.optString("cover_xl", "")
+                        ?.ifBlank { albumObj.optString("cover_big", "") }
+                        ?.ifBlank { albumObj.optString("cover_medium", "") }
+
+                    if (title.isNotBlank()) {
+                        OnlineMetadataResult(
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            coverUrl = cover?.takeIf { it.isNotBlank() }
+                        )
+                    } else null
+                } else null
+            } else {
+                conn.disconnect()
+                null
             }
-            Uri.fromFile(outFile).toString()
         }.getOrNull()
     }
 
-    fun copyPickedCoverToDisk(context: Context, songId: String, pickedUri: Uri): String? {
+    private fun queryItunesSearch(query: String, targetDurationMs: Long): OnlineMetadataResult? {
         return runCatching {
-            val coversDir = File(context.filesDir, "covers").apply { mkdirs() }
-            val safeId = songId.replace(Regex("[^a-zA-Z0-9_-]"), "_")
-            val outFile = File(coversDir, "custom_${safeId}_${System.currentTimeMillis()}.jpg")
-            context.contentResolver.openInputStream(pickedUri)?.use { input ->
-                FileOutputStream(outFile).use { output ->
-                    input.copyTo(output)
-                }
+            val encoded = URLEncoder.encode(query, "UTF-8")
+            val url = URL("https://itunes.apple.com/search?term=$encoded&entity=song&limit=5")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 6000
+                readTimeout = 6000
+                setRequestProperty("User-Agent", "LorMusic/1.6.0 (Android; ShazamEngine)")
             }
-            Uri.fromFile(outFile).toString()
+            if (conn.responseCode == 200) {
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
+                val root = JSONObject(body)
+                val results = root.optJSONArray("results")
+                if (results != null && results.length() > 0) {
+                    var bestObj = results.getJSONObject(0)
+                    if (targetDurationMs > 3000L) {
+                        var bestDiff = Long.MAX_VALUE
+                        for (i in 0 until results.length()) {
+                            val item = results.getJSONObject(i)
+                            val itemDur = item.optLong("trackTimeMillis", 0L)
+                            if (itemDur > 0) {
+                                val diff = abs(itemDur - targetDurationMs)
+                                if (diff < bestDiff) {
+                                    bestDiff = diff
+                                    bestObj = item
+                                }
+                            }
+                        }
+                    }
+
+                    val title = bestObj.optString("trackName", "")
+                    val artist = bestObj.optString("artistName", "")
+                    val album = bestObj.optString("collectionName", "")
+                    val rawCover = bestObj.optString("artworkUrl100", "")
+                    val highResCover = if (rawCover.isNotBlank()) {
+                        rawCover.replace("100x100bb", "600x600bb")
+                    } else null
+                    val genre = bestObj.optString("primaryGenreName", "")
+                    val year = bestObj.optString("releaseDate", "").take(4)
+
+                    if (title.isNotBlank()) {
+                        OnlineMetadataResult(
+                            title = title,
+                            artist = artist,
+                            album = album,
+                            year = year,
+                            genre = genre,
+                            coverUrl = highResCover
+                        )
+                    } else null
+                } else null
+            } else {
+                conn.disconnect()
+                null
+            }
+        }.getOrNull()
+    }
+
+    private fun cleanJunk(input: String): String {
+        var res = input.trim()
+        res = res.replace(junkRegex, "")
+        res = res.replace(Regex("(?i)^(\\d{1,3}[.\\-_ ]+|track[\\-_ ]*\\d+[.\\-_ ]*)"), "")
+        res = res.replace(Regex("(?i)\\[(mp3|flac|wav|320|128)\\]"), "")
+        res = res.replace("_", " ")
+        res = res.replace(Regex("\\s+"), " ")
+        return res.trim()
+    }
+
+    private fun hasMeaningfulChanges(song: Song, proposal: TagFixProposal): Boolean {
+        if (!proposal.proposedTitle.equals(song.title.trim(), ignoreCase = false)) return true
+        if (!proposal.proposedArtist.equals(song.artist.trim(), ignoreCase = false)) return true
+        if (!proposal.proposedCoverUri.isNullOrBlank() && proposal.proposedCoverUri != song.albumArtUri) return true
+        return false
+    }
+
+    fun cacheRemoteCoverToDisk(context: Context, songId: String, imageUrl: String): String? {
+        return runCatching {
+            val safeId = songId.replace(Regex("[^a-zA-Z0-9_]"), "_")
+            val coversDir = File(context.filesDir, "tag_covers").apply { if (!exists()) mkdirs() }
+            val file = File(coversDir, "cover_$safeId.jpg")
+
+            val url = URL(imageUrl)
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 8000
+                readTimeout = 8000
+                setRequestProperty("User-Agent", "LorMusic/1.6.0")
+            }
+            if (conn.responseCode == 200) {
+                conn.inputStream.use { input ->
+                    FileOutputStream(file).use { output ->
+                        input.copyTo(output)
+                    }
+                }
+                conn.disconnect()
+                file.absolutePath
+            } else {
+                conn.disconnect()
+                null
+            }
         }.getOrNull()
     }
 }

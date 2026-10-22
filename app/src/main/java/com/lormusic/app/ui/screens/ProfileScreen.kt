@@ -1,5 +1,6 @@
 package com.lormusic.app.ui.screens
 
+import android.os.Build
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -34,6 +35,10 @@ fun ProfileScreen(
     useDynamicColor: Boolean,
     useSquigglySlider: Boolean,
     enableBlur: Boolean,
+    useLiquidGlass: Boolean = false,
+    enableBetaUpdates: Boolean = false,
+    useAlbumArtGradient: Boolean = false,
+    autoTagFixEnabled: Boolean = false,
     searchBarPlacement: SearchBarPlacement,
     enablePlayerSwipe: Boolean,
     hideDemoTracks: Boolean,
@@ -44,6 +49,10 @@ fun ProfileScreen(
     onToggleDynamicColor: (Boolean) -> Unit,
     onToggleSquigglySlider: (Boolean) -> Unit,
     onToggleBlur: (Boolean) -> Unit,
+    onToggleLiquidGlass: (Boolean) -> Unit = {},
+    onToggleBetaUpdates: (Boolean) -> Unit = {},
+    onToggleAlbumArtGradient: (Boolean) -> Unit = {},
+    onToggleAutoTagFix: (Boolean) -> Unit = {},
     onChangeSearchBarPlacement: (SearchBarPlacement) -> Unit,
     onTogglePlayerSwipe: (Boolean) -> Unit,
     onToggleHideDemoTracks: (Boolean) -> Unit,
@@ -59,6 +68,8 @@ fun ProfileScreen(
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showSleepDialog by remember { mutableStateOf(false) }
     var showAboutDialog by remember { mutableStateOf(false) }
+    var showLiquidGlassWarning by remember { mutableStateOf<String?>(null) }
+    val isLiquidGlassSupported = Build.VERSION.SDK_INT >= 33
 
     val iconChoices = listOf(
         AppIconOption.MINIMAL,
@@ -158,7 +169,7 @@ fun ProfileScreen(
                         )
                         Spacer(Modifier.height(8.dp))
                         Text(
-                            text = "${idx + 1}) ${option.label}",
+                            text = option.label,
                             style = MaterialTheme.typography.labelLarge,
                             fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
                             color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
@@ -223,6 +234,44 @@ fun ProfileScreen(
                         Switch(
                             checked = enableBlur,
                             onCheckedChange = onToggleBlur
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text("Стиль Liquid Glass (Apple)") },
+                    supportingContent = {
+                        Text(
+                            if (isLiquidGlassSupported) {
+                                "Жидкое стекло с объёмными бликами вместо обычного блюра"
+                            } else {
+                                "Требуется Android 13+ (у вас Android ${Build.VERSION.RELEASE})"
+                            }
+                        )
+                    },
+                    leadingContent = { Icon(Icons.Filled.AutoFixNormal, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = useLiquidGlass,
+                            onCheckedChange = { checked ->
+                                if (!isLiquidGlassSupported) {
+                                    showLiquidGlassWarning = "Liquid Glass работает только на Android 13 и выше, а у вас Android ${Build.VERSION.RELEASE}"
+                                } else {
+                                    onToggleLiquidGlass(checked)
+                                }
+                            }
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text("Динамический градиент обложки") },
+                    supportingContent = { Text("Фон экрана «Сейчас играет» формируется из цветов обложки") },
+                    leadingContent = { Icon(Icons.Filled.Gradient, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = useAlbumArtGradient,
+                            onCheckedChange = onToggleAlbumArtGradient
                         )
                     }
                 )
@@ -307,6 +356,30 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
+                    headlineContent = { Text("Автоматический TagFix") },
+                    supportingContent = { Text("Предлагать исправление при обнаружении треков со сломанными тегами") },
+                    leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = autoTagFixEnabled,
+                            onCheckedChange = onToggleAutoTagFix
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text("Получать бета-обновления") },
+                    supportingContent = { Text("Уведомлять о предварительных и пре-релизных сборках с GitHub") },
+                    leadingContent = { Icon(Icons.Filled.BugReport, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = enableBetaUpdates,
+                            onCheckedChange = onToggleBetaUpdates
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
                     headlineContent = { Text("Скорость воспроизведения") },
                     supportingContent = { Text("${playbackSpeed}x") },
                     leadingContent = { Icon(Icons.Filled.Speed, contentDescription = null) },
@@ -334,14 +407,14 @@ fun ProfileScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text("Проверить обновления") },
-                    supportingContent = { Text("Текущая версия 1.5.6") },
+                    supportingContent = { Text("Текущая версия 1.6.0") },
                     leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
                     modifier = Modifier.clickable { onCheckForUpdates() }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text("О приложении") },
-                    supportingContent = { Text("LorMusic 1.5.6") },
+                    supportingContent = { Text("LorMusic 1.6.0") },
                     leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
                     modifier = Modifier.clickable { showAboutDialog = true }
                 )
@@ -503,19 +576,41 @@ fun ProfileScreen(
         )
     }
 
+    if (showLiquidGlassWarning != null) {
+        AlertDialog(
+            onDismissRequest = { showLiquidGlassWarning = null },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.WarningAmber,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.error,
+                    modifier = Modifier.size(32.dp)
+                )
+            },
+            title = { Text("Liquid Glass недоступен", fontWeight = FontWeight.Bold) },
+            text = { Text(showLiquidGlassWarning ?: "") },
+            confirmButton = {
+                TextButton(onClick = { showLiquidGlassWarning = null }) {
+                    Text("Понятно")
+                }
+            }
+        )
+    }
+
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text("LorMusic 1.5.6") },
+            title = { Text("LorMusic 1.6.0") },
             text = {
                 Text(
-                    "Музыкальный плеер в стиле Material 3 Expressive + iOS Blur.\n\n" +
-                        "• Исправлена ошибка воспроизведения (source error) в YouTube Music + полная длина всех треков\n" +
-                        "• Жест навигации скольжением (Hold & Swipe) по нижнему навбару с плавным указателем\n" +
-                        "• Плавная инерционная прокрутка (Smooth Scrolling) списков без рывков\n" +
-                        "• Свайпы переключения треков в мини-плеере и полноэкранном плеере + кнопка предыдущего трека в мини-плеере\n" +
-                        "• Удаление песен с устройства и скрытие треков из основного потока в папку «Скрытые»\n" +
-                        "• Гибкая настройка расположения поиска и включения/выключения размытия (Blur)"
+                    "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                        "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
+                        "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
+                        "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
+                        "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
+                        "• Получение бета-обновлений и редизайн окна автоапдейтера с Markdown\n" +
+                        "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
+                        "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
                 )
             },
             confirmButton = {
