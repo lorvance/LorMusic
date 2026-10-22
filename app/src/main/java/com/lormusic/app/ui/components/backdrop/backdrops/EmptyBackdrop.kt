@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.backdrops
+package com.lormusic.app.ui.components.backdrop.backdrops
 
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable

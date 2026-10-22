@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop
+package com.lormusic.app.ui.components.backdrop
 
 import android.os.Build
 import androidx.annotation.ChecksSdkIntAtLeast

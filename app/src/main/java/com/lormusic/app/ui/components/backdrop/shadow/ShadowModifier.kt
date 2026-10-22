@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.shadow
+package com.lormusic.app.ui.components.backdrop.shadow
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.BlendMode

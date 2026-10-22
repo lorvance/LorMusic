@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.shadow
+package com.lormusic.app.ui.components.backdrop.shadow
 
 import androidx.annotation.FloatRange
 import androidx.compose.runtime.Immutable

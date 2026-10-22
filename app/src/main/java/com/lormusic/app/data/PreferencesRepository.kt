@@ -161,12 +161,22 @@ class PreferencesRepository(context: Context) {
 
     fun getGoogleAccountName(): String? = prefs.getString(KEY_GOOGLE_NAME, null)
     fun getGoogleAccountEmail(): String? = prefs.getString(KEY_GOOGLE_EMAIL, null)
+    fun getGoogleAccountAvatar(): String? = prefs.getString(KEY_GOOGLE_AVATAR, null)
     fun getYtMusicCookie(): String? = prefs.getString(KEY_YT_MUSIC_COOKIE, null)
 
-    fun saveGoogleAccount(name: String?, email: String?) {
+    fun saveGoogleAccount(name: String?, email: String?, avatarUrl: String? = null) {
         prefs.edit()
             .putString(KEY_GOOGLE_NAME, name)
             .putString(KEY_GOOGLE_EMAIL, email)
+            .putString(KEY_GOOGLE_AVATAR, avatarUrl)
+            .apply()
+    }
+
+    fun getClassicLibraryDesign(): Boolean = prefs.getBoolean(KEY_CLASSIC_LIBRARY, false)
+
+    fun setClassicLibraryDesign(enabled: Boolean) {
+        prefs.edit()
+            .putBoolean(KEY_CLASSIC_LIBRARY, enabled)
             .apply()
     }
 
@@ -385,6 +395,8 @@ class PreferencesRepository(context: Context) {
         private const val KEY_RECENTLY_PLAYED = "recently_played_song_ids"
         private const val KEY_GOOGLE_NAME = "google_account_name"
         private const val KEY_GOOGLE_EMAIL = "google_account_email"
+        private const val KEY_GOOGLE_AVATAR = "google_account_avatar"
+        private const val KEY_CLASSIC_LIBRARY = "classic_library_design"
         private const val KEY_YT_MUSIC_COOKIE = "yt_music_cookie_raw"
         private const val KEY_TAG_OVERRIDES = "song_tag_overrides_json"
         private const val KEY_SAVED_YT_SONGS = "saved_yt_music_songs_json"

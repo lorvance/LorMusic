@@ -76,7 +76,8 @@ data class Playlist(
 
 data class GoogleAccountProfile(
     val displayName: String,
-    val email: String
+    val email: String,
+    val avatarUrl: String? = null
 )
 
 enum class RepeatMode {
@@ -93,8 +94,8 @@ enum class ThemeMode(val label: String) {
 
 enum class AppIconOption(val label: String, val subtitle: String, val aliasClassName: String) {
     MINIMAL("Минимализм", "Лавандовый цветок с нотой", "com.lormusic.app.MainActivityAliasMinimal"),
-    REGULAR("Обычная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),
-    OLD("Old", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld")
+    REGULAR("Стандартная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),
+    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld")
 }
 
 enum class LibraryFilter(val label: String) {

@@ -227,7 +227,15 @@ object YouTubeMusicRepository {
                 .ifBlank { extractRunsText(header.optJSONObject("channelHandle")) }
                 .ifBlank { "Синхронизировано с YouTube Music" }
 
-            GoogleAccountProfile(displayName = name, email = email)
+            val photoThumbs = header.optJSONObject("accountPhoto")?.optJSONArray("thumbnails")
+            val rawAvatar = if (photoThumbs != null && photoThumbs.length() > 0) {
+                photoThumbs.optJSONObject(photoThumbs.length() - 1)?.optString("url")
+            } else null
+            val avatarUrl = rawAvatar?.let {
+                if (it.startsWith("//")) "https:$it" else it
+            }
+
+            GoogleAccountProfile(displayName = name, email = email, avatarUrl = avatarUrl)
         }.getOrNull()
     }
 

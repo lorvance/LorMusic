@@ -506,12 +506,11 @@ fun AnimatedSplashIcon(
             AppIconOption.OLD -> {
                 val flyAnim = remember { Animatable(0f) }
                 LaunchedEffect(Unit) {
-                    delay(120)
                     flyAnim.animateTo(
                         targetValue = 1f,
-                        animationSpec = spring(
-                            dampingRatio = 0.58f,
-                            stiffness = 140f
+                        animationSpec = tween(
+                            durationMillis = 850,
+                            easing = CubicBezierEasing(0.2f, 0.9f, 0.3f, 1f)
                         )
                     )
                 }
@@ -555,8 +554,8 @@ fun AnimatedSplashIcon(
                     )
 
                     val flyFraction = flyAnim.value
-                    val startX = cx + w * 0.85f
-                    val startY = cy - h * 0.85f
+                    val startX = cx + w * 0.90f
+                    val startY = cy - h * 0.90f
                     val targetX = cx + w * 0.12f
                     val targetY = cy + h * 0.05f
 
@@ -573,12 +572,12 @@ fun AnimatedSplashIcon(
             }
 
             AppIconOption.MINIMAL -> {
-                val transition = rememberInfiniteTransition(label = "minimalHop")
+                val transition = rememberInfiniteTransition(label = "minimalSmoothHop")
                 val hopOffset by transition.animateFloat(
                     initialValue = 0f,
-                    targetValue = -16f,
+                    targetValue = -12f,
                     animationSpec = infiniteRepeatable(
-                        animation = tween(380, easing = FastOutSlowInEasing),
+                        animation = tween(750, easing = FastOutSlowInEasing),
                         repeatMode = RepeatMode.Reverse
                     ),
                     label = "noteHop"

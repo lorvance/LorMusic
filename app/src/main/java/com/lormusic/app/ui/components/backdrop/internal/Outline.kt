@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.internal
+package com.lormusic.app.ui.components.backdrop.internal
 
 import androidx.compose.ui.graphics.Canvas
 import androidx.compose.ui.graphics.Outline

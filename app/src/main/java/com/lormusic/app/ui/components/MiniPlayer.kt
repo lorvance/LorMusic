@@ -126,10 +126,10 @@ fun MiniPlayer(
                     onDragEnd = {
                         val threshold = 85f
 
-                        if (totalDrag > threshold) {
+                        if (totalDrag < -threshold) {
                             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                             onNext()
-                        } else if (totalDrag < -threshold) {
+                        } else if (totalDrag > threshold) {
                             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                             onPrevious()
                         }

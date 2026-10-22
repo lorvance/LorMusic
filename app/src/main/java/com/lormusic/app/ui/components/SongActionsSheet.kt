@@ -127,7 +127,8 @@ fun SongActionsBottomSheet(
     onOpenTagEditor: (() -> Unit)? = null,
     onDownloadSong: (() -> Unit)? = null,
     onToggleHidden: (() -> Unit)? = null,
-    onDeleteFromDevice: (() -> Unit)? = null
+    onDeleteFromDevice: (() -> Unit)? = null,
+    onOpenArtistProfile: ((String) -> Unit)? = null
 ) {
     var showPlaylistPicker by remember { mutableStateOf(false) }
     var showTrackDetails by remember { mutableStateOf(false) }
@@ -263,6 +264,16 @@ fun SongActionsBottomSheet(
                             onDismiss()
                         }
                     )
+                    if (onOpenArtistProfile != null && song.artist.isNotBlank()) {
+                        ListItem(
+                            headlineContent = { Text("Исполнитель: ${song.artist}") },
+                            leadingContent = { Icon(Icons.Filled.Person, contentDescription = null) },
+                            modifier = Modifier.clickable {
+                                onDismiss()
+                                onOpenArtistProfile(song.artist)
+                            }
+                        )
+                    }
                     if (onOpenTagEditor != null) {
                         ListItem(
                             headlineContent = { Text("Редактор тегов и обложки") },

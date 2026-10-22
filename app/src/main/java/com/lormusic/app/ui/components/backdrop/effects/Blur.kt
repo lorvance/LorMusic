@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.effects
+package com.lormusic.app.ui.components.backdrop.effects
 
 import androidx.annotation.FloatRange
 import androidx.compose.ui.graphics.BlurEffect

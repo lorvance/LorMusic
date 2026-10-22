@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.backdrops
+package com.lormusic.app.ui.components.backdrop.backdrops
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
@@ -59,9 +59,17 @@ private class LayerBackdropNode(
             return
         }
         try {
+            backdrop.isRecording = true
             recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
+        } catch (_: Throwable) {
+            drawContent()
+            return
+        } finally {
+            backdrop.isRecording = false
+        }
+        try {
             drawLayer(backdrop.graphicsLayer)
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             drawContent()
         }
     }

@@ -20,6 +20,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.lormusic.app.model.AppIconOption
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.ui.components.AppIconVectorPreview
@@ -39,6 +40,7 @@ fun ProfileScreen(
     enableBetaUpdates: Boolean = false,
     useAlbumArtGradient: Boolean = false,
     autoTagFixEnabled: Boolean = false,
+    classicLibraryDesign: Boolean = false,
     appLanguage: com.lormusic.app.model.AppLanguage = com.lormusic.app.model.AppLanguage.SYSTEM,
     searchBarPlacement: SearchBarPlacement,
     enablePlayerSwipe: Boolean,
@@ -54,6 +56,7 @@ fun ProfileScreen(
     onToggleBetaUpdates: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
     onToggleAutoTagFix: (Boolean) -> Unit = {},
+    onToggleClassicLibraryDesign: (Boolean) -> Unit = {},
     onSelectLanguage: (com.lormusic.app.model.AppLanguage) -> Unit = {},
     onChangeSearchBarPlacement: (SearchBarPlacement) -> Unit,
     onTogglePlayerSwipe: (Boolean) -> Unit,
@@ -65,6 +68,7 @@ fun ProfileScreen(
     onOpenTagFix: () -> Unit,
     onCheckForUpdates: () -> Unit = {}
 ) {
+    val strings = LocalStrings.current
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSearchPlacementDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -311,10 +315,22 @@ fun ProfileScreen(
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
-                    headlineContent = { Text("Язык / Language / Мова") },
+                    headlineContent = { Text(strings.languageTitle) },
                     supportingContent = { Text(appLanguage.displayName) },
                     leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
                     modifier = Modifier.clickable { showLanguageDialog = true }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text(strings.classicLibraryDesignTitle) },
+                    supportingContent = { Text(strings.classicLibraryDesignDesc) },
+                    leadingContent = { Icon(Icons.Filled.ViewAgenda, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = classicLibraryDesign,
+                            onCheckedChange = onToggleClassicLibraryDesign
+                        )
+                    }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
@@ -610,7 +626,7 @@ fun ProfileScreen(
     if (showLanguageDialog) {
         AlertDialog(
             onDismissRequest = { showLanguageDialog = false },
-            title = { Text("Выберите язык / Select Language", fontWeight = FontWeight.Bold) },
+            title = { Text(strings.languageTitle, fontWeight = FontWeight.Bold) },
             text = {
                 Column {
                     com.lormusic.app.model.AppLanguage.entries.forEach { lang ->
@@ -639,7 +655,7 @@ fun ProfileScreen(
             },
             confirmButton = {
                 TextButton(onClick = { showLanguageDialog = false }) {
-                    Text("Закрыть")
+                    Text(strings.close)
                 }
             }
         )

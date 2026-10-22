@@ -28,6 +28,9 @@ import com.lormusic.app.ui.components.backdrop.highlight.Highlight
 import com.lormusic.app.ui.components.backdrop.highlight.HighlightElement
 import com.lormusic.app.ui.components.backdrop.internal.ShapeProvider
 import com.lormusic.app.ui.components.backdrop.shadow.Shadow
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop?> { null }
@@ -92,6 +95,64 @@ fun Modifier.liquidGlass(shape: CornerBasedShape): Modifier {
         exportedBackdrop = exportedBackdrop,
         backdropScale = GLASS_RESOLUTION_SCALE,
     )
+}
+
+@Composable
+fun Modifier.liquidGlassBubble(
+    shape: CornerBasedShape,
+    hazeState: dev.chrisbanes.haze.HazeState? = null,
+    enableBlur: Boolean = true,
+    isLiquidGlass: Boolean = false
+): Modifier {
+    val useGlass = isLiquidGlass && isLiquidGlassSupported()
+    val baseSurface = MaterialTheme.colorScheme.surface
+    val glassTint = if (baseSurface.luminance() > 0.5f) Color(0xFFFAFAFA) else Color(0xFF141414)
+    val shapeProvider = ShapeProvider { shape }
+
+    val blurModifier = if (hazeState != null && (useGlass || enableBlur)) {
+        Modifier.hazeEffect(state = hazeState) {
+            blurEnabled = true
+            backgroundColor = baseSurface
+            blurRadius = if (useGlass) 28.dp else 22.dp
+            tints = listOf(dev.chrisbanes.haze.HazeTint(baseSurface.copy(alpha = if (useGlass) 0.35f else 0.65f)))
+        }
+    } else {
+        Modifier
+    }
+
+    val bgModifier = if (useGlass) {
+        Modifier.background(glassTint.copy(alpha = 0.35f), shape)
+    } else if (enableBlur) {
+        Modifier.background(baseSurface.copy(alpha = 0.60f), shape)
+    } else {
+        Modifier.background(baseSurface.copy(alpha = 0.94f), shape)
+    }
+
+    val highlightModifier = if (useGlass) {
+        HighlightElement(
+            shapeProvider = shapeProvider,
+            highlight = { Highlight.Default }
+        )
+    } else {
+        Modifier
+    }
+
+    val borderModifier = Modifier.border(
+        width = if (useGlass) 1.2.dp else 1.dp,
+        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+            listOf(
+                Color.White.copy(alpha = if (useGlass) 0.38f else 0.22f),
+                Color.White.copy(alpha = if (useGlass) 0.12f else 0.06f)
+            )
+        ),
+        shape = shape
+    )
+
+    return clip(shape)
+        .then(blurModifier)
+        .then(bgModifier)
+        .then(highlightModifier)
+        .then(borderModifier)
 }
 
 @Composable

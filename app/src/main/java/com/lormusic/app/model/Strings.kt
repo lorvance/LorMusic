@@ -64,7 +64,14 @@ class AppStrings(
     val appVersion: String,
     val cancel: String,
     val apply: String,
-    val save: String
+    val save: String,
+    val classicLibraryDesignTitle: String,
+    val classicLibraryDesignDesc: String,
+    val shuffleAll: String,
+    val rescan: String,
+    val artistProfile: String,
+    val tracksCount: String,
+    val searchOnYouTube: String
 )
 
 val StringsRu = AppStrings(
@@ -128,7 +135,14 @@ val StringsRu = AppStrings(
     appVersion = "Версия 1.6.0",
     cancel = "Отмена",
     apply = "Применить",
-    save = "Сохранить"
+    save = "Сохранить",
+    classicLibraryDesignTitle = "Классический дизайн медиатеки",
+    classicLibraryDesignDesc = "Показывать прежнюю шапку с кнопками фильтрации",
+    shuffleAll = "Перемешать всё",
+    rescan = "Пересканировать",
+    artistProfile = "Исполнитель",
+    tracksCount = "треков в медиатеке",
+    searchOnYouTube = "Искать в YouTube Music"
 )
 
 val StringsEn = AppStrings(
@@ -192,7 +206,14 @@ val StringsEn = AppStrings(
     appVersion = "Version 1.6.0",
     cancel = "Cancel",
     apply = "Apply",
-    save = "Save"
+    save = "Save",
+    classicLibraryDesignTitle = "Classic library design",
+    classicLibraryDesignDesc = "Show classic top header with filter chips",
+    shuffleAll = "Shuffle all",
+    rescan = "Rescan",
+    artistProfile = "Artist",
+    tracksCount = "tracks in library",
+    searchOnYouTube = "Search on YouTube Music"
 )
 
 val StringsUk = AppStrings(
@@ -256,7 +277,14 @@ val StringsUk = AppStrings(
     appVersion = "Версія 1.6.0",
     cancel = "Скасувати",
     apply = "Застосувати",
-    save = "Зберегти"
+    save = "Зберегти",
+    classicLibraryDesignTitle = "Класичний дизайн медіатеки",
+    classicLibraryDesignDesc = "Показувати класичну шапку з кнопками фільтрації",
+    shuffleAll = "Перемішати все",
+    rescan = "Пересканувати",
+    artistProfile = "Виконавець",
+    tracksCount = "треків у медіатеці",
+    searchOnYouTube = "Шукати в YouTube Music"
 )
 
 fun resolveStrings(language: AppLanguage): AppStrings {

@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop
+package com.lormusic.app.ui.components.backdrop
 
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.RenderEffect

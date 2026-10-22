@@ -307,20 +307,23 @@ private class DrawBackdropNode(
             val padding = padding
             val scale = backdropScale
 
-            recordLayer(
-                this@DrawBackdropNode,
-                layer,
-                size = IntSize(
-                    ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
-                    ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
-                ),
-                block = recordBackdropBlock
-            )
+            try {
+                recordLayer(
+                    this@DrawBackdropNode,
+                    layer,
+                    size = IntSize(
+                        ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
+                        ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
+                    ),
+                    block = recordBackdropBlock
+                )
 
-            layer.topLeft =
-                if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt())
-                else IntOffset.Zero
-            drawRecordedBackdrop()
+                layer.topLeft =
+                    if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt())
+                    else IntOffset.Zero
+                drawRecordedBackdrop()
+            } catch (_: Throwable) {
+            }
         }
     }
 
@@ -368,7 +371,7 @@ private class DrawBackdropNode(
                     onDrawFront?.invoke(this)
                 }
             }
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
             drawContent()
         }
     }

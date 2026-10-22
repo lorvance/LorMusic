@@ -1,14 +1,17 @@
 package com.lormusic.app.ui.screens
 
+import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -23,14 +26,19 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import com.lormusic.app.data.AlphaNumericComparator
 import com.lormusic.app.model.LibraryFilter
+import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.SortOption
 import com.lormusic.app.ui.components.ExpressiveLoadingIndicator
 import com.lormusic.app.ui.components.SongRow
+import com.lormusic.app.ui.components.isLiquidGlassSupported
+import com.lormusic.app.ui.components.liquidGlass
+import com.lormusic.app.ui.components.liquidGlassBubble
 import com.lormusic.app.ui.components.rememberSmoothFlingBehavior
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
@@ -48,6 +56,8 @@ fun LibraryScreen(
     hiddenSongIds: Set<String> = emptySet(),
     hideDemoTracks: Boolean = false,
     enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
+    classicLibraryDesign: Boolean = false,
     showTopSearchBar: Boolean = true,
     externalSearchActive: Boolean = false,
     selectedFilter: LibraryFilter,
@@ -59,12 +69,16 @@ fun LibraryScreen(
     onSelectSort: (SortOption) -> Unit,
     onRequestPermissionAndScan: () -> Unit,
     onOpenTagFix: () -> Unit,
+    onOpenYtMusic: () -> Unit = {},
     onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit
 ) {
+    val strings = LocalStrings.current
+    val view = LocalView.current
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
+    var showMoreMenu by remember { mutableStateOf(false) }
     var isTopSearchExpanded by remember { mutableStateOf(false) }
     var searchQuery by remember { mutableStateOf("") }
 
@@ -161,6 +175,15 @@ fun LibraryScreen(
     val baseSurface = MaterialTheme.colorScheme.surface
     val topHeaderShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
     val smoothFling = rememberSmoothFlingBehavior()
+
+    val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
+        Modifier.liquidGlassBubble(
+            shape = shape,
+            hazeState = hazeState,
+            enableBlur = enableBlur,
+            isLiquidGlass = useLiquidGlass
+        )
+    }
 
     val headerBlurModifier = if (enableBlur) {
         Modifier.hazeEffect(state = hazeState) {
@@ -280,32 +303,283 @@ fun LibraryScreen(
             }
         }
 
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .onGloballyPositioned { coords ->
-                    headerHeightDp = with(density) { coords.size.height.toDp() }
-                }
-                .shadow(
-                    elevation = 16.dp,
-                    shape = topHeaderShape,
-                    ambientColor = Color.Black.copy(alpha = 0.55f),
-                    spotColor = Color.Black.copy(alpha = 0.55f)
-                )
-                .clip(topHeaderShape)
-                .then(headerBlurModifier)
-                .border(
-                    width = 1.dp,
-                    brush = Brush.verticalGradient(
-                        listOf(
-                            Color.White.copy(alpha = 0.06f),
-                            Color.White.copy(alpha = 0.20f)
+        if (!classicLibraryDesign) {
+            Column(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coords ->
+                        headerHeightDp = with(density) { coords.size.height.toDp() }
+                    }
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = strings.navLibrary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold
                         )
-                    ),
-                    shape = topHeaderShape
-                )
-        ) {
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (showTopSearchBar) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        isTopSearchExpanded = !isTopSearchExpanded
+                                        if (!isTopSearchExpanded) searchQuery = ""
+                                    }
+                                    .then(bubbleModifier(CircleShape)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                    contentDescription = "Поиск",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    showSortMenu = true
+                                }
+                                .then(bubbleModifier(CircleShape)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.Sort,
+                                contentDescription = "Сортировка",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false }
+                            ) {
+                                SortOption.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.label) },
+                                        leadingIcon = {
+                                            if (selectedSort == option) {
+                                                Icon(Icons.Filled.Check, contentDescription = null)
+                                            }
+                                        },
+                                        onClick = {
+                                            onSelectSort(option)
+                                            showSortMenu = false
+                                        }
+                                    )
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    showMoreMenu = true
+                                }
+                                .then(bubbleModifier(CircleShape)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.MoreVert,
+                                contentDescription = "Действия",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+
+                            DropdownMenu(
+                                expanded = showMoreMenu,
+                                onDismissRequest = { showMoreMenu = false }
+                            ) {
+                                DropdownMenuItem(
+                                    text = { Text(strings.playAll) },
+                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onPlayQueue(filteredSongs, 0, false)
+                                    },
+                                    enabled = filteredSongs.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(strings.shuffleAll) },
+                                    leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onPlayQueue(filteredSongs, 0, true)
+                                    },
+                                    enabled = filteredSongs.isNotEmpty()
+                                )
+                                DropdownMenuItem(
+                                    text = { Text(strings.rescan) },
+                                    leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                                    onClick = {
+                                        showMoreMenu = false
+                                        onRequestPermissionAndScan()
+                                    },
+                                    enabled = !isScanningLocal
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onOpenYtMusic()
+                            }
+                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "YT Music",
+                                        tint = Color(0xFF111111),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "YouTube Music",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onOpenTagFix()
+                            }
+                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AutoFixHigh,
+                                contentDescription = "TagFix",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "TagFix",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = isSearchVisible) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text("Поиск по названию, артисту, папке…") },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Filled.Clear, contentDescription = "Очистить")
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(bubbleModifier(RoundedCornerShape(18.dp)))
+                    )
+                }
+            }
+        } else {
+            Box(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .onGloballyPositioned { coords ->
+                        headerHeightDp = with(density) { coords.size.height.toDp() }
+                    }
+                    .shadow(
+                        elevation = 16.dp,
+                        shape = topHeaderShape,
+                        ambientColor = Color.Black.copy(alpha = 0.55f),
+                        spotColor = Color.Black.copy(alpha = 0.55f)
+                    )
+                    .clip(topHeaderShape)
+                    .then(headerBlurModifier)
+                    .border(
+                        width = 1.dp,
+                        brush = Brush.verticalGradient(
+                            listOf(
+                                Color.White.copy(alpha = 0.06f),
+                                Color.White.copy(alpha = 0.20f)
+                            )
+                        ),
+                        shape = topHeaderShape
+                    )
+            ) {
             Column(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -536,4 +810,5 @@ fun LibraryScreen(
             }
         }
     }
+}
 }

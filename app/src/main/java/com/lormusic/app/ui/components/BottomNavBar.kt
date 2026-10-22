@@ -46,14 +46,12 @@ import dev.chrisbanes.haze.hazeEffect
 
 enum class LorTab(val route: String, val label: String, val filled: ImageVector, val outline: ImageVector) {
     LIBRARY("library", "Медиатека", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
-    YT_MUSIC("yt_music", "YT Music", Icons.Filled.PlayCircleFilled, Icons.Outlined.PlayCircleOutline),
     PLAYLISTS("playlists", "Плейлисты", Icons.AutoMirrored.Filled.QueueMusic, Icons.AutoMirrored.Outlined.QueueMusic),
     SETTINGS("settings", "Настройки", Icons.Filled.Settings, Icons.Outlined.Settings),
 }
 
 enum class YtMusicTab(val label: String, val filled: ImageVector, val outline: ImageVector) {
     HOME("Главная", Icons.Filled.Home, Icons.Outlined.Home),
-    LOCAL("Локальная", Icons.Filled.FolderSpecial, Icons.Outlined.Folder),
     LIBRARIES("Библиотеки", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
     MY_WAVE("Моя волна", Icons.Filled.GraphicEq, Icons.Outlined.GraphicEq),
     SEARCH("", Icons.Filled.Search, Icons.Outlined.Search)
@@ -247,7 +245,7 @@ fun LorBottomNavBar(
                             outlineIcon = tab.outline,
                             isSelected = idx == activeIndex,
                             isHoveredByGesture = isDraggingNav && idx == activeIndex,
-                            isYtBadge = tab == LorTab.YT_MUSIC,
+                            isYtBadge = false,
                             compact = showBottomSearchButton
                         )
                     }
@@ -271,15 +269,29 @@ fun LorBottomNavBar(
                     )
                     .clip(CircleShape)
                     .then(
-                        if (enableBlur) {
-                            Modifier.hazeEffect(state = hazeState) {
-                                blurEnabled = true
-                                backgroundColor = baseSurface
-                                blurRadius = 30.dp
-                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.54f)))
-                            }
+                        if (useLiquidGlass && isLiquidGlassSupported()) {
+                            Modifier.liquidGlass(CircleShape)
                         } else {
-                            Modifier.background(baseSurface.copy(alpha = 0.96f))
+                            val baseMod = if (enableBlur) {
+                                Modifier.hazeEffect(state = hazeState) {
+                                    blurEnabled = true
+                                    backgroundColor = baseSurface
+                                    blurRadius = 30.dp
+                                    tints = listOf(HazeTint(baseSurface.copy(alpha = 0.54f)))
+                                }
+                            } else {
+                                Modifier.background(baseSurface.copy(alpha = 0.96f))
+                            }
+                            baseMod.border(
+                                width = 1.dp,
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.24f),
+                                        Color.White.copy(alpha = 0.06f)
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
                         }
                     )
                     .background(searchBg.copy(alpha = if (isLocalSearchActive) 0.88f else 0f))
@@ -332,7 +344,6 @@ fun YtMusicBottomNavBar(
     val mainTabs = remember {
         listOf(
             YtMusicTab.HOME,
-            YtMusicTab.LOCAL,
             YtMusicTab.LIBRARIES,
             YtMusicTab.MY_WAVE
         )
@@ -530,15 +541,29 @@ fun YtMusicBottomNavBar(
                     )
                     .clip(CircleShape)
                     .then(
-                        if (enableBlur) {
-                            Modifier.hazeEffect(state = hazeState) {
-                                blurEnabled = true
-                                backgroundColor = baseSurface
-                                blurRadius = 30.dp
-                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.54f)))
-                            }
+                        if (useLiquidGlass && isLiquidGlassSupported()) {
+                            Modifier.liquidGlass(CircleShape)
                         } else {
-                            Modifier.background(baseSurface.copy(alpha = 0.96f))
+                            val baseMod = if (enableBlur) {
+                                Modifier.hazeEffect(state = hazeState) {
+                                    blurEnabled = true
+                                    backgroundColor = baseSurface
+                                    blurRadius = 30.dp
+                                    tints = listOf(HazeTint(baseSurface.copy(alpha = 0.54f)))
+                                }
+                            } else {
+                                Modifier.background(baseSurface.copy(alpha = 0.96f))
+                            }
+                            baseMod.border(
+                                width = 1.dp,
+                                brush = Brush.verticalGradient(
+                                    listOf(
+                                        Color.White.copy(alpha = 0.24f),
+                                        Color.White.copy(alpha = 0.06f)
+                                    )
+                                ),
+                                shape = CircleShape
+                            )
                         }
                     )
                     .background(searchBg.copy(alpha = if (searchSelected) 0.88f else 0f))

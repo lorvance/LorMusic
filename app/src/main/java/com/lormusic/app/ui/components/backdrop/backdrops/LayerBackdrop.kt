@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.backdrops
+package com.lormusic.app.ui.components.backdrop.backdrops
 
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
@@ -39,6 +39,7 @@ class LayerBackdrop internal constructor(
 
     override val isCoordinatesDependent: Boolean = true
 
+    internal var isRecording: Boolean = false
     internal var layerCoordinates: LayoutCoordinates? by mutableStateOf(null)
 
     private var inverseLayerScope: InverseLayerScope? = null
@@ -48,6 +49,7 @@ class LayerBackdrop internal constructor(
         coordinates: LayoutCoordinates?,
         layerBlock: (GraphicsLayerScope.() -> Unit)?
     ) {
+        if (isRecording) return
         val coordinates = coordinates ?: return
         val layerCoordinates = layerCoordinates ?: return
         if (!coordinates.isAttached || !layerCoordinates.isAttached) return
@@ -59,14 +61,14 @@ class LayerBackdrop internal constructor(
                 val offset =
                     try {
                         layerCoordinates.localPositionOf(coordinates)
-                    } catch (_: Exception) {
+                    } catch (_: Throwable) {
                         coordinates.positionInWindow() - layerCoordinates.positionInWindow()
                     }
                 translate(-offset.x, -offset.y)
             }) {
                 drawLayer(graphicsLayer)
             }
-        } catch (_: Exception) {
+        } catch (_: Throwable) {
         }
     }
 

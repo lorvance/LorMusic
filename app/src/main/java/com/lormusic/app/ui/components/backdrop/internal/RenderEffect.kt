@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.internal
+package com.lormusic.app.ui.components.backdrop.internal
 
 import android.os.Build
 import androidx.annotation.RequiresApi

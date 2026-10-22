@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.internal
+package com.lormusic.app.ui.components.backdrop.internal
 
 import android.graphics.BlurMaskFilter
 import androidx.compose.ui.graphics.Paint

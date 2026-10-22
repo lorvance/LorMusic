@@ -125,16 +125,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return cleaned
     }
 
+    val classicLibraryDesign = mutableStateOf(prefs.getClassicLibraryDesign())
+    val selectedArtistProfile = mutableStateOf<String?>(null)
+
     private fun loadInitialGoogleProfile(): GoogleAccountProfile? {
         val cookie = prefs.getYtMusicCookie()
         if (!YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
-            prefs.saveGoogleAccount(null, null)
+            prefs.saveGoogleAccount(null, null, null)
             return null
         }
         val name = prefs.getGoogleAccountName()
         val email = prefs.getGoogleAccountEmail()
+        val avatar = prefs.getGoogleAccountAvatar()
         return if (!name.isNullOrBlank() && !email.isNullOrBlank()) {
-            GoogleAccountProfile(displayName = name, email = email)
+            GoogleAccountProfile(displayName = name, email = email, avatarUrl = avatar)
         } else null
     }
 
@@ -367,17 +371,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun selectYtTab(tab: YtMusicTab) {
-        if (tab == YtMusicTab.LOCAL) {
-            exitYtMusicMode()
-        } else {
-            activeYtTab.value = tab
-            if (tab == YtMusicTab.MY_WAVE &&
-                ytMyWaveSongs.value.isEmpty() &&
-                googleAccount.value != null &&
-                YouTubeMusicRepository.hasValidAuthCookie(ytMusicCookie.value)
-            ) {
-                refreshYtMyWave(null)
-            }
+        activeYtTab.value = tab
+        if (tab == YtMusicTab.MY_WAVE &&
+            ytMyWaveSongs.value.isEmpty() &&
+            googleAccount.value != null &&
+            YouTubeMusicRepository.hasValidAuthCookie(ytMusicCookie.value)
+        ) {
+            refreshYtMyWave(null)
         }
     }
 
@@ -488,7 +488,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 email = "YouTube Music Sync"
             )
             googleAccount.value = profile
-            prefs.saveGoogleAccount(profile.displayName, profile.email)
+            prefs.saveGoogleAccount(profile.displayName, profile.email, profile.avatarUrl)
 
             val newSaved = (syncData.historySongs + syncData.likedSongs + savedYtSongs.value)
                 .distinctBy { it.id }
@@ -539,7 +539,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         ytMyWaveSongs.value = emptyList()
         ytSearchResults.value = emptyList()
         savedYtSongs.value = emptyList()
-        prefs.saveGoogleAccount(null, null)
+        prefs.saveGoogleAccount(null, null, null)
         prefs.saveYtMusicCookie(null)
         prefs.saveYtSongs(emptyList())
         try {
@@ -1134,6 +1134,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setUseLiquidGlass(enabled: Boolean) {
         useLiquidGlass.value = enabled
         prefs.saveUseLiquidGlass(enabled)
+    }
+
+    fun setClassicLibraryDesign(enabled: Boolean) {
+        classicLibraryDesign.value = enabled
+        prefs.setClassicLibraryDesign(enabled)
+    }
+
+    fun openArtistProfile(artist: String) {
+        val trimmed = artist.trim()
+        if (trimmed.isNotBlank()) {
+            selectedArtistProfile.value = trimmed
+        }
+    }
+
+    fun closeArtistProfile() {
+        selectedArtistProfile.value = null
     }
 
     fun setEnableBetaUpdates(enabled: Boolean) {

@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop
+package com.lormusic.app.ui.components.backdrop
 
 import androidx.compose.ui.graphics.GraphicsLayerScope
 import androidx.compose.ui.graphics.drawscope.DrawScope

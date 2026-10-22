@@ -83,6 +83,7 @@ fun NowPlayingScreen(
     onRefreshLyrics: () -> Unit,
     onOpenSongActions: () -> Unit,
     onOpenTagEditor: () -> Unit,
+    onOpenArtistProfile: ((String) -> Unit)? = null,
     onClose: () -> Unit
 ) {
     val view = LocalView.current
@@ -275,10 +276,10 @@ fun NowPlayingScreen(
                                     onDragEnd = {
                                         val threshold = 90f
 
-                                        if (totalDrag > threshold) {
+                                        if (totalDrag < -threshold) {
                                             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                             onNext()
-                                        } else if (totalDrag < -threshold) {
+                                        } else if (totalDrag > threshold) {
                                             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                             onPrevious()
                                         }
@@ -332,37 +333,47 @@ fun NowPlayingScreen(
 
                     Spacer(Modifier.height(10.dp))
 
+                    AnimatedContent(
+                        targetState = song,
+                        transitionSpec = {
+                            (fadeIn(tween(240)) + slideInVertically { it / 3 })
+                                .togetherWith(fadeOut(tween(180)) + slideOutVertically { -it / 3 })
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        label = "songTitleAnim"
+                    ) { targetSong ->
+                        Text(
+                            text = targetSong.title,
+                            style = MaterialTheme.typography.headlineMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.fillMaxWidth()
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
                     Row(
                         modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        AnimatedContent(
-                            targetState = song,
-                            transitionSpec = {
-                                (fadeIn(tween(240)) + slideInVertically { it / 3 })
-                                    .togetherWith(fadeOut(tween(180)) + slideOutVertically { -it / 3 })
-                            },
-                            modifier = Modifier.weight(1f),
-                            label = "songTitleAnim"
-                        ) { targetSong ->
-                            Column {
-                                Text(
-                                    text = targetSong.title,
-                                    style = MaterialTheme.typography.headlineMedium,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                                Spacer(Modifier.height(2.dp))
-                                Text(
-                                    text = targetSong.artist,
-                                    style = MaterialTheme.typography.titleMedium,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.68f),
-                                    maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
-                                )
-                            }
-                        }
+                        Text(
+                            text = song.artist,
+                            style = MaterialTheme.typography.titleMedium,
+                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier
+                                .weight(1f, fill = false)
+                                .clip(RoundedCornerShape(8.dp))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onOpenArtistProfile?.invoke(song.artist)
+                                }
+                                .padding(vertical = 4.dp, horizontal = 2.dp)
+                        )
                         Row(
                             horizontalArrangement = Arrangement.spacedBy(6.dp),
                             verticalAlignment = Alignment.CenterVertically

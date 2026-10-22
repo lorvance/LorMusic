@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.highlight
+package com.lormusic.app.ui.components.backdrop.highlight
 
 import androidx.annotation.FloatRange
 import androidx.compose.foundation.shape.CornerBasedShape

@@ -1,4 +1,4 @@
-﻿package com.lormusic.app.ui.components.backdrop.highlight
+package com.lormusic.app.ui.components.backdrop.highlight
 
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Outline

@@ -279,7 +279,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             label = "tabTransition"
                         ) { tab ->
                             when (tab) {
-                                LorTab.LIBRARY, LorTab.YT_MUSIC -> LibraryScreen(
+                                LorTab.LIBRARY -> LibraryScreen(
                                     songs = allSongs,
                                     currentSong = currentSong,
                                     isPlaying = isPlaying,
@@ -287,6 +287,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     hiddenSongIds = hiddenSongIds,
                                     hideDemoTracks = hideDemoTracks,
                                     enableBlur = enableBlur,
+                                    useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                    classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                     showTopSearchBar = isLocalSearchTop,
                                     externalSearchActive = isBottomLocalSearchActive,
                                     selectedFilter = selectedFilter,
@@ -308,7 +310,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     },
                                     onToggleFavorite = playerViewModel::toggleFavorite,
                                     onSongMoreClick = { songForActionsSheet = it },
-                                    onOpenTagFix = { showTagFixSheet = true }
+                                    onOpenTagFix = { showTagFixSheet = true },
+                                    onOpenYtMusic = { playerViewModel.enterYtMusicMode() }
                                 )
 
                                 LorTab.PLAYLISTS -> Box(
@@ -353,6 +356,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         useSquigglySlider = useSquigglySlider,
                                         enableBlur = enableBlur,
                                         useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                        classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                         enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
                                         useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                         autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
@@ -368,6 +372,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleSquigglySlider = playerViewModel::setUseSquigglySlider,
                                         onToggleBlur = playerViewModel::setEnableBlur,
                                         onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
+                                        onToggleClassicLibraryDesign = playerViewModel::setClassicLibraryDesign,
                                         onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
                                         onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                         onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
@@ -444,11 +449,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     LorBottomNavBar(
                         selected = selectedTab,
                         onSelect = { tab ->
-                            if (tab == LorTab.YT_MUSIC) {
-                                playerViewModel.enterYtMusicMode()
-                            } else {
-                                selectedTab = tab
-                            }
+                            selectedTab = tab
                         },
                         hazeState = hazeState,
                         enableBlur = enableBlur,
@@ -517,6 +518,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             onRefreshLyrics = { playerViewModel.loadLyricsFor(song) },
                             onOpenSongActions = { songForActionsSheet = song },
                             onOpenTagEditor = { songForTagEditor = song },
+                            onOpenArtistProfile = playerViewModel::openArtistProfile,
                             onClose = { showNowPlaying = false }
                         )
                     }
@@ -554,7 +556,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             },
             onCreateNewPlaylistWithSong = { name ->
                 playerViewModel.createPlaylist(name, listOf(targetSong))
-            }
+            },
+            onOpenArtistProfile = playerViewModel::openArtistProfile
         )
     }
 
@@ -565,6 +568,27 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             onSave = { override ->
                 playerViewModel.saveSongTagOverride(override)
                 songForTagEditor = null
+            }
+        )
+    }
+
+    val selectedArtist = playerViewModel.selectedArtistProfile.value
+    if (selectedArtist != null) {
+        ArtistProfileSheet(
+            artistName = selectedArtist,
+            allSongs = allSongs,
+            currentSong = currentSong,
+            isPlaying = isPlaying,
+            favoriteIds = favoriteIds,
+            onDismiss = playerViewModel::closeArtistProfile,
+            onPlayQueue = { list, idx, shuffle ->
+                playerViewModel.setQueueAndPlay(list, idx, shuffle)
+            },
+            onToggleFavorite = playerViewModel::toggleFavorite,
+            onSongMoreClick = { songForActionsSheet = it },
+            onSearchOnYouTube = { query ->
+                playerViewModel.enterYtMusicMode()
+                playerViewModel.searchYtMusic(query)
             }
         )
     }
