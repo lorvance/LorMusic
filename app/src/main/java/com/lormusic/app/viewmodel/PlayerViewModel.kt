@@ -69,6 +69,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val useLiquidGlass = mutableStateOf(prefs.getUseLiquidGlass())
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
     val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
+    val useDynamicPlayerColors = mutableStateOf(prefs.getUseDynamicPlayerColors())
     val autoTagFixEnabled = mutableStateOf<Boolean>(prefs.getAutoTagFixEnabled())
     val appLanguage = mutableStateOf(prefs.getAppLanguage())
     val recentsViewMode = mutableStateOf(prefs.getRecentsViewMode())
@@ -90,6 +91,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val isLoadingYtFeed = mutableStateOf(false)
     val isSearchingYt = mutableStateOf(false)
     val downloadingSongIds = mutableStateOf<Set<String>>(emptySet())
+    val downloadProgress = mutableStateOf<Map<String, Float>>(emptyMap())
     val savedYtSongs = mutableStateOf(loadCleanSavedYtSongs())
     val ytMusicCookie = mutableStateOf(prefs.getYtMusicCookie())
     val googleAccount = mutableStateOf<GoogleAccountProfile?>(loadInitialGoogleProfile())
@@ -486,13 +488,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (downloadingSongIds.value.contains(song.id)) return
         viewModelScope.launch {
             downloadingSongIds.value = downloadingSongIds.value + song.id
+            downloadProgress.value = downloadProgress.value + (song.id to 0f)
         statusMessage.value = when (appLanguage.value) {
             AppLanguage.EN -> "Downloading «${song.title}» with ID3v2.3 tags and cover…"
             AppLanguage.UK -> "Завантаження «${song.title}» з усіма тегами ID3v2.3 та обкладинкою…"
             else -> "Скачивание «${song.title}» со всеми тегами ID3v2.3 и обложкой…"
         }
-            val result = YouTubeMusicRepository.downloadTrackToPhoneWithTags(getApplication(), song)
+            val result = YouTubeMusicRepository.downloadTrackToPhoneWithTags(getApplication(), song) { frac ->
+                downloadProgress.value = downloadProgress.value + (song.id to frac)
+            }
             downloadingSongIds.value = downloadingSongIds.value - song.id
+            downloadProgress.value = downloadProgress.value - song.id
 
             if (result != null) {
                 val (downloaded, override) = result
@@ -1299,6 +1305,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveUseAlbumArtGradient(enabled)
     }
 
+    fun setUseDynamicPlayerColors(enabled: Boolean) {
+        useDynamicPlayerColors.value = enabled
+        prefs.saveUseDynamicPlayerColors(enabled)
+    }
+
     fun setAutoTagFixEnabled(enabled: Boolean) {
         autoTagFixEnabled.value = enabled
         prefs.saveAutoTagFix(enabled)
@@ -1340,7 +1351,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.0", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.6.1", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
@@ -1348,9 +1359,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.0)"
-                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.0)"
-                        else -> "У вас установлена последняя версия (1.6.0)"
+                        AppLanguage.EN -> "You have the latest version installed (1.6.1)"
+                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.1)"
+                        else -> "У вас установлена последняя версия (1.6.1)"
                     }
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message

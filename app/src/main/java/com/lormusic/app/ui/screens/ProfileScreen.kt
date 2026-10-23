@@ -39,6 +39,7 @@ fun ProfileScreen(
     useLiquidGlass: Boolean = false,
     enableBetaUpdates: Boolean = false,
     useAlbumArtGradient: Boolean = false,
+    useDynamicPlayerColors: Boolean = true,
     autoTagFixEnabled: Boolean = false,
     classicLibraryDesign: Boolean = false,
     appLanguage: com.lormusic.app.model.AppLanguage = com.lormusic.app.model.AppLanguage.SYSTEM,
@@ -55,6 +56,7 @@ fun ProfileScreen(
     onToggleLiquidGlass: (Boolean) -> Unit = {},
     onToggleBetaUpdates: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
+    onToggleDynamicPlayerColors: (Boolean) -> Unit = {},
     onToggleAutoTagFix: (Boolean) -> Unit = {},
     onToggleClassicLibraryDesign: (Boolean) -> Unit = {},
     onSelectLanguage: (com.lormusic.app.model.AppLanguage) -> Unit = {},
@@ -279,6 +281,18 @@ fun ProfileScreen(
                         Switch(
                             checked = useAlbumArtGradient,
                             onCheckedChange = onToggleAlbumArtGradient
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text(strings.dynamicPlayerColorsTitle) },
+                    supportingContent = { Text(strings.dynamicPlayerColorsDesc) },
+                    leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = useDynamicPlayerColors,
+                            onCheckedChange = onToggleDynamicPlayerColors
                         )
                     }
                 )

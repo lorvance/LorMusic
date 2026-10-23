@@ -214,3 +214,88 @@ fun SquigglySlider(
         )
     }
 }
+
+@Composable
+fun WavyLinearProgressIndicator(
+    progress: Float?,
+    modifier: Modifier = Modifier,
+    activeColor: Color = MaterialTheme.colorScheme.primary,
+    inactiveColor: Color = activeColor.copy(alpha = 0.24f)
+) {
+    val density = LocalDensity.current
+    val waveLengthPx = with(density) { 24.dp.toPx() }
+    val lineAmplitudePx = with(density) { 2.8.dp.toPx() }
+    val phaseSpeedPxPerSec = with(density) { 18.dp.toPx() }
+    val strokeWidthPx = with(density) { 3.2.dp.toPx() }
+
+    var phaseOffset by remember { mutableFloatStateOf(0f) }
+
+    LaunchedEffect(Unit) {
+        var lastTimeNanos = withFrameNanos { it }
+        while (true) {
+            withFrameNanos { nowNanos ->
+                val dtSec = ((nowNanos - lastTimeNanos) / 1_000_000_000f).coerceIn(0f, 0.1f)
+                lastTimeNanos = nowNanos
+                phaseOffset = (phaseOffset + dtSec * phaseSpeedPxPerSec) % waveLengthPx
+            }
+        }
+    }
+
+    val wavePath = remember { Path() }
+    val effectiveProgress = (progress ?: 0.5f).coerceIn(0f, 1f)
+
+    Canvas(modifier = modifier) {
+        val totalWidth = size.width.coerceAtLeast(1f)
+        val centerY = size.height / 2f
+        val filledWidthPx = if (progress == null) totalWidth else totalWidth * effectiveProgress
+
+        wavePath.reset()
+        val waveStart = -phaseOffset - waveLengthPx / 2f
+        val waveEnd = totalWidth
+
+        var currentX = waveStart
+        var waveSign = 1f
+        var currentAmp = waveSign * lineAmplitudePx
+        wavePath.moveTo(currentX, centerY + currentAmp)
+
+        val dist = waveLengthPx / 2f
+        while (currentX < waveEnd) {
+            waveSign = -waveSign
+            val nextX = currentX + dist
+            val midX = currentX + dist / 2f
+            val nextAmp = waveSign * lineAmplitudePx
+            wavePath.cubicTo(
+                midX, centerY + currentAmp,
+                midX, centerY + nextAmp,
+                nextX, centerY + nextAmp
+            )
+            currentAmp = nextAmp
+            currentX = nextX
+        }
+
+        if (progress != null && progress > 0f) {
+            clipRect(left = 0f, top = 0f, right = filledWidthPx, bottom = size.height) {
+                drawPath(
+                    path = wavePath,
+                    color = activeColor,
+                    style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+                )
+            }
+            if (filledWidthPx < totalWidth) {
+                clipRect(left = filledWidthPx, top = 0f, right = totalWidth, bottom = size.height) {
+                    drawPath(
+                        path = wavePath,
+                        color = inactiveColor,
+                        style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+                    )
+                }
+            }
+        } else {
+            drawPath(
+                path = wavePath,
+                color = activeColor,
+                style = Stroke(width = strokeWidthPx, cap = StrokeCap.Round)
+            )
+        }
+    }
+}

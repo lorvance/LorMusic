@@ -377,6 +377,12 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putString(KEY_APP_LANGUAGE, lang.code).apply()
     }
 
+    fun getUseDynamicPlayerColors(): Boolean = prefs.getBoolean(KEY_DYNAMIC_PLAYER_COLORS, true)
+
+    fun saveUseDynamicPlayerColors(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_DYNAMIC_PLAYER_COLORS, enabled).apply()
+    }
+
     companion object {
         private const val KEY_FAVORITES = "favorite_song_ids"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"
@@ -407,5 +413,6 @@ class PreferencesRepository(context: Context) {
         private const val KEY_AUTO_TAGFIX = "auto_tagfix_enabled"
         private const val KEY_RECENTS_VIEW_MODE = "yt_recents_view_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
+        private const val KEY_DYNAMIC_PLAYER_COLORS = "use_dynamic_player_colors"
     }
 }

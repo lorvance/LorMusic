@@ -775,7 +775,8 @@ object YouTubeMusicRepository {
 
     suspend fun downloadTrackToPhoneWithTags(
         context: Context,
-        song: Song
+        song: Song,
+        onProgress: ((Float) -> Unit)? = null
     ): Pair<Song, SongTagOverride>? = withContext(Dispatchers.IO) {
         runCatching {
             val videoId = extractVideoId(song.id) ?: extractVideoId(song.uri)
@@ -802,9 +803,20 @@ object YouTubeMusicRepository {
                     readTimeout = 25000
                     setRequestProperty("User-Agent", ANDROID_USER_AGENT)
                 }
+                val contentLength = audioConn.contentLengthLong
                 audioConn.inputStream.use { input ->
                     FileOutputStream(tempInput).use { output ->
-                        input.copyTo(output)
+                        val buffer = ByteArray(16384)
+                        var bytesRead: Int
+                        var totalBytes = 0L
+                        while (input.read(buffer).also { bytesRead = it } != -1) {
+                            output.write(buffer, 0, bytesRead)
+                            totalBytes += bytesRead
+                            if (contentLength > 0L) {
+                                val progress = (totalBytes.toFloat() / contentLength.toFloat()).coerceIn(0f, 1f)
+                                onProgress?.invoke(progress)
+                            }
+                        }
                     }
                 }
 

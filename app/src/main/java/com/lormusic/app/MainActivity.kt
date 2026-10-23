@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ElectricBolt
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -361,6 +362,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         enableBlur = enableBlur,
                                         useLiquidGlass = playerViewModel.useLiquidGlass.value,
                                         classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
+                                        useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
                                         enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
                                         useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                         autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
@@ -377,6 +379,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleBlur = playerViewModel::setEnableBlur,
                                         onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
                                         onToggleClassicLibraryDesign = playerViewModel::setClassicLibraryDesign,
+                                        onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
                                         onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
                                         onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                         onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
@@ -437,8 +440,52 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 ) {
                     SnackbarHost(
                         hostState = snackbarHostState,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp)
-                    )
+                        modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp),
+                        snackbar = { data ->
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            tonalElevation = 6.dp,
+                            shadowElevation = 8.dp,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 18.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Info,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = data.visuals.message,
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    fontWeight = FontWeight.Medium,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.weight(1f)
+                                )
+                                data.visuals.actionLabel?.let { actionLabel ->
+                                    TextButton(
+                                        onClick = { data.performAction() },
+                                        contentPadding = PaddingValues(horizontal = 8.dp, vertical = 2.dp)
+                                    ) {
+                                        Text(
+                                            text = actionLabel,
+                                            style = MaterialTheme.typography.labelLarge,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+                )
                     AnimatedVisibility(
                         visible = currentSong != null,
                         enter = fadeIn(tween(220)) + slideInVertically { it / 2 },
@@ -528,6 +575,13 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             useSquigglySlider = useSquigglySlider,
                             useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                             enableSwipe = enablePlayerSwipe,
+                            useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
+                            playlists = playlists,
+                            isDownloading = downloadingSongIds.contains(song.id),
+                            downloadProgressFraction = playerViewModel.downloadProgress.value[song.id] ?: 0f,
+                            onAddToPlaylist = { plId, targetSong -> playerViewModel.addSongToPlaylist(plId, targetSong) },
+                            onRemoveFromPlaylist = { plId, songId -> playerViewModel.removeSongFromPlaylist(plId, songId) },
+                            onCreatePlaylist = { name -> playerViewModel.createPlaylist(name, listOf(song)) },
                             onDownloadTrack = { playerViewModel.downloadYtSongWithTags(song) },
                             onTogglePlay = playerViewModel::togglePlayPause,
                             onNext = playerViewModel::skipNext,

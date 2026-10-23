@@ -2,6 +2,7 @@ package com.lormusic.app.ui.screens
 
 import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
+import androidx.collection.LruCache
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
@@ -9,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -37,6 +39,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lormusic.app.data.YouTubeMusicRepository
 import com.lormusic.app.model.LyricLine
+import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.RepeatMode
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.LocalStrings
@@ -61,14 +64,18 @@ fun NowPlayingScreen(
     durationMs: Long,
     shuffleOn: Boolean,
     repeatMode: RepeatMode,
-    playbackSpeed: Float,
+    playbackSpeed: Float = 1.0f,
     sleepTimerRemainingSec: Int?,
     queue: List<Song>,
     lyrics: List<LyricLine>,
     isLoadingLyrics: Boolean,
     useSquigglySlider: Boolean,
     useAlbumArtGradient: Boolean = false,
+    useDynamicPlayerColors: Boolean = true,
     enableSwipe: Boolean = true,
+    playlists: List<Playlist> = emptyList(),
+    isDownloading: Boolean = false,
+    downloadProgressFraction: Float = 0f,
     onDownloadTrack: (() -> Unit)? = null,
     onTogglePlay: () -> Unit,
     onNext: () -> Unit,
@@ -77,7 +84,10 @@ fun NowPlayingScreen(
     onToggleShuffle: () -> Unit,
     onCycleRepeat: () -> Unit,
     onToggleFavorite: () -> Unit,
-    onCycleSpeed: () -> Unit,
+    onCycleSpeed: () -> Unit = {},
+    onAddToPlaylist: (String, Song) -> Unit = { _, _ -> },
+    onRemoveFromPlaylist: (String, String) -> Unit = { _, _ -> },
+    onCreatePlaylist: (String) -> Unit = {},
     onSelectSleepTimer: (Int?) -> Unit,
     onPlayFromQueue: (Int) -> Unit,
     onRemoveFromQueue: (Int) -> Unit,
@@ -105,6 +115,7 @@ fun NowPlayingScreen(
     var sliderDragValue by remember { mutableFloatStateOf(0f) }
     var showQueueSheet by remember { mutableStateOf(false) }
     var showSleepDialog by remember { mutableStateOf(false) }
+    var showAddToPlaylistSheet by remember { mutableStateOf(false) }
 
     val accentColor = MaterialTheme.colorScheme.primary
 
@@ -130,6 +141,11 @@ fun NowPlayingScreen(
     }
 
     val gradientColors = rememberAlbumArtGradient(song, useAlbumArtGradient, accentColor)
+    val cachedDominant = remember(song.id, gradientColors) {
+        coverAccentCache.get(song.id) ?: gradientColors.firstOrNull()?.copy(alpha = 1.0f) ?: accentColor
+    }
+    val effectiveAccentColor = if (useDynamicPlayerColors) cachedDominant else accentColor
+    val playButtonContentColor = if (useDynamicPlayerColors) getContrastingContentColor(effectiveAccentColor) else MaterialTheme.colorScheme.onPrimary
 
     Box(
         modifier = Modifier
@@ -214,7 +230,7 @@ fun NowPlayingScreen(
                     Box(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        FilledTonalIconButton(
+                        IconButton(
                             onClick = onClose,
                             modifier = Modifier.align(Alignment.CenterStart)
                         ) {
@@ -237,6 +253,61 @@ fun NowPlayingScreen(
                             modifier = Modifier.align(Alignment.CenterEnd)
                         ) {
                             Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = strings.songActions)
+                        }
+                    }
+
+                    AnimatedVisibility(
+                        visible = isDownloading,
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        Surface(
+                            shape = RoundedCornerShape(22.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+                            tonalElevation = 6.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 4.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier.padding(horizontal = 16.dp, vertical = 10.dp)
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Download,
+                                        contentDescription = null,
+                                        tint = effectiveAccentColor,
+                                        modifier = Modifier.size(20.dp)
+                                    )
+                                    Text(
+                                        text = "${strings.downloadingSong}: ${song.title}",
+                                        style = MaterialTheme.typography.titleSmall,
+                                        fontWeight = FontWeight.SemiBold,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (downloadProgressFraction > 0f) {
+                                        Text(
+                                            text = "${(downloadProgressFraction * 100).toInt()}%",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = effectiveAccentColor
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                WavyLinearProgressIndicator(
+                                    progress = if (downloadProgressFraction > 0f) downloadProgressFraction else null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(18.dp),
+                                    activeColor = effectiveAccentColor
+                                )
+                            }
                         }
                     }
 
@@ -328,115 +399,72 @@ fun NowPlayingScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(10.dp))
-
-                    AnimatedContent(
-                        targetState = song,
-                        transitionSpec = {
-                            (fadeIn(tween(240)) + slideInVertically { it / 3 })
-                                .togetherWith(fadeOut(tween(180)) + slideOutVertically { -it / 3 })
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        label = "songTitleAnim"
-                    ) { targetSong ->
-                        Text(
-                            text = targetSong.title,
-                            style = MaterialTheme.typography.headlineMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier.fillMaxWidth()
-                        )
-                    }
-
-                    Spacer(Modifier.height(4.dp))
+                    Spacer(Modifier.height(6.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = song.artist,
-                            style = MaterialTheme.typography.titleMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .weight(1f, fill = false)
-                                .clip(RoundedCornerShape(8.dp))
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onOpenArtistProfile?.invoke(song.artist)
-                                }
-                                .padding(vertical = 4.dp, horizontal = 2.dp)
-                        )
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(6.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                        Column(modifier = Modifier.weight(1f)) {
+                            AnimatedContent(
+                                targetState = song,
+                                transitionSpec = {
+                                    (fadeIn(tween(240)) + slideInVertically { it / 3 })
+                                        .togetherWith(fadeOut(tween(180)) + slideOutVertically { -it / 3 })
+                                },
+                                label = "songTitleAnim"
+                            ) { targetSong ->
+                                Text(
+                                    text = targetSong.title,
+                                    style = MaterialTheme.typography.headlineSmall,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = song.artist,
+                                style = MaterialTheme.typography.titleMedium,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.72f),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        onOpenArtistProfile?.invoke(song.artist)
+                                    }
+                                    .padding(vertical = 2.dp)
+                            )
+                        }
+
+                        val isSavedAnywhere = isFavorite || playlists.any { pl -> !pl.isSystem && pl.songs.any { it.id == song.id } }
+                        IconButton(
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                showAddToPlaylistSheet = true
+                            }
                         ) {
-                            if (ytShareUrl != null) {
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        YouTubeMusicRepository.shareSongLink(context, song)
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Share,
-                                        contentDescription = strings.shareSongLink
-                                    )
-                                }
-                            }
-                            if (onDownloadTrack != null) {
-                                FilledTonalIconButton(
-                                    onClick = {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        onDownloadTrack()
-                                    }
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.Download,
-                                        contentDescription = strings.downloadTrack
-                                    )
-                                }
-                            }
-                            FilledTonalIconButton(
-                                onClick = {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onOpenTagEditor()
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.Edit,
-                                    contentDescription = strings.editTags
-                                )
-                            }
-                            FilledTonalIconButton(
-                                onClick = {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onToggleFavorite()
-                                }
-                            ) {
-                                Icon(
-                                    imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                    contentDescription = strings.favorites,
-                                    tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                )
-                            }
+                            Icon(
+                                imageVector = if (isSavedAnywhere) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
+                                contentDescription = strings.addToPlaylist,
+                                tint = if (isSavedAnywhere) effectiveAccentColor else MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(32.dp)
+                            )
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(4.dp))
 
                     if (useSquigglySlider) {
                         SquigglySlider(
                             value = currentSliderValue,
                             valueRange = 0f..effectiveDuration.toFloat(),
                             isPlaying = isPlaying,
-                            activeColor = accentColor,
+                            activeColor = effectiveAccentColor,
                             inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.24f),
-                            thumbColor = accentColor,
+                            thumbColor = effectiveAccentColor,
                             onValueChange = {
                                 isDraggingSlider = true
                                 sliderDragValue = it
@@ -493,40 +521,42 @@ fun NowPlayingScreen(
                             Icon(
                                 imageVector = Icons.Filled.Shuffle,
                                 contentDescription = strings.shuffle,
-                                tint = if (shuffleOn) accentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
+                                tint = if (shuffleOn) effectiveAccentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                             )
                         }
-                        FilledTonalIconButton(
+                        IconButton(
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 onPrevious()
                             },
-                            modifier = Modifier.size(54.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.SkipPrevious,
                                 contentDescription = strings.previousTrack,
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(34.dp)
                             )
                         }
 
                         WavyPlayPauseButton(
                             isPlaying = isPlaying,
                             onClick = onTogglePlay,
-                            size = 78.dp
+                            size = 76.dp,
+                            containerColor = effectiveAccentColor,
+                            contentColor = playButtonContentColor
                         )
 
-                        FilledTonalIconButton(
+                        IconButton(
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 onNext()
                             },
-                            modifier = Modifier.size(54.dp)
+                            modifier = Modifier.size(48.dp)
                         ) {
                             Icon(
                                 imageVector = Icons.Filled.SkipNext,
                                 contentDescription = strings.nextTrack,
-                                modifier = Modifier.size(30.dp)
+                                modifier = Modifier.size(34.dp)
                             )
                         }
                         IconButton(
@@ -542,7 +572,7 @@ fun NowPlayingScreen(
                                 },
                                 contentDescription = strings.repeatMode,
                                 tint = if (repeatMode != RepeatMode.OFF) {
-                                    accentColor
+                                    effectiveAccentColor
                                 } else {
                                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.55f)
                                 }
@@ -550,53 +580,95 @@ fun NowPlayingScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp, Alignment.CenterHorizontally),
+                        horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        FilterChip(
-                            selected = showLyrics,
+                        IconButton(
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                showLyrics = true
-                            },
-                            label = { Text(strings.lyricsTab) },
-                            leadingIcon = { Icon(Icons.Filled.Lyrics, contentDescription = null, modifier = Modifier.size(17.dp)) },
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        AssistChip(
-                            onClick = onCycleSpeed,
-                            label = { Text("${playbackSpeed}x") },
-                            leadingIcon = { Icon(Icons.Filled.Speed, contentDescription = null, modifier = Modifier.size(17.dp)) },
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        AssistChip(
-                            onClick = { showSleepDialog = true },
-                            label = {
-                                val timerText = sleepTimerRemainingSec?.let { formatDurationShort(it * 1000L) } ?: strings.timerChip
-                                Text(timerText)
-                            },
-                            leadingIcon = { Icon(Icons.Filled.Bedtime, contentDescription = null, modifier = Modifier.size(17.dp)) },
-                            shape = RoundedCornerShape(16.dp)
-                        )
-                        AssistChip(
-                            onClick = { showQueueSheet = true },
-                            label = { Text("${queue.size}") },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Filled.QueueMusic, contentDescription = null, modifier = Modifier.size(17.dp)) },
-                            shape = RoundedCornerShape(16.dp)
-                        )
+                                showSleepDialog = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Bedtime,
+                                contentDescription = strings.sleepTimerDialogTitle,
+                                tint = if (sleepTimerRemainingSec != null) effectiveAccentColor else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                            )
+                        }
+
+                        val isOnlineTrack = song.isRemoteYt || song.uri.startsWith("http") || song.uri.startsWith("yt://")
+                        if (isOnlineTrack) {
+                            if (onDownloadTrack != null) {
+                                IconButton(
+                                    onClick = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        onDownloadTrack()
+                                    }
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Download,
+                                        contentDescription = strings.download,
+                                        tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                    )
+                                }
+                            }
+                        } else {
+                            IconButton(
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onOpenTagEditor()
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Edit,
+                                    contentDescription = strings.editTags,
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                )
+                            }
+                        }
+
+                        if (ytShareUrl != null) {
+                            IconButton(
+                                onClick = {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    YouTubeMusicRepository.shareSongLink(context, song)
+                                }
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.Share,
+                                    contentDescription = strings.share,
+                                    tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                )
+                            }
+                        } else {
+                            Spacer(Modifier.size(48.dp))
+                        }
+
+                        IconButton(
+                            onClick = {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                showQueueSheet = true
+                            }
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                contentDescription = strings.queueTitle,
+                                tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                            )
+                        }
                     }
 
-                    Spacer(Modifier.height(8.dp))
+                    Spacer(Modifier.height(6.dp))
 
                     LiveBottomLyricBanner(
                         activeLine = activeLyricLine,
                         isLoadingLyrics = isLoadingLyrics,
                         isPlaying = isPlaying,
-                        accentColor = accentColor,
+                        accentColor = effectiveAccentColor,
                         onClick = {
                             view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                             showLyrics = true
@@ -683,6 +755,218 @@ fun NowPlayingScreen(
             confirmButton = {
                 TextButton(onClick = { showSleepDialog = false }) {
                     Text(strings.close)
+                }
+            }
+        )
+    }
+
+    if (showAddToPlaylistSheet) {
+        AddToPlaylistOrFavoritesSheet(
+            song = song,
+            isFavorite = isFavorite,
+            playlists = playlists,
+            onToggleFavorite = onToggleFavorite,
+            onAddToPlaylist = onAddToPlaylist,
+            onRemoveFromPlaylist = onRemoveFromPlaylist,
+            onCreatePlaylist = onCreatePlaylist,
+            onDismiss = { showAddToPlaylistSheet = false }
+        )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AddToPlaylistOrFavoritesSheet(
+    song: Song,
+    isFavorite: Boolean,
+    playlists: List<Playlist>,
+    onToggleFavorite: () -> Unit,
+    onAddToPlaylist: (String, Song) -> Unit,
+    onRemoveFromPlaylist: (String, String) -> Unit,
+    onCreatePlaylist: (String) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val strings = LocalStrings.current
+    var showCreateDialog by remember { mutableStateOf(false) }
+    var newPlaylistName by remember { mutableStateOf("") }
+
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+    ) {
+        Column(
+            modifier = Modifier
+                .fillMaxWidth()
+                .navigationBarsPadding()
+                .padding(bottom = 16.dp)
+        ) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(14.dp)
+            ) {
+                SongArtwork(
+                    seed = song.coverColorSeed,
+                    albumArtUri = song.albumArtUri,
+                    songUri = song.uri,
+                    cornerRadius = 14.dp,
+                    modifier = Modifier.size(52.dp)
+                )
+                Column(modifier = Modifier.weight(1f)) {
+                    Text(
+                        text = song.title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                    Text(
+                        text = song.artist,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                }
+            }
+
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp))
+
+            ListItem(
+                headlineContent = { Text(strings.favorites) },
+                supportingContent = {
+                    Text(if (isFavorite) strings.inFavorites else strings.addToFavorites)
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
+                        contentDescription = null,
+                        tint = if (isFavorite) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                },
+                trailingContent = {
+                    if (isFavorite) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                modifier = Modifier.clickable {
+                    onToggleFavorite()
+                }
+            )
+
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 20.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = strings.navPlaylists,
+                    style = MaterialTheme.typography.titleSmall,
+                    fontWeight = FontWeight.Bold
+                )
+                TextButton(
+                    onClick = { showCreateDialog = true },
+                    contentPadding = PaddingValues(horizontal = 8.dp, vertical = 4.dp)
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp)
+                    )
+                    Spacer(Modifier.width(4.dp))
+                    Text(strings.newPlaylist)
+                }
+            }
+
+            val userPlaylists = remember(playlists) { playlists.filter { !it.isSystem } }
+            if (userPlaylists.isEmpty()) {
+                Text(
+                    text = strings.emptyPlaylistHint,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f),
+                    modifier = Modifier.padding(horizontal = 20.dp, vertical = 8.dp)
+                )
+            } else {
+                LazyColumn(modifier = Modifier.heightIn(max = 260.dp)) {
+                    items(userPlaylists, key = { it.id }) { pl ->
+                        val containsSong = pl.songs.any { it.id == song.id }
+                        ListItem(
+                            headlineContent = { Text(pl.name) },
+                            supportingContent = { Text("${pl.songs.size} ${strings.tracksCount}") },
+                            leadingContent = {
+                                SongArtwork(
+                                    seed = pl.coverColorSeed,
+                                    cornerRadius = 10.dp,
+                                    modifier = Modifier.size(40.dp)
+                                )
+                            },
+                            trailingContent = {
+                                Icon(
+                                    imageVector = if (containsSong) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
+                                    contentDescription = null,
+                                    tint = if (containsSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                if (containsSong) {
+                                    onRemoveFromPlaylist(pl.id, song.id)
+                                } else {
+                                    onAddToPlaylist(pl.id, song)
+                                }
+                            }
+                        )
+                    }
+                }
+            }
+        }
+    }
+
+    if (showCreateDialog) {
+        AlertDialog(
+            onDismissRequest = {
+                showCreateDialog = false
+                newPlaylistName = ""
+            },
+            title = { Text(strings.newPlaylistDialogTitle) },
+            text = {
+                OutlinedTextField(
+                    value = newPlaylistName,
+                    onValueChange = { newPlaylistName = it },
+                    label = { Text(strings.playlistNameLabel) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        val name = newPlaylistName.trim()
+                        if (name.isNotBlank()) {
+                            onCreatePlaylist(name)
+                        }
+                        showCreateDialog = false
+                        newPlaylistName = ""
+                    }
+                ) {
+                    Text(strings.save)
+                }
+            },
+            dismissButton = {
+                TextButton(
+                    onClick = {
+                        showCreateDialog = false
+                        newPlaylistName = ""
+                    }
+                ) {
+                    Text(strings.cancel)
                 }
             }
         )
@@ -1286,17 +1570,28 @@ private fun rememberAlbumArtGradient(
     }.value
 }
 
+private val coverGradientsCache = LruCache<String, Pair<Color, Color>>(100)
+val coverAccentCache = LruCache<String, Color>(100)
+
+fun getContrastingContentColor(backgroundColor: Color): Color {
+    val luminance = 0.299f * backgroundColor.red + 0.587f * backgroundColor.green + 0.114f * backgroundColor.blue
+    return if (luminance > 0.52f) Color.Black else Color.White
+}
+
 private fun extractSongGradientColors(
     context: android.content.Context,
     song: Song,
     fallback: Color
 ): Pair<Color, Color> {
+    val cacheKey = song.albumArtUri?.takeIf { it.isNotBlank() } ?: song.id
+    coverGradientsCache.get(cacheKey)?.let { return it }
+
     val art = song.albumArtUri
     if (!art.isNullOrBlank()) {
         try {
             val bmp = if (art.startsWith("content://") || art.startsWith("file://")) {
                 val stream = context.contentResolver.openInputStream(android.net.Uri.parse(art))
-                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
+                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 }
                 val b = android.graphics.BitmapFactory.decodeStream(stream, null, opts)
                 stream?.close()
                 b
@@ -1305,7 +1600,8 @@ private fun extractSongGradientColors(
                 conn.connectTimeout = 2500
                 conn.readTimeout = 2500
                 val stream = conn.inputStream
-                val b = android.graphics.BitmapFactory.decodeStream(stream)
+                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
+                val b = android.graphics.BitmapFactory.decodeStream(stream, null, opts)
                 stream.close()
                 conn.disconnect()
                 b
@@ -1315,10 +1611,15 @@ private fun extractSongGradientColors(
                 val p1 = bmp.getPixel(bmp.width / 4, bmp.height / 4)
                 val p2 = bmp.getPixel((bmp.width * 3) / 4, (bmp.height * 3) / 4)
                 bmp.recycle()
-                return Pair(
-                    Color(p1).copy(alpha = 0.55f),
-                    Color(p2).copy(alpha = 0.40f)
+                val color1 = Color(p1)
+                val color2 = Color(p2)
+                val pair = Pair(
+                    color1.copy(alpha = 0.55f),
+                    color2.copy(alpha = 0.40f)
                 )
+                coverGradientsCache.put(cacheKey, pair)
+                coverAccentCache.put(song.id, color1.copy(alpha = 1.0f))
+                return pair
             }
         } catch (_: Exception) {
         }
@@ -1326,8 +1627,13 @@ private fun extractSongGradientColors(
     val hash = kotlin.math.abs((song.title + song.artist).hashCode())
     val hue1 = (hash % 360).toFloat()
     val hue2 = ((hash + 130) % 360).toFloat()
-    return Pair(
-        Color.hsv(hue1, 0.70f, 0.50f).copy(alpha = 0.50f),
-        Color.hsv(hue2, 0.60f, 0.40f).copy(alpha = 0.40f)
+    val c1 = Color.hsv(hue1, 0.70f, 0.50f)
+    val c2 = Color.hsv(hue2, 0.60f, 0.40f)
+    val pair = Pair(
+        c1.copy(alpha = 0.50f),
+        c2.copy(alpha = 0.40f)
     )
+    coverGradientsCache.put(cacheKey, pair)
+    coverAccentCache.put(song.id, c1.copy(alpha = 1.0f))
+    return pair
 }

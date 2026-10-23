@@ -257,7 +257,10 @@ val tagFixTitle: String,
     val autoTagFixPromptTitle: String,
     val autoTagFixPromptMessage: String,
     val fixNow: String,
-    val remindLaterBtn: String
+    val remindLaterBtn: String,
+    val dynamicPlayerColorsTitle: String,
+    val dynamicPlayerColorsDesc: String,
+    val downloadingSong: String
 )
 
 val StringsRu = AppStrings(
@@ -434,7 +437,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "Версия 1.6.0",
+    appVersion = "Версия 1.6.1",
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -514,7 +517,10 @@ tagFixTitle = "TagFix • Умное исправление тегов",
     autoTagFixPromptTitle = "Автоматический TagFix",
     autoTagFixPromptMessage = "Обнаружено треков со сломанными тегами: %d.\n\nЗапустить TagFix для автоматического восстановления названий, исполнителей и обложек?",
     fixNow = "Исправить сейчас",
-    remindLaterBtn = "Позже"
+    remindLaterBtn = "Позже",
+    dynamicPlayerColorsTitle = "Цвета плеера под обложку",
+    dynamicPlayerColorsDesc = "Окрашивать кнопки и элементы управления плеера в акцентные тона обложки",
+    downloadingSong = "Скачивание трека"
 )
 
 val StringsEn = AppStrings(
@@ -691,7 +697,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "Version 1.6.0",
+    appVersion = "Version 1.6.1",
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -771,7 +777,10 @@ tagFixTitle = "TagFix • Smart tag recovery",
     autoTagFixPromptTitle = "Automatic TagFix",
     autoTagFixPromptMessage = "Detected %d tracks with broken tags.\n\nRun TagFix to automatically recover titles, artists, and album artwork?",
     fixNow = "Fix now",
-    remindLaterBtn = "Later"
+    remindLaterBtn = "Later",
+    dynamicPlayerColorsTitle = "Cover-adaptive player colors",
+    dynamicPlayerColorsDesc = "Tint player buttons and controls based on current album cover colors",
+    downloadingSong = "Downloading track"
 )
 
 val StringsUk = AppStrings(
@@ -948,7 +957,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "Версія 1.6.0",
+    appVersion = "Версія 1.6.1",
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1028,7 +1037,10 @@ tagFixTitle = "TagFix • Розумне виправлення тегів",
     autoTagFixPromptTitle = "Автоматичний TagFix",
     autoTagFixPromptMessage = "Виявлено треків зі зламаними тегами: %d.\n\nЗапустити TagFix для автоматичного відновлення назв, виконавців та обкладинок?",
     fixNow = "Виправити зараз",
-    remindLaterBtn = "Пізніше"
+    remindLaterBtn = "Пізніше",
+    dynamicPlayerColorsTitle = "Динамічні кольори плеєра",
+    dynamicPlayerColorsDesc = "Підлаштовувати кнопки та елементи керування плеєра під обкладинку треку",
+    downloadingSong = "Завантаження треку"
 )
 
 fun resolveStrings(language: AppLanguage): AppStrings {
