@@ -38,6 +38,7 @@ import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.model.resolveStrings
+import com.lormusic.app.ui.components.LocalPureMaterialYou
 import com.lormusic.app.ui.components.*
 import com.lormusic.app.ui.components.backdrop.backdrops.layerBackdrop
 import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
@@ -137,6 +138,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     val useDynamicColor by playerViewModel.useDynamicColor
     val useSquigglySlider by playerViewModel.useSquigglySlider
     val enableBlur by playerViewModel.enableBlur
+    val pureMaterialYou by playerViewModel.pureMaterialYou
     val searchBarPlacement by playerViewModel.searchBarPlacement
     val enablePlayerSwipe by playerViewModel.enablePlayerSwipe
     val hideDemoTracks by playerViewModel.hideDemoTracks
@@ -176,7 +178,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     val hazeState = remember { HazeState() }
     val useLiquidGlass = playerViewModel.useLiquidGlass.value
-    val isGlassActive = useLiquidGlass && isLiquidGlassSupported()
+    val effectiveEnableBlur = enableBlur && !pureMaterialYou
+    val effectiveUseLiquidGlass = useLiquidGlass && !pureMaterialYou
+    val isGlassActive = effectiveUseLiquidGlass && isLiquidGlassSupported()
     val windowBackground = MaterialTheme.colorScheme.background
     val paintBackdrop: ContentDrawScope.() -> Unit = remember(windowBackground) {
         {
@@ -199,6 +203,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     CompositionLocalProvider(
         LocalAppBackdrop provides appBackdrop,
         LocalLiquidGlassEnabled provides isGlassActive,
+        LocalPureMaterialYou provides pureMaterialYou,
         LocalStrings provides currentStrings
     ) {
         Surface(
@@ -239,8 +244,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 savedYtSongs = savedYtSongs,
                                 googleAccount = googleAccount,
                                 hazeState = hazeState,
-                                enableBlur = enableBlur,
-                                useLiquidGlass = useLiquidGlass,
+                                enableBlur = effectiveEnableBlur,
+                                useLiquidGlass = effectiveUseLiquidGlass,
                                 showTopSearchBar = isYtSearchTop,
                                 recentsViewMode = playerViewModel.recentsViewMode.value,
                                 onToggleRecentsViewMode = playerViewModel::setRecentsViewMode,
@@ -291,8 +296,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     favoriteIds = favoriteIds,
                                     hiddenSongIds = hiddenSongIds,
                                     hideDemoTracks = hideDemoTracks,
-                                    enableBlur = enableBlur,
-                                    useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                    enableBlur = effectiveEnableBlur,
+                                    useLiquidGlass = effectiveUseLiquidGlass,
                                     classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                     showTopSearchBar = isLocalSearchTop,
                                     externalSearchActive = isBottomLocalSearchActive,
@@ -337,7 +342,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onDeletePlaylist = playerViewModel::deletePlaylist,
                                         onAddSongToPlaylist = playerViewModel::addSongToPlaylist,
                                         onRemoveSongFromPlaylist = playerViewModel::removeSongFromPlaylist,
-                                        onToggleFavorite = playerViewModel::toggleFavorite
+                                        onToggleFavorite = playerViewModel::toggleFavorite,
+                                        hazeState = hazeState,
+                                        enableBlur = effectiveEnableBlur,
+                                        useLiquidGlass = effectiveUseLiquidGlass
                                     )
                                 }
 
@@ -360,6 +368,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         useDynamicColor = useDynamicColor,
                                         useSquigglySlider = useSquigglySlider,
                                         enableBlur = enableBlur,
+                                        pureMaterialYou = pureMaterialYou,
                                         useLiquidGlass = playerViewModel.useLiquidGlass.value,
                                         classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                         useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
@@ -377,6 +386,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleDynamicColor = playerViewModel::setUseDynamicColor,
                                         onToggleSquigglySlider = playerViewModel::setUseSquigglySlider,
                                         onToggleBlur = playerViewModel::setEnableBlur,
+                                        onTogglePureMaterialYou = playerViewModel::setPureMaterialYou,
                                         onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
                                         onToggleClassicLibraryDesign = playerViewModel::setClassicLibraryDesign,
                                         onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
@@ -499,8 +509,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 isFavorite = favoriteIds.contains(song.id),
                                 progress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f),
                                 hazeState = hazeState,
-                                enableBlur = enableBlur,
-                                useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                enableBlur = effectiveEnableBlur,
+                                useLiquidGlass = effectiveUseLiquidGlass,
                                 enableSwipe = enablePlayerSwipe,
                                 onTogglePlay = playerViewModel::togglePlayPause,
                                 onPrevious = playerViewModel::skipPrevious,
@@ -518,8 +528,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 playerViewModel.selectYtTab(tab)
                             },
                             hazeState = hazeState,
-                            enableBlur = enableBlur,
-                            useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                            enableBlur = effectiveEnableBlur,
+                            useLiquidGlass = effectiveUseLiquidGlass,
                             showBottomSearchButton = !isYtSearchTop
                         )
                     } else {
@@ -529,8 +539,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 selectedTab = tab
                             },
                             hazeState = hazeState,
-                            enableBlur = enableBlur,
-                            useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                            enableBlur = effectiveEnableBlur,
+                            useLiquidGlass = effectiveUseLiquidGlass,
                             showBottomSearchButton = !isLocalSearchTop,
                             isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
                             onToggleLocalSearch = {
@@ -743,7 +753,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             },
             onDismiss = {
                 playerViewModel.dismissUpdateDialog()
-            }
+            },
+            appLanguage = appLanguage
         )
     }
     }

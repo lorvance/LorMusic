@@ -25,8 +25,46 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lormusic.app.data.AppUpdateInfo
 import com.lormusic.app.data.UpdateState
+import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import org.json.JSONArray
 import java.io.File
+import java.net.HttpURLConnection
+import java.net.URL
+import java.net.URLEncoder
+
+private suspend fun translateChangelog(text: String, targetLang: String): String = withContext(Dispatchers.IO) {
+    if (text.isBlank()) return@withContext text
+    try {
+        val encoded = URLEncoder.encode(text, "UTF-8")
+        val url = URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=$encoded")
+        val conn = (url.openConnection() as HttpURLConnection).apply {
+            connectTimeout = 6000
+            readTimeout = 6000
+            setRequestProperty("User-Agent", "Mozilla/5.0")
+        }
+        if (conn.responseCode in 200..299) {
+            val resp = conn.inputStream.bufferedReader().use { it.readText() }
+            val jsonArray = JSONArray(resp)
+            val sentences = jsonArray.optJSONArray(0) ?: return@withContext text
+            val sb = StringBuilder()
+            for (i in 0 until sentences.length()) {
+                val item = sentences.optJSONArray(i)
+                if (item != null) {
+                    sb.append(item.optString(0))
+                }
+            }
+            val res = sb.toString()
+            if (res.isNotBlank()) res else text
+        } else {
+            text
+        }
+    } catch (_: Exception) {
+        text
+    }
+}
 
 @Composable
 fun UpdateDialog(
@@ -34,9 +72,20 @@ fun UpdateDialog(
     updateState: UpdateState,
     onDownload: () -> Unit,
     onInstall: (File) -> Unit,
-    onDismiss: () -> Unit
+    onDismiss: () -> Unit,
+    appLanguage: AppLanguage = AppLanguage.RU
 ) {
     val strings = LocalStrings.current
+    val targetLang = when (appLanguage) {
+        AppLanguage.UK -> "uk"
+        AppLanguage.RU -> "ru"
+        else -> null
+    }
+    val displayedChangelog by produceState(initialValue = updateInfo.changelog, updateInfo.changelog, targetLang) {
+        if (targetLang != null) {
+            value = translateChangelog(updateInfo.changelog, targetLang)
+        }
+    }
     var isChangelogExpanded by remember { mutableStateOf(false) }
     val arrowRotation by animateFloatAsState(
         targetValue = if (isChangelogExpanded) 180f else 0f,
@@ -165,7 +214,7 @@ fun UpdateDialog(
                                     color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f),
                                     modifier = Modifier.padding(bottom = 10.dp)
                                 )
-                                MarkdownText(markdown = updateInfo.changelog)
+                                MarkdownText(markdown = displayedChangelog)
                             }
                         }
                     }

@@ -1,5 +1,6 @@
 package com.lormusic.app.ui.screens
 
+import android.view.HapticFeedbackConstants
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -8,6 +9,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -15,6 +17,8 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -24,6 +28,11 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
@@ -32,6 +41,10 @@ import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
 import com.lormusic.app.ui.components.SongArtwork
 import com.lormusic.app.ui.components.SongRow
+import com.lormusic.app.ui.components.liquidGlassBubble
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 
 @Composable
 fun PlaylistsScreen(
@@ -45,11 +58,24 @@ fun PlaylistsScreen(
     onDeletePlaylist: (String) -> Unit,
     onAddSongToPlaylist: (String, Song) -> Unit,
     onRemoveSongFromPlaylist: (String, String) -> Unit,
-    onToggleFavorite: (Song) -> Unit
+    onToggleFavorite: (Song) -> Unit,
+    hazeState: HazeState? = null,
+    enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false
 ) {
     val strings = LocalStrings.current
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+
+    @Composable
+    fun bubbleModifier(shape: CornerBasedShape): Modifier {
+        return Modifier.liquidGlassBubble(
+            shape = shape,
+            hazeState = hazeState,
+            enableBlur = enableBlur,
+            isLiquidGlass = useLiquidGlass
+        )
+    }
 
     val activePlaylist = playlists.find { it.id == selectedPlaylistId }
 
@@ -95,36 +121,21 @@ fun PlaylistsScreen(
                     onDeletePlaylist(detailPlaylist.id)
                     selectedPlaylistId = null
                 },
-                onToggleFavorite = onToggleFavorite
+                onToggleFavorite = onToggleFavorite,
+                bubbleModifier = { bubbleModifier(it) }
             )
         } else {
-            Column(modifier = Modifier.fillMaxSize()) {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 20.dp, vertical = 14.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text(
-                        text = strings.navPlaylists,
-                        style = MaterialTheme.typography.displayLarge,
-                        modifier = Modifier.weight(1f)
-                    )
-                    FilledTonalButton(
-                        onClick = { showCreateDialog = true },
-                        shape = RoundedCornerShape(18.dp)
-                    ) {
-                        Icon(Icons.Filled.Add, contentDescription = null)
-                        Spacer(Modifier.width(6.dp))
-                        Text(strings.newPlaylist)
-                    }
-                }
+            Box(modifier = Modifier.fillMaxSize()) {
+                var headerHeightDp by remember { mutableStateOf(68.dp) }
+                val density = LocalDensity.current
+                val view = LocalView.current
 
                 LazyVerticalGrid(
                     columns = GridCells.Fixed(2),
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 4.dp, bottom = 180.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeightDp + 12.dp, bottom = 185.dp),
                     horizontalArrangement = Arrangement.spacedBy(14.dp),
-                    verticalArrangement = Arrangement.spacedBy(16.dp)
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                    modifier = Modifier.fillMaxSize()
                 ) {
                     items(playlists, key = { it.id }) { playlist ->
                         PlaylistCard(
@@ -134,8 +145,96 @@ fun PlaylistsScreen(
                                 if (playlist.songs.isNotEmpty()) {
                                     onPlayQueue(playlist.songs, 0, false)
                                 }
-                            }
+                            },
+                            bubbleModifier = { bubbleModifier(it) }
                         )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.TopCenter)
+                        .fillMaxWidth()
+                        .onGloballyPositioned { coords ->
+                            headerHeightDp = with(density) { coords.size.height.toDp() }
+                        }
+                ) {
+                    if (enableBlur && hazeState != null) {
+                        val topScrimColor = MaterialTheme.colorScheme.background
+                        Box(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .hazeEffect(state = hazeState) {
+                                    blurEnabled = true
+                                    backgroundColor = topScrimColor
+                                    blurRadius = 30.dp
+                                    tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
+                                }
+                                .background(
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            topScrimColor.copy(alpha = 0.75f),
+                                            topScrimColor.copy(alpha = 0.35f),
+                                            Color.Transparent
+                                        )
+                                    )
+                                )
+                        )
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 10.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Spacer(Modifier.size(44.dp))
+
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                                .padding(horizontal = 24.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.navPlaylists,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    showCreateDialog = true
+                                }
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.Add,
+                                    contentDescription = strings.newPlaylist,
+                                    modifier = Modifier.size(20.dp),
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(Modifier.width(6.dp))
+                                Text(
+                                    text = strings.newPlaylist,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
                     }
                 }
             }
@@ -224,7 +323,8 @@ fun PlaylistsScreen(
 private fun PlaylistCard(
     playlist: Playlist,
     onClick: () -> Unit,
-    onQuickPlay: () -> Unit
+    onQuickPlay: () -> Unit,
+    bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { Modifier }
 ) {
     val strings = LocalStrings.current
     val firstSong = playlist.songs.firstOrNull()
@@ -247,41 +347,51 @@ private fun PlaylistCard(
                 modifier = Modifier.fillMaxSize()
             )
             if (playlist.isSystem) {
-                Surface(
-                    color = MaterialTheme.colorScheme.secondary,
-                    shape = RoundedCornerShape(14.dp),
+                Box(
                     modifier = Modifier
                         .align(Alignment.TopStart)
                         .padding(10.dp)
+                        .clip(RoundedCornerShape(14.dp))
+                        .then(bubbleModifier(RoundedCornerShape(14.dp)))
+                        .padding(horizontal = 8.dp, vertical = 4.dp),
+                    contentAlignment = Alignment.Center
                 ) {
                     Row(
-                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
                             imageVector = Icons.Filled.Favorite,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.onSecondary,
+                            tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp)
                         )
                         Spacer(Modifier.width(4.dp))
                         Text(
                             text = strings.autoPlaylistBadge,
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSecondary
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.onSurface
                         )
                     }
                 }
             }
             if (playlist.songs.isNotEmpty()) {
-                FilledIconButton(
-                    onClick = onQuickPlay,
+                Box(
                     modifier = Modifier
                         .align(Alignment.BottomEnd)
                         .padding(10.dp)
-                        .size(40.dp)
+                        .size(42.dp)
+                        .clip(CircleShape)
+                        .then(bubbleModifier(CircleShape))
+                        .clickable(onClick = onQuickPlay),
+                    contentAlignment = Alignment.Center
                 ) {
-                    Icon(Icons.Filled.PlayArrow, contentDescription = strings.playPlaylist)
+                    Icon(
+                        imageVector = Icons.Filled.PlayArrow,
+                        contentDescription = strings.playPlaylist,
+                        tint = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier.size(24.dp)
+                    )
                 }
             }
         }
@@ -298,6 +408,8 @@ private fun PlaylistCard(
             text = "${playlist.songs.size} ${strings.tracksCount}",
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            maxLines = 1,
+            overflow = TextOverflow.Ellipsis,
             modifier = Modifier.padding(horizontal = 4.dp)
         )
     }
@@ -316,7 +428,8 @@ private fun PlaylistDetailContent(
     onAddSong: (Song) -> Unit,
     onRemoveSong: (String) -> Unit,
     onDeletePlaylist: () -> Unit,
-    onToggleFavorite: (Song) -> Unit
+    onToggleFavorite: (Song) -> Unit,
+    bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { Modifier }
 ) {
     BackHandler(onBack = onBack)
 
@@ -328,26 +441,75 @@ private fun PlaylistDetailContent(
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(horizontal = 12.dp, vertical = 12.dp),
+                .padding(horizontal = 14.dp, vertical = 10.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = strings.back)
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .then(bubbleModifier(CircleShape))
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
+                    contentDescription = strings.back,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(20.dp)
+                )
             }
-            Text(
-                text = playlist.name,
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
-                modifier = Modifier.weight(1f)
-            )
+            Spacer(Modifier.width(12.dp))
+            Box(
+                modifier = Modifier
+                    .weight(1f)
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.CenterStart
+            ) {
+                Text(
+                    text = playlist.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
             if (!playlist.isSystem) {
-                IconButton(onClick = { showAddTracksDialog = true }) {
-                    Icon(Icons.Filled.Add, contentDescription = strings.addTracksButton)
+                Spacer(Modifier.width(8.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .then(bubbleModifier(CircleShape))
+                        .clickable { showAddTracksDialog = true },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.Add,
+                        contentDescription = strings.addTracksButton,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
-                IconButton(onClick = onDeletePlaylist) {
-                    Icon(Icons.Filled.DeleteOutline, contentDescription = strings.deletePlaylist)
+                Spacer(Modifier.width(6.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .then(bubbleModifier(CircleShape))
+                        .clickable(onClick = onDeletePlaylist),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        imageVector = Icons.Filled.DeleteOutline,
+                        contentDescription = strings.deletePlaylist,
+                        tint = MaterialTheme.colorScheme.onSurface,
+                        modifier = Modifier.size(20.dp)
+                    )
                 }
             }
         }
@@ -376,21 +538,30 @@ private fun PlaylistDetailContent(
                 )
                 Spacer(Modifier.height(10.dp))
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    Button(
-                        enabled = playlist.songs.isNotEmpty(),
-                        onClick = { onPlayAll(false) },
-                        shape = RoundedCornerShape(16.dp)
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                            .clickable(enabled = playlist.songs.isNotEmpty(), onClick = { onPlayAll(false) })
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Filled.PlayArrow, contentDescription = null)
-                        Spacer(Modifier.width(4.dp))
-                        Text(strings.playAction)
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Spacer(Modifier.width(4.dp))
+                            Text(strings.playAction, fontWeight = FontWeight.Bold)
+                        }
                     }
-                    FilledTonalButton(
-                        enabled = playlist.songs.isNotEmpty(),
-                        onClick = { onPlayAll(true) },
-                        shape = RoundedCornerShape(16.dp)
+                    Box(
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .then(bubbleModifier(CircleShape))
+                            .clickable(enabled = playlist.songs.isNotEmpty(), onClick = { onPlayAll(true) }),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Icon(Icons.Filled.Shuffle, contentDescription = null)
+                        Icon(Icons.Filled.Shuffle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -414,10 +585,20 @@ private fun PlaylistDetailContent(
                     )
                     if (!playlist.isSystem) {
                         Spacer(Modifier.height(12.dp))
-                        FilledTonalButton(onClick = { showAddTracksDialog = true }) {
-                            Icon(Icons.Filled.Add, contentDescription = null)
-                            Spacer(Modifier.width(6.dp))
-                            Text(strings.addTracksButton)
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                                .clickable { showAddTracksDialog = true }
+                                .padding(horizontal = 16.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(Icons.Filled.Add, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                                Spacer(Modifier.width(6.dp))
+                                Text(strings.addTracksButton, fontWeight = FontWeight.Bold)
+                            }
                         }
                     }
                 }

@@ -33,6 +33,7 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
+val LocalPureMaterialYou = staticCompositionLocalOf { false }
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 
@@ -104,12 +105,14 @@ fun Modifier.liquidGlassBubble(
     enableBlur: Boolean = true,
     isLiquidGlass: Boolean = false
 ): Modifier {
-    val useGlass = isLiquidGlass && isLiquidGlassSupported()
+    val isPureMy = LocalPureMaterialYou.current
+    val useGlass = !isPureMy && isLiquidGlass && isLiquidGlassSupported()
+    val effectiveBlur = !isPureMy && enableBlur
     val baseSurface = MaterialTheme.colorScheme.surface
     val glassTint = if (baseSurface.luminance() > 0.5f) Color(0xFFFAFAFA) else Color(0xFF141414)
     val shapeProvider = ShapeProvider { shape }
 
-    val blurModifier = if (hazeState != null && (useGlass || enableBlur)) {
+    val blurModifier = if (hazeState != null && (useGlass || effectiveBlur)) {
         Modifier.hazeEffect(state = hazeState) {
             blurEnabled = true
             backgroundColor = baseSurface
@@ -120,9 +123,11 @@ fun Modifier.liquidGlassBubble(
         Modifier
     }
 
-    val bgModifier = if (useGlass) {
+    val bgModifier = if (isPureMy) {
+        Modifier.background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
+    } else if (useGlass) {
         Modifier.background(glassTint.copy(alpha = 0.35f), shape)
-    } else if (enableBlur) {
+    } else if (effectiveBlur) {
         Modifier.background(baseSurface.copy(alpha = 0.60f), shape)
     } else {
         Modifier.background(baseSurface.copy(alpha = 0.94f), shape)
@@ -138,23 +143,31 @@ fun Modifier.liquidGlassBubble(
     }
 
     val isLight = baseSurface.luminance() > 0.5f
-    val borderModifier = Modifier.border(
-        width = if (useGlass) 1.2.dp else 1.dp,
-        brush = androidx.compose.ui.graphics.Brush.verticalGradient(
-            if (isLight) {
-                listOf(
-                    Color.Black.copy(alpha = if (useGlass) 0.12f else 0.08f),
-                    Color.Black.copy(alpha = if (useGlass) 0.04f else 0.02f)
-                )
-            } else {
-                listOf(
-                    Color.White.copy(alpha = if (useGlass) 0.38f else 0.22f),
-                    Color.White.copy(alpha = if (useGlass) 0.12f else 0.06f)
-                )
-            }
-        ),
-        shape = shape
-    )
+    val borderModifier = if (isPureMy) {
+        Modifier.border(
+            width = 1.dp,
+            color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f),
+            shape = shape
+        )
+    } else {
+        Modifier.border(
+            width = if (useGlass) 1.2.dp else 1.dp,
+            brush = androidx.compose.ui.graphics.Brush.verticalGradient(
+                if (isLight) {
+                    listOf(
+                        Color.Black.copy(alpha = if (useGlass) 0.12f else 0.08f),
+                        Color.Black.copy(alpha = if (useGlass) 0.04f else 0.02f)
+                    )
+                } else {
+                    listOf(
+                        Color.White.copy(alpha = if (useGlass) 0.38f else 0.22f),
+                        Color.White.copy(alpha = if (useGlass) 0.12f else 0.06f)
+                    )
+                }
+            ),
+            shape = shape
+        )
+    }
 
     return clip(shape)
         .then(blurModifier)

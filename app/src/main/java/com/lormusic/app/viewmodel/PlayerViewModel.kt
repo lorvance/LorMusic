@@ -70,6 +70,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
     val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
     val useDynamicPlayerColors = mutableStateOf(prefs.getUseDynamicPlayerColors())
+    val pureMaterialYou = mutableStateOf(prefs.getPureMaterialYou())
     val autoTagFixEnabled = mutableStateOf<Boolean>(prefs.getAutoTagFixEnabled())
     val appLanguage = mutableStateOf(prefs.getAppLanguage())
     val recentsViewMode = mutableStateOf(prefs.getRecentsViewMode())
@@ -549,7 +550,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             googleAccount.value = profile
             prefs.saveGoogleAccount(profile.displayName, profile.email, profile.avatarUrl)
 
-            val newSaved = (syncData.historySongs + syncData.likedSongs + savedYtSongs.value)
+            val unfavorited = prefs.getUnfavoritedSongIds()
+            val filteredLiked = syncData.likedSongs.filterNot {
+                unfavorited.contains(it.id) || unfavorited.contains(it.id.removePrefix("yt_"))
+            }
+            val newSaved = (syncData.historySongs + filteredLiked + savedYtSongs.value)
                 .distinctBy { it.id }
                 .take(120)
             savedYtSongs.value = newSaved
@@ -562,9 +567,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 recentlyPlayedIds.value = prefs.getRecentlyPlayedIds()
             }
 
-            if (syncData.likedSongs.isNotEmpty()) {
+            if (filteredLiked.isNotEmpty()) {
                 val updatedFavs = favoriteIds.value.toMutableSet()
-                syncData.likedSongs.forEach { updatedFavs.add(it.id) }
+                filteredLiked.forEach { updatedFavs.add(it.id) }
                 favoriteIds.value = updatedFavs
                 prefs.saveFavoriteIds(updatedFavs)
             }
@@ -875,11 +880,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleFavorite(song: Song) {
         val updated = favoriteIds.value.toMutableSet()
+        val cookie = ytMusicCookie.value
         val added = if (updated.contains(song.id)) {
             updated.remove(song.id)
+            prefs.addUnfavoritedSongId(song.id)
+            prefs.addUnfavoritedSongId(song.id.removePrefix("yt_"))
+            if (!cookie.isNullOrBlank()) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    YouTubeMusicRepository.removeLikeFromYtMusic(song.id, cookie)
+                }
+            }
             false
         } else {
             updated.add(song.id)
+            prefs.removeUnfavoritedSongId(song.id)
+            prefs.removeUnfavoritedSongId(song.id.removePrefix("yt_"))
+            if (!cookie.isNullOrBlank() && (song.isRemoteYt || song.id.startsWith("yt_"))) {
+                viewModelScope.launch(Dispatchers.IO) {
+                    YouTubeMusicRepository.likeYtMusicVideo(song.id, cookie)
+                }
+            }
             if (song.isRemoteYt || song.id.startsWith("yt_")) {
                 val saved = (listOf(song) + savedYtSongs.value).distinctBy { it.id }
                 savedYtSongs.value = saved
@@ -1211,6 +1231,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveEnableBlur(enabled)
     }
 
+    fun setPureMaterialYou(enabled: Boolean) {
+        pureMaterialYou.value = enabled
+        prefs.savePureMaterialYou(enabled)
+    }
+
     fun setSearchBarPlacement(placement: SearchBarPlacement) {
         searchBarPlacement.value = placement
         prefs.saveSearchBarPlacement(placement)
@@ -1351,7 +1376,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.1", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.6.2", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
@@ -1359,9 +1384,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.1)"
-                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.1)"
-                        else -> "У вас установлена последняя версия (1.6.1)"
+                        AppLanguage.EN -> "You have the latest version installed (1.6.2)"
+                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.2)"
+                        else -> "У вас установлена последняя версия (1.6.2)"
                     }
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message

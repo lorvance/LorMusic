@@ -383,6 +383,29 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_DYNAMIC_PLAYER_COLORS, enabled).apply()
     }
 
+    fun getPureMaterialYou(): Boolean = prefs.getBoolean(KEY_PURE_MATERIAL_YOU, false)
+
+    fun savePureMaterialYou(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_PURE_MATERIAL_YOU, enabled).apply()
+    }
+
+    fun getUnfavoritedSongIds(): Set<String> {
+        return prefs.getStringSet(KEY_UNFAVORITED_SONGS, emptySet()) ?: emptySet()
+    }
+
+    fun addUnfavoritedSongId(id: String) {
+        val current = getUnfavoritedSongIds().toMutableSet()
+        current.add(id)
+        prefs.edit().putStringSet(KEY_UNFAVORITED_SONGS, current).apply()
+    }
+
+    fun removeUnfavoritedSongId(id: String) {
+        val current = getUnfavoritedSongIds().toMutableSet()
+        if (current.remove(id)) {
+            prefs.edit().putStringSet(KEY_UNFAVORITED_SONGS, current).apply()
+        }
+    }
+
     companion object {
         private const val KEY_FAVORITES = "favorite_song_ids"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"
@@ -414,5 +437,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_RECENTS_VIEW_MODE = "yt_recents_view_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
         private const val KEY_DYNAMIC_PLAYER_COLORS = "use_dynamic_player_colors"
+        private const val KEY_PURE_MATERIAL_YOU = "pure_material_you"
+        private const val KEY_UNFAVORITED_SONGS = "unfavorited_song_ids"
     }
 }

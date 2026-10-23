@@ -78,7 +78,12 @@ fun MiniPlayer(
         Modifier.background(baseSurface.copy(alpha = 0.96f))
     }
 
-    val glassMod = if (useLiquidGlass && isLiquidGlassSupported()) {
+    val isPureMy = LocalPureMaterialYou.current
+    val glassMod = if (isPureMy) {
+        Modifier
+            .background(MaterialTheme.colorScheme.surfaceContainerHigh, shape)
+            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), shape)
+    } else if (useLiquidGlass && isLiquidGlassSupported()) {
         Modifier.liquidGlass(shape)
     } else {
         blurModifier.border(

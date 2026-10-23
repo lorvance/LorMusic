@@ -1,7 +1,12 @@
 package com.lormusic.app.ui.screens
 
 import android.os.Build
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
+import com.lormusic.app.R
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -36,6 +41,7 @@ fun ProfileScreen(
     useDynamicColor: Boolean,
     useSquigglySlider: Boolean,
     enableBlur: Boolean,
+    pureMaterialYou: Boolean = false,
     useLiquidGlass: Boolean = false,
     enableBetaUpdates: Boolean = false,
     useAlbumArtGradient: Boolean = false,
@@ -53,6 +59,7 @@ fun ProfileScreen(
     onToggleDynamicColor: (Boolean) -> Unit,
     onToggleSquigglySlider: (Boolean) -> Unit,
     onToggleBlur: (Boolean) -> Unit,
+    onTogglePureMaterialYou: (Boolean) -> Unit = {},
     onToggleLiquidGlass: (Boolean) -> Unit = {},
     onToggleBetaUpdates: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
@@ -71,6 +78,9 @@ fun ProfileScreen(
     onCheckForUpdates: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
+    val context = LocalContext.current
+    var updateClickCount by remember { mutableIntStateOf(0) }
+    var easterEggStage by remember { mutableIntStateOf(0) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showSearchPlacementDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
@@ -142,13 +152,13 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
             modifier = Modifier.fillMaxWidth()
         ) {
-            Row(
+            Column(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(14.dp),
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    .padding(10.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                iconChoices.forEachIndexed { idx, option ->
+                iconChoices.forEach { option ->
                     val isSelected = selectedAppIcon == option
                     val borderColor = if (isSelected) {
                         MaterialTheme.colorScheme.primary
@@ -161,38 +171,37 @@ fun ProfileScreen(
                         MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
                     }
 
-                    Column(
-                        horizontalAlignment = Alignment.CenterHorizontally,
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
-                            .weight(1f)
-                            .clip(RoundedCornerShape(20.dp))
+                            .fillMaxWidth()
+                            .clip(RoundedCornerShape(18.dp))
                             .background(cardBg)
-                            .border(2.dp, borderColor, RoundedCornerShape(20.dp))
+                            .border(2.dp, borderColor, RoundedCornerShape(18.dp))
                             .clickable { onSelectAppIcon(option) }
-                            .padding(vertical = 12.dp, horizontal = 6.dp)
+                            .padding(horizontal = 14.dp, vertical = 10.dp)
                     ) {
                         AppIconVectorPreview(
                             option = option,
-                            size = 66.dp,
-                            cornerRadius = 18.dp
+                            size = 52.dp,
+                            cornerRadius = 14.dp
                         )
-                        Spacer(Modifier.height(8.dp))
-                        Text(
-                            text = option.getDisplayName(strings),
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center
-                        )
-                        Spacer(Modifier.height(2.dp))
-                        Text(
-                            text = option.getDisplaySubtitle(strings),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
-                            textAlign = TextAlign.Center,
-                            maxLines = 2
-                        )
-                        Spacer(Modifier.height(6.dp))
+                        Spacer(Modifier.width(14.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = option.getDisplayName(strings),
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(Modifier.height(2.dp))
+                            Text(
+                                text = option.getDisplaySubtitle(strings),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                            )
+                        }
+                        Spacer(Modifier.width(8.dp))
                         RadioButton(
                             selected = isSelected,
                             onClick = { onSelectAppIcon(option) }
@@ -231,6 +240,18 @@ fun ProfileScreen(
                         Switch(
                             checked = useDynamicColor,
                             onCheckedChange = onToggleDynamicColor
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text(strings.pureMaterialYouTitle) },
+                    supportingContent = { Text(strings.pureMaterialYouDesc) },
+                    leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = pureMaterialYou,
+                            onCheckedChange = onTogglePureMaterialYou
                         )
                     }
                 )
@@ -449,7 +470,20 @@ fun ProfileScreen(
                     headlineContent = { Text(strings.checkForUpdatesTitle) },
                     supportingContent = { Text(strings.appVersion) },
                     leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                    modifier = Modifier.clickable { onCheckForUpdates() }
+                    modifier = Modifier.clickable {
+                        updateClickCount++
+                        if (updateClickCount == 10) {
+                            playScreamSound()
+                            easterEggStage = 1
+                            android.widget.Toast.makeText(context, "ХВАТИТ!!!! ОБНОВЫ НЕТ ЕЩЕ!!!", android.widget.Toast.LENGTH_LONG).show()
+                        } else if (updateClickCount >= 20) {
+                            playScreamSound()
+                            easterEggStage = 2
+                            android.widget.Toast.makeText(context, "я смотрю ты ничего не понял... ИДИ УЖЕ ОТСЮДА!!!", android.widget.Toast.LENGTH_LONG).show()
+                        } else {
+                            onCheckForUpdates()
+                        }
+                    }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
@@ -715,6 +749,134 @@ fun ProfileScreen(
                 TextButton(onClick = { showAboutDialog = false }) { Text(strings.great) }
             }
         )
+    }
+
+    if (easterEggStage == 1) {
+        AlertDialog(
+            onDismissRequest = { easterEggStage = 0 },
+            confirmButton = {
+                Button(
+                    onClick = { easterEggStage = 0 },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Понял...")
+                }
+            },
+            title = {
+                Text(
+                    text = "ХВАТИТ!!!! ОБНОВЫ НЕТ ЕЩЕ!!!",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.error
+                )
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.easter_cat_1),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                    )
+                    Spacer(Modifier.height(12.dp))
+                    Text(
+                        text = "ХВАТИТ ТЫКАТЬ! Новой версии ещё нет!",
+                        style = MaterialTheme.typography.bodyMedium,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            },
+            shape = RoundedCornerShape(28.dp)
+        )
+    } else if (easterEggStage == 2) {
+        AlertDialog(
+            onDismissRequest = { easterEggStage = 0 },
+            confirmButton = {
+                Button(
+                    onClick = { easterEggStage = 0 },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text("Ухожу, ухожу...")
+                }
+            },
+            title = {
+                Text(
+                    text = "я смотрю ты ничего не понял...",
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+            },
+            text = {
+                Column(
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Image(
+                        painter = painterResource(id = R.drawable.easter_cat_2),
+                        contentDescription = null,
+                        contentScale = ContentScale.Crop,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(240.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                    )
+                    Spacer(Modifier.height(14.dp))
+                    Text(
+                        text = "ИДИ УЖЕ ОТСЮДА!!!",
+                        style = MaterialTheme.typography.headlineSmall,
+                        fontWeight = FontWeight.Black,
+                        color = MaterialTheme.colorScheme.error,
+                        textAlign = TextAlign.Center
+                    )
+                }
+            },
+            shape = RoundedCornerShape(28.dp)
+        )
+    }
+}
+
+private fun playScreamSound() {
+    try {
+        val sampleRate = 44100
+        val durationMs = 600
+        val numSamples = sampleRate * durationMs / 1000
+        val buffer = ShortArray(numSamples)
+        for (i in 0 until numSamples) {
+            val t = i.toDouble() / sampleRate
+            val progress = i.toDouble() / numSamples
+            val freq = 800.0 + progress * 2400.0 + kotlin.math.sin(t * 150.0) * 180.0
+            val angle = 2.0 * Math.PI * freq * t
+            val amplitude = 32767.0 * (1.0 - progress * 0.15)
+            val sample = (kotlin.math.sin(angle) * amplitude * 0.85).toInt().toShort()
+            buffer[i] = sample
+        }
+        val track = android.media.AudioTrack.Builder()
+            .setAudioAttributes(
+                android.media.AudioAttributes.Builder()
+                    .setUsage(android.media.AudioAttributes.USAGE_MEDIA)
+                    .setContentType(android.media.AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+            )
+            .setAudioFormat(
+                android.media.AudioFormat.Builder()
+                    .setEncoding(android.media.AudioFormat.ENCODING_PCM_16BIT)
+                    .setSampleRate(sampleRate)
+                    .setChannelMask(android.media.AudioFormat.CHANNEL_OUT_MONO)
+                    .build()
+            )
+            .setBufferSizeInBytes(buffer.size * 2)
+            .setTransferMode(android.media.AudioTrack.MODE_STATIC)
+            .build()
+        track.write(buffer, 0, buffer.size)
+        track.play()
+    } catch (_: Exception) {
     }
 }
 

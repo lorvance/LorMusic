@@ -93,6 +93,7 @@ fun LorBottomNavBar(
     val innerInset = 5.dp
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
+    val isPureMy = LocalPureMaterialYou.current
     val tabs = LorTab.entries
 
     var innerWidthPx by remember { mutableIntStateOf(0) }
@@ -123,7 +124,11 @@ fun LorBottomNavBar(
                 )
                 .clip(capsuleShape)
                 .then(
-                    if (useLiquidGlass && isLiquidGlassSupported()) {
+                    if (isPureMy) {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer, capsuleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), capsuleShape)
+                    } else if (useLiquidGlass && isLiquidGlassSupported()) {
                         Modifier.liquidGlass(capsuleShape)
                     } else {
                         val baseMod = if (enableBlur) {
@@ -287,7 +292,11 @@ fun LorBottomNavBar(
                     )
                     .clip(CircleShape)
                     .then(
-                        if (useLiquidGlass && isLiquidGlassSupported()) {
+                        if (isPureMy) {
+                            Modifier
+                                .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), CircleShape)
+                        } else if (useLiquidGlass && isLiquidGlassSupported()) {
                             Modifier.liquidGlass(CircleShape)
                         } else {
                             val baseMod = if (enableBlur) {
@@ -360,6 +369,7 @@ fun YtMusicBottomNavBar(
     val innerInset = 5.dp
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
+    val isPureMy = LocalPureMaterialYou.current
     val mainTabs = remember {
         listOf(
             YtMusicTab.HOME,
@@ -396,7 +406,11 @@ fun YtMusicBottomNavBar(
                 )
                 .clip(capsuleShape)
                 .then(
-                    if (useLiquidGlass && isLiquidGlassSupported()) {
+                    if (isPureMy) {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer, capsuleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), capsuleShape)
+                    } else if (useLiquidGlass && isLiquidGlassSupported()) {
                         Modifier.liquidGlass(capsuleShape)
                     } else {
                         val baseMod = if (enableBlur) {
@@ -560,7 +574,11 @@ fun YtMusicBottomNavBar(
                     )
                     .clip(CircleShape)
                     .then(
-                        if (useLiquidGlass && isLiquidGlassSupported()) {
+                        if (isPureMy) {
+                            Modifier
+                                .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), CircleShape)
+                        } else if (useLiquidGlass && isLiquidGlassSupported()) {
                             Modifier.liquidGlass(CircleShape)
                         } else {
                             val baseMod = if (enableBlur) {

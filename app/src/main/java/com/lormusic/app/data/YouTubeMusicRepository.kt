@@ -258,6 +258,30 @@ object YouTubeMusicRepository {
         }
     }
 
+    suspend fun removeLikeFromYtMusic(videoId: String, cookie: String?): Boolean = withContext(Dispatchers.IO) {
+        if (cookie.isNullOrBlank()) return@withContext false
+        val cleanId = videoId.removePrefix("yt_")
+        val body = buildWebRemixContextJson().apply {
+            put("target", JSONObject().apply {
+                put("videoId", cleanId)
+            })
+        }
+        val res = postInnertubeJson("$YTM_ORIGIN/youtubei/v1/like/removelike?prettyPrint=false", body, cookie)
+        res != null
+    }
+
+    suspend fun likeYtMusicVideo(videoId: String, cookie: String?): Boolean = withContext(Dispatchers.IO) {
+        if (cookie.isNullOrBlank()) return@withContext false
+        val cleanId = videoId.removePrefix("yt_")
+        val body = buildWebRemixContextJson().apply {
+            put("target", JSONObject().apply {
+                put("videoId", cleanId)
+            })
+        }
+        val res = postInnertubeJson("$YTM_ORIGIN/youtubei/v1/like/like?prettyPrint=false", body, cookie)
+        res != null
+    }
+
     private fun fetchBrowseTracks(browseId: String, cookie: String?, limit: Int = 18): List<Song> {
         val body = buildWebRemixContextJson().apply {
             put("browseId", browseId)

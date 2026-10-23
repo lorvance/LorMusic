@@ -277,7 +277,7 @@ object TagFixEngine {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 6000
                 readTimeout = 6000
-                setRequestProperty("User-Agent", "LorMusic/1.6.1 (Android; ShazamEngine)")
+                setRequestProperty("User-Agent", "LorMusic/1.6.2 (Android; ShazamEngine)")
             }
             if (conn.responseCode == 200) {
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -334,7 +334,7 @@ object TagFixEngine {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 6000
                 readTimeout = 6000
-                setRequestProperty("User-Agent", "LorMusic/1.6.1 (Android; ShazamEngine)")
+                setRequestProperty("User-Agent", "LorMusic/1.6.2 (Android; ShazamEngine)")
             }
             if (conn.responseCode == 200) {
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -413,7 +413,7 @@ object TagFixEngine {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 8000
                 readTimeout = 8000
-                setRequestProperty("User-Agent", "LorMusic/1.6.1")
+                setRequestProperty("User-Agent", "LorMusic/1.6.2")
             }
             if (conn.responseCode == 200) {
                 conn.inputStream.use { input ->
