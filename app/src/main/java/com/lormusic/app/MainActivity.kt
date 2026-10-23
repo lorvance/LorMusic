@@ -31,6 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import com.lormusic.app.model.LocalStrings
@@ -369,6 +370,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         useSquigglySlider = useSquigglySlider,
                                         enableBlur = enableBlur,
                                         pureMaterialYou = pureMaterialYou,
+                                        showNavBarLabels = playerViewModel.showNavBarLabels.value,
                                         useLiquidGlass = playerViewModel.useLiquidGlass.value,
                                         classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                         useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
@@ -387,6 +389,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleSquigglySlider = playerViewModel::setUseSquigglySlider,
                                         onToggleBlur = playerViewModel::setEnableBlur,
                                         onTogglePureMaterialYou = playerViewModel::setPureMaterialYou,
+                                        onToggleShowNavBarLabels = playerViewModel::setShowNavBarLabels,
                                         onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
                                         onToggleClassicLibraryDesign = playerViewModel::setClassicLibraryDesign,
                                         onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
@@ -497,6 +500,76 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     }
                 )
                     AnimatedVisibility(
+                        visible = downloadingSongIds.isNotEmpty(),
+                        enter = expandVertically() + fadeIn(),
+                        exit = shrinkVertically() + fadeOut()
+                    ) {
+                        val activeSongId = downloadingSongIds.firstOrNull()
+                        val activeSong = activeSongId?.let { id ->
+                            playerViewModel.downloadingSongs.value[id]
+                                ?: allSongs.firstOrNull { it.id == id }
+                                ?: savedYtSongs.firstOrNull { it.id == id }
+                                ?: ytSearchResults.firstOrNull { it.id == id }
+                                ?: ytRecommendations.firstOrNull { it.id == id }
+                                ?: currentSong?.takeIf { it.id == id }
+                        }
+                        val progressFrac = activeSongId?.let { playerViewModel.downloadProgress.value[it] } ?: 0f
+                        Surface(
+                            shape = RoundedCornerShape(24.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerHighest,
+                            tonalElevation = 6.dp,
+                            shadowElevation = 8.dp,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 20.dp, vertical = 6.dp)
+                        ) {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 18.dp, vertical = 12.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Download,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                    Text(
+                                        text = activeSong?.let { "${currentStrings.downloadingSong}: ${it.title}" }
+                                            ?: currentStrings.downloadingSong,
+                                        style = MaterialTheme.typography.bodyMedium,
+                                        fontWeight = FontWeight.Medium,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        maxLines = 1,
+                                        overflow = TextOverflow.Ellipsis,
+                                        modifier = Modifier.weight(1f)
+                                    )
+                                    if (progressFrac > 0f) {
+                                        Text(
+                                            text = "${(progressFrac * 100).toInt()}%",
+                                            style = MaterialTheme.typography.labelMedium,
+                                            fontWeight = FontWeight.Bold,
+                                            color = MaterialTheme.colorScheme.primary
+                                        )
+                                    }
+                                }
+                                Spacer(Modifier.height(8.dp))
+                                WavyLinearProgressIndicator(
+                                    progress = if (progressFrac > 0f) progressFrac else null,
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .height(16.dp),
+                                    activeColor = MaterialTheme.colorScheme.primary
+                                )
+                            }
+                        }
+                    }
+                    AnimatedVisibility(
                         visible = currentSong != null,
                         enter = fadeIn(tween(220)) + slideInVertically { it / 2 },
                         exit = fadeOut(tween(180)) + slideOutVertically { it / 2 }
@@ -530,7 +603,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             hazeState = hazeState,
                             enableBlur = effectiveEnableBlur,
                             useLiquidGlass = effectiveUseLiquidGlass,
-                            showBottomSearchButton = !isYtSearchTop
+                            showBottomSearchButton = !isYtSearchTop,
+                            showLabels = playerViewModel.showNavBarLabels.value
                         )
                     } else {
                         LorBottomNavBar(
@@ -542,6 +616,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             enableBlur = effectiveEnableBlur,
                             useLiquidGlass = effectiveUseLiquidGlass,
                             showBottomSearchButton = !isLocalSearchTop,
+                            showLabels = playerViewModel.showNavBarLabels.value,
                             isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
                             onToggleLocalSearch = {
                                 if (selectedTab != LorTab.LIBRARY) {

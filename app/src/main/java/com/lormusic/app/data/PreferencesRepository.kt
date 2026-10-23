@@ -389,6 +389,12 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_PURE_MATERIAL_YOU, enabled).apply()
     }
 
+    fun getShowNavBarLabels(): Boolean = prefs.getBoolean(KEY_SHOW_NAVBAR_LABELS, false)
+
+    fun saveShowNavBarLabels(show: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_NAVBAR_LABELS, show).apply()
+    }
+
     fun getUnfavoritedSongIds(): Set<String> {
         return prefs.getStringSet(KEY_UNFAVORITED_SONGS, emptySet()) ?: emptySet()
     }
@@ -439,5 +445,6 @@ class PreferencesRepository(context: Context) {
         private const val KEY_DYNAMIC_PLAYER_COLORS = "use_dynamic_player_colors"
         private const val KEY_PURE_MATERIAL_YOU = "pure_material_you"
         private const val KEY_UNFAVORITED_SONGS = "unfavorited_song_ids"
+        private const val KEY_SHOW_NAVBAR_LABELS = "show_navbar_labels"
     }
 }

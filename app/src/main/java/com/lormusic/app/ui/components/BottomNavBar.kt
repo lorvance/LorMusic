@@ -83,6 +83,7 @@ fun LorBottomNavBar(
     useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = false,
     isLocalSearchActive: Boolean = false,
+    showLabels: Boolean = false,
     onToggleLocalSearch: () -> Unit = {},
     modifier: Modifier = Modifier
 ) {
@@ -269,7 +270,8 @@ fun LorBottomNavBar(
                             isSelected = idx == activeIndex,
                             isHoveredByGesture = isDraggingNav && idx == activeIndex,
                             isYtBadge = false,
-                            compact = showBottomSearchButton
+                            compact = showBottomSearchButton,
+                            showLabels = showLabels
                         )
                     }
                 }
@@ -360,6 +362,7 @@ fun YtMusicBottomNavBar(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = true,
+    showLabels: Boolean = false,
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -550,7 +553,8 @@ fun YtMusicBottomNavBar(
                             isSelected = idx == activeIndex,
                             isHoveredByGesture = isDraggingNav && idx == activeIndex,
                             isYtBadge = false,
-                            compact = true
+                            compact = true,
+                            showLabels = showLabels
                         )
                     }
                 }
@@ -642,7 +646,8 @@ private fun LorTabItem(
     isSelected: Boolean,
     isHoveredByGesture: Boolean = false,
     isYtBadge: Boolean = false,
-    compact: Boolean = false
+    compact: Boolean = false,
+    showLabels: Boolean = false
 ) {
     val contentColor by animateColorAsState(
         targetValue = when {
@@ -674,21 +679,25 @@ private fun LorTabItem(
             imageVector = if (isSelected) filledIcon else outlineIcon,
             contentDescription = label,
             tint = if (isSelected || isYtBadge) MaterialTheme.colorScheme.primary else contentColor,
-            modifier = Modifier.size(22.dp)
+            modifier = Modifier.size(if (showLabels) 22.dp else 26.dp)
         )
-        Spacer(Modifier.height(2.dp))
-        Text(
-            text = label,
-            style = TextStyle(
-                fontSize = if (compact) 11.sp else 11.5.sp,
-                fontWeight = if (isSelected || isYtBadge) FontWeight.Bold else FontWeight.Medium,
-                platformStyle = PlatformTextStyle(includeFontPadding = false)
-            ),
-            color = contentColor,
-            textAlign = TextAlign.Center,
-            maxLines = 1,
-            overflow = TextOverflow.Ellipsis,
-            modifier = Modifier.fillMaxWidth()
-        )
+        if (showLabels) {
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = label,
+                style = TextStyle(
+                    fontSize = if (compact) 10.5.sp else 11.sp,
+                    fontWeight = if (isSelected || isYtBadge) FontWeight.Bold else FontWeight.Medium,
+                    platformStyle = PlatformTextStyle(includeFontPadding = false)
+                ),
+                color = contentColor,
+                textAlign = TextAlign.Center,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 2.dp)
+            )
+        }
     }
 }

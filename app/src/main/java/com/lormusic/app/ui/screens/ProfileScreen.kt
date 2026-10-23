@@ -30,6 +30,7 @@ import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.ui.components.AppIconVectorPreview
 import com.lormusic.app.ui.components.formatDurationShort
+import com.lormusic.app.ui.components.liquidGlassBubble
 
 @Composable
 fun ProfileScreen(
@@ -42,6 +43,7 @@ fun ProfileScreen(
     useSquigglySlider: Boolean,
     enableBlur: Boolean,
     pureMaterialYou: Boolean = false,
+    showNavBarLabels: Boolean = false,
     useLiquidGlass: Boolean = false,
     enableBetaUpdates: Boolean = false,
     useAlbumArtGradient: Boolean = false,
@@ -60,6 +62,7 @@ fun ProfileScreen(
     onToggleSquigglySlider: (Boolean) -> Unit,
     onToggleBlur: (Boolean) -> Unit,
     onTogglePureMaterialYou: (Boolean) -> Unit = {},
+    onToggleShowNavBarLabels: (Boolean) -> Unit = {},
     onToggleLiquidGlass: (Boolean) -> Unit = {},
     onToggleBetaUpdates: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
@@ -103,35 +106,30 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
-        Text(
-            text = strings.settingsTitle,
-            style = MaterialTheme.typography.displayMedium,
-            fontWeight = FontWeight.ExtraBold
-        )
-        Spacer(Modifier.height(14.dp))
-
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(10.dp)
+        Box(
+            modifier = Modifier
+                .fillMaxWidth()
+                .padding(vertical = 4.dp),
+            contentAlignment = Alignment.Center
         ) {
-            StatCard(
-                title = strings.statsTracks,
-                value = totalSongsCount.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = strings.statsFavorites,
-                value = favoritesCount.toString(),
-                modifier = Modifier.weight(1f)
-            )
-            StatCard(
-                title = strings.statsPlaylists,
-                value = playlistsCount.toString(),
-                modifier = Modifier.weight(1f)
-            )
+            Box(
+                modifier = Modifier
+                    .height(44.dp)
+                    .clip(RoundedCornerShape(22.dp))
+                    .then(Modifier.liquidGlassBubble(RoundedCornerShape(22.dp)))
+                    .padding(horizontal = 24.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    text = strings.settingsTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.ExtraBold,
+                    color = MaterialTheme.colorScheme.onSurface
+                )
+            }
         }
 
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(14.dp))
 
         Text(
             text = strings.appIconSectionTitle,
@@ -252,6 +250,18 @@ fun ProfileScreen(
                         Switch(
                             checked = pureMaterialYou,
                             onCheckedChange = onTogglePureMaterialYou
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text(strings.showNavBarLabelsTitle) },
+                    supportingContent = { Text(strings.showNavBarLabelsDesc) },
+                    leadingContent = { Icon(Icons.Filled.Label, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = showNavBarLabels,
+                            onCheckedChange = onToggleShowNavBarLabels
                         )
                     }
                 )

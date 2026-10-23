@@ -14,6 +14,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -137,6 +138,34 @@ fun PlaylistsScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    item(span = { GridItemSpan(2) }, key = "stats_row") {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(bottom = 2.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                        ) {
+                            StatCard(
+                                title = strings.statsTracks,
+                                value = allSongs.size.toString(),
+                                modifier = Modifier.weight(1f),
+                                bubbleModifier = { bubbleModifier(it) }
+                            )
+                            StatCard(
+                                title = strings.statsFavorites,
+                                value = favoriteIds.size.toString(),
+                                modifier = Modifier.weight(1f),
+                                bubbleModifier = { bubbleModifier(it) }
+                            )
+                            StatCard(
+                                title = strings.statsPlaylists,
+                                value = playlists.size.toString(),
+                                modifier = Modifier.weight(1f),
+                                bubbleModifier = { bubbleModifier(it) }
+                            )
+                        }
+                    }
+
                     items(playlists, key = { it.id }) { playlist ->
                         PlaylistCard(
                             playlist = playlist,
@@ -669,5 +698,41 @@ private fun PlaylistDetailContent(
                 }
             }
         )
+    }
+}
+
+@Composable
+private fun StatCard(
+    title: String,
+    value: String,
+    modifier: Modifier = Modifier,
+    bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { Modifier }
+) {
+    Box(
+        modifier = modifier
+            .clip(RoundedCornerShape(22.dp))
+            .then(bubbleModifier(RoundedCornerShape(22.dp)))
+            .padding(vertical = 12.dp, horizontal = 8.dp),
+        contentAlignment = Alignment.Center
+    ) {
+        Column(
+            horizontalAlignment = Alignment.CenterHorizontally
+        ) {
+            Text(
+                text = value,
+                style = MaterialTheme.typography.headlineMedium,
+                fontWeight = FontWeight.ExtraBold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(2.dp))
+            Text(
+                text = title,
+                style = MaterialTheme.typography.labelMedium,
+                fontWeight = FontWeight.SemiBold,
+                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis
+            )
+        }
     }
 }
