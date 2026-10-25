@@ -37,6 +37,9 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.lazy.items
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
@@ -58,6 +61,7 @@ fun PlaylistsScreen(
     onCreatePlaylist: (String, List<Song>) -> Unit,
     onDeletePlaylist: (String) -> Unit,
     onAddSongToPlaylist: (String, Song) -> Unit,
+    onAddSongsToPlaylist: (String, List<Song>) -> Unit = { id, list -> list.forEach { onAddSongToPlaylist(id, it) } },
     onRemoveSongFromPlaylist: (String, String) -> Unit,
     onToggleFavorite: (Song) -> Unit,
     hazeState: HazeState? = null,
@@ -112,8 +116,8 @@ fun PlaylistsScreen(
                 onPlaySongAt = { idx ->
                     onPlayQueue(detailPlaylist.songs, idx, false)
                 },
-                onAddSong = { song ->
-                    onAddSongToPlaylist(detailPlaylist.id, song)
+                onAddSongs = { songs ->
+                    onAddSongsToPlaylist(detailPlaylist.id, songs)
                 },
                 onRemoveSong = { songId ->
                     onRemoveSongFromPlaylist(detailPlaylist.id, songId)
@@ -454,7 +458,7 @@ private fun PlaylistDetailContent(
     onBack: () -> Unit,
     onPlayAll: (Boolean) -> Unit,
     onPlaySongAt: (Int) -> Unit,
-    onAddSong: (Song) -> Unit,
+    onAddSongs: (List<Song>) -> Unit,
     onRemoveSong: (String) -> Unit,
     onDeletePlaylist: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
@@ -464,6 +468,7 @@ private fun PlaylistDetailContent(
 
     val strings = LocalStrings.current
     var showAddTracksDialog by remember { mutableStateOf(false) }
+    var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val firstSong = playlist.songs.firstOrNull()
 
     Column(modifier = Modifier.fillMaxSize()) {
@@ -530,7 +535,7 @@ private fun PlaylistDetailContent(
                         .size(44.dp)
                         .clip(CircleShape)
                         .then(bubbleModifier(CircleShape))
-                        .clickable(onClick = onDeletePlaylist),
+                        .clickable { showDeleteConfirmDialog = true },
                     contentAlignment = Alignment.Center
                 ) {
                     Icon(
@@ -664,40 +669,253 @@ private fun PlaylistDetailContent(
         }
     }
 
+    if (showDeleteConfirmDialog) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirmDialog = false },
+            title = { Text(strings.deletePlaylistConfirmTitle) },
+            text = {
+                Text(strings.deletePlaylistConfirmMessage.format(playlist.name))
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        showDeleteConfirmDialog = false
+                        onDeletePlaylist()
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(strings.deletePlaylist)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showDeleteConfirmDialog = false }) {
+                    Text(strings.cancel)
+                }
+            }
+        )
+    }
+
     if (showAddTracksDialog) {
         val existingIds = remember(playlist.songs) { playlist.songs.map { it.id }.toSet() }
         val availableSongs = remember(allSongs, existingIds) {
             allSongs.filterNot { existingIds.contains(it.id) }
         }
-        AlertDialog(
+        var searchQuery by remember { mutableStateOf("") }
+        val selectedIds = remember { mutableStateListOf<String>() }
+
+        val filteredSongs = remember(availableSongs, searchQuery) {
+            if (searchQuery.isBlank()) availableSongs
+            else availableSongs.filter {
+                it.title.contains(searchQuery, ignoreCase = true) ||
+                    it.artist.contains(searchQuery, ignoreCase = true)
+            }
+        }
+
+        Dialog(
             onDismissRequest = { showAddTracksDialog = false },
-            title = { Text("${strings.addToPlaylist}: «${playlist.name}»") },
-            text = {
-                if (availableSongs.isEmpty()) {
-                    Text(strings.allTracksAlreadyInPlaylist)
-                } else {
-                    LazyColumn(modifier = Modifier.heightIn(max = 300.dp)) {
-                        itemsIndexed(availableSongs, key = { _, s -> s.id }) { _, song ->
-                            ListItem(
-                                headlineContent = { Text(song.title) },
-                                supportingContent = { Text(song.artist) },
-                                trailingContent = {
-                                    IconButton(onClick = { onAddSong(song) }) {
-                                        Icon(Icons.Filled.AddCircleOutline, contentDescription = strings.addTracksButton)
-                                    }
-                                },
-                                modifier = Modifier.clickable { onAddSong(song) }
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            Surface(
+                modifier = Modifier.fillMaxSize(),
+                color = MaterialTheme.colorScheme.background
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .statusBarsPadding()
+                        .navigationBarsPadding()
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 12.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { showAddTracksDialog = false }) {
+                            Icon(Icons.Filled.Close, contentDescription = strings.cancel)
+                        }
+                        Spacer(Modifier.width(8.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "${strings.addToPlaylist}: «${playlist.name}»",
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.Bold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
                             )
+                            Text(
+                                text = "${strings.selectedCount}: ${selectedIds.size} / ${availableSongs.size}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                            )
+                        }
+                        if (filteredSongs.isNotEmpty()) {
+                            TextButton(
+                                onClick = {
+                                    val filteredIds = filteredSongs.map { it.id }
+                                    if (selectedIds.containsAll(filteredIds)) {
+                                        selectedIds.removeAll(filteredIds)
+                                    } else {
+                                        filteredIds.forEach { id ->
+                                            if (!selectedIds.contains(id)) selectedIds.add(id)
+                                        }
+                                    }
+                                }
+                            ) {
+                                val allFilteredSelected = filteredSongs.isNotEmpty() && selectedIds.containsAll(filteredSongs.map { it.id })
+                                Text(if (allFilteredSelected) strings.deselectAll else strings.selectAll)
+                            }
+                        }
+                    }
+
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp, vertical = 4.dp),
+                        placeholder = { Text(strings.searchPlaceholder) },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Filled.Clear, contentDescription = null)
+                                }
+                            }
+                        },
+                        shape = RoundedCornerShape(16.dp),
+                        singleLine = true
+                    )
+
+                    Spacer(Modifier.height(8.dp))
+
+                    if (availableSongs.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.allTracksAlreadyInPlaylist,
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    } else if (filteredSongs.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxWidth(),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.nothingFoundQuery.format(searchQuery),
+                                style = MaterialTheme.typography.bodyLarge,
+                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                            )
+                        }
+                    } else {
+                        LazyColumn(
+                            modifier = Modifier.weight(1f),
+                            contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                            verticalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            items(filteredSongs, key = { it.id }) { song ->
+                                val isSelected = selectedIds.contains(song.id)
+                                Surface(
+                                    shape = RoundedCornerShape(16.dp),
+                                    color = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.45f)
+                                    else MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.35f),
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            if (isSelected) selectedIds.remove(song.id)
+                                            else selectedIds.add(song.id)
+                                        }
+                                ) {
+                                    Row(
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        verticalAlignment = Alignment.CenterVertically
+                                    ) {
+                                        Checkbox(
+                                            checked = isSelected,
+                                            onCheckedChange = { checked ->
+                                                if (checked) {
+                                                    if (!selectedIds.contains(song.id)) selectedIds.add(song.id)
+                                                } else {
+                                                    selectedIds.remove(song.id)
+                                                }
+                                            }
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        SongArtwork(
+                                            seed = song.coverColorSeed,
+                                            albumArtUri = song.albumArtUri,
+                                            songUri = song.uri,
+                                            cornerRadius = 10.dp,
+                                            modifier = Modifier.size(44.dp)
+                                        )
+                                        Spacer(Modifier.width(12.dp))
+                                        Column(modifier = Modifier.weight(1f)) {
+                                            Text(
+                                                text = song.title,
+                                                style = MaterialTheme.typography.bodyLarge,
+                                                fontWeight = FontWeight.SemiBold,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                            Text(
+                                                text = song.artist,
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis
+                                            )
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Surface(
+                        tonalElevation = 8.dp,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 16.dp, vertical = 12.dp)
+                        ) {
+                            Button(
+                                onClick = {
+                                    val selectedSongs = availableSongs.filter { selectedIds.contains(it.id) }
+                                    onAddSongs(selectedSongs)
+                                    showAddTracksDialog = false
+                                },
+                                enabled = selectedIds.isNotEmpty(),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp),
+                                shape = RoundedCornerShape(16.dp)
+                            ) {
+                                Text(
+                                    text = if (selectedIds.isNotEmpty()) "${strings.confirm} (${selectedIds.size})" else strings.confirm,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAddTracksDialog = false }) {
-                    Text(strings.done)
-                }
             }
-        )
+        }
     }
 }
 

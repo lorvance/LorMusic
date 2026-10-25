@@ -90,8 +90,8 @@ fun LorBottomNavBar(
     val view = LocalView.current
     val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current
-    val navBarHeight = 64.dp
-    val innerInset = 5.dp
+    val navBarHeight = 58.dp
+    val innerInset = 4.dp
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
     val isPureMy = LocalPureMaterialYou.current
@@ -109,7 +109,7 @@ fun LorBottomNavBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {
@@ -368,8 +368,8 @@ fun YtMusicBottomNavBar(
     val view = LocalView.current
     val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current
-    val navBarHeight = 64.dp
-    val innerInset = 5.dp
+    val navBarHeight = 58.dp
+    val innerInset = 4.dp
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
     val isPureMy = LocalPureMaterialYou.current
@@ -393,7 +393,7 @@ fun YtMusicBottomNavBar(
         modifier = modifier
             .fillMaxWidth()
             .navigationBarsPadding()
-            .padding(horizontal = 14.dp, vertical = 8.dp),
+            .padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)
     ) {

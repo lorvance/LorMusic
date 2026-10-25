@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
 import android.provider.MediaStore
+import androidx.core.content.ContextCompat
 import androidx.compose.runtime.mutableStateOf
 import java.io.File
 import androidx.lifecycle.AndroidViewModel
@@ -978,6 +979,34 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         persistPlaylists(updated)
     }
 
+    fun addSongsToPlaylist(playlistId: String, songs: List<Song>) {
+        if (songs.isEmpty()) return
+        if (playlistId == "sys_favorites") {
+            songs.forEach { if (!isFavorite(it.id)) toggleFavorite(it) }
+            return
+        }
+        val ytTracks = songs.filter { it.isRemoteYt || it.id.startsWith("yt_") }
+        if (ytTracks.isNotEmpty()) {
+            val saved = (ytTracks + savedYtSongs.value).distinctBy { it.id }
+            savedYtSongs.value = saved
+            prefs.saveYtSongs(saved)
+        }
+        val updated = customPlaylists.value.map { pl ->
+            if (pl.id == playlistId) {
+                val existingIds = pl.songs.map { it.id }.toSet()
+                val newSongs = songs.filterNot { existingIds.contains(it.id) }
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Added ${newSongs.size} tracks to «${pl.name}»"
+                    AppLanguage.UK -> "Додано ${newSongs.size} треків до «${pl.name}»"
+                    else -> "Добавлено треков: ${newSongs.size} в «${pl.name}»"
+                }
+                pl.copy(songs = pl.songs + newSongs)
+            } else pl
+        }
+        customPlaylists.value = updated
+        persistPlaylists(updated)
+    }
+
     fun removeSongFromPlaylist(playlistId: String, songId: String) {
         if (playlistId == "sys_favorites") {
             (allSongs.value + savedYtSongs.value).find { it.id == songId }?.let { toggleFavorite(it) }
@@ -1276,10 +1305,68 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         try {
             val app = getApplication<Application>()
             val intent = Intent(app, PlaybackService::class.java)
-            app.startService(intent)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                ContextCompat.startForegroundService(app, intent)
+            } else {
+                app.startService(intent)
+            }
         } catch (_: Exception) {
 
         }
+    }
+
+    fun hasSeenBackupNotice(): Boolean = prefs.hasSeenBackupNotice()
+
+    fun dismissBackupNotice() {
+        prefs.setHasSeenBackupNotice(true)
+    }
+
+    fun exportBackup(): String = prefs.exportBackupJson()
+
+    fun reloadAllPreferences() {
+        themeMode.value = prefs.getThemeMode()
+        useDynamicColor.value = prefs.getUseDynamicColor()
+        useSquigglySlider.value = prefs.getUseSquigglySlider()
+        enableBlur.value = prefs.getEnableBlur()
+        pureMaterialYou.value = prefs.getPureMaterialYou()
+        useLiquidGlass.value = prefs.getUseLiquidGlass()
+        classicLibraryDesign.value = prefs.getClassicLibraryDesign()
+        useDynamicPlayerColors.value = prefs.getUseDynamicPlayerColors()
+        enableBetaUpdates.value = prefs.getEnableBetaUpdates()
+        useAlbumArtGradient.value = prefs.getUseAlbumArtGradient()
+        autoTagFixEnabled.value = prefs.getAutoTagFixEnabled()
+        appLanguage.value = prefs.getAppLanguage()
+        searchBarPlacement.value = prefs.getSearchBarPlacement()
+        enablePlayerSwipe.value = prefs.getEnablePlayerSwipe()
+        hideDemoTracks.value = prefs.getHideDemoTracks()
+        selectedAppIcon.value = prefs.getAppIconOption()
+        playbackSpeed.value = prefs.getPlaybackSpeed()
+        showNavBarLabels.value = prefs.getShowNavBarLabels()
+        favoriteIds.value = prefs.getFavoriteIds()
+        hiddenSongIds.value = prefs.getHiddenSongIds()
+        tagOverrides.value = prefs.getTagOverrides()
+        savedYtSongs.value = loadCleanSavedYtSongs()
+        rebuildPlaylists(allSongs.value)
+        rescanLocalMusic()
+    }
+
+    fun importBackup(jsonString: String): Boolean {
+        val success = prefs.importBackupJson(jsonString)
+        if (success) {
+            reloadAllPreferences()
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Settings successfully restored!"
+                AppLanguage.UK -> "Налаштування успішно відновлено!"
+                else -> "Настройки успешно восстановлены!"
+            }
+        } else {
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Invalid JSON backup format"
+                AppLanguage.UK -> "Неправильний формат бекапу JSON"
+                else -> "Неверный формат бэкапа JSON"
+            }
+        }
+        return success
     }
 
     private fun Song.toMediaItem(): MediaItem {
@@ -1380,7 +1467,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.3", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.6.3.1", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
@@ -1388,9 +1475,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.3)"
-                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.3)"
-                        else -> "У вас установлена последняя версия (1.6.3)"
+                        AppLanguage.EN -> "You have the latest version installed (1.6.3.1)"
+                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.3.1)"
+                        else -> "У вас установлена последняя версия (1.6.3.1)"
                     }
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message

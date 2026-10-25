@@ -1,6 +1,10 @@
 package com.lormusic.app.ui.screens
 
 import android.os.Build
+import android.content.Context
+import android.content.Intent
+import android.os.PowerManager
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.ui.layout.ContentScale
@@ -78,6 +82,8 @@ fun ProfileScreen(
     onSetSleepTimer: (Int?) -> Unit,
     onRescanLocalMusic: () -> Unit,
     onOpenTagFix: () -> Unit,
+    onExportBackup: () -> String = { "" },
+    onImportBackup: (String) -> Boolean = { false },
     onCheckForUpdates: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
@@ -92,6 +98,9 @@ fun ProfileScreen(
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showLiquidGlassWarning by remember { mutableStateOf<String?>(null) }
     val isLiquidGlassSupported = Build.VERSION.SDK_INT >= 33
+    var showBackupDialog by remember { mutableStateOf(false) }
+    var showRestoreDialog by remember { mutableStateOf(false) }
+    var restoreText by remember { mutableStateOf("") }
 
     val iconChoices = listOf(
         AppIconOption.MINIMAL,
@@ -106,12 +115,14 @@ fun ProfileScreen(
             .verticalScroll(rememberScrollState())
             .padding(horizontal = 20.dp, vertical = 14.dp)
     ) {
-        Box(
+        Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .padding(vertical = 4.dp),
-            contentAlignment = Alignment.Center
+                .padding(horizontal = 16.dp, vertical = 4.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.SpaceBetween
         ) {
+            Spacer(Modifier.size(44.dp))
             Box(
                 modifier = Modifier
                     .height(44.dp)
@@ -125,6 +136,21 @@ fun ProfileScreen(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.onSurface
+                )
+            }
+            Box(
+                modifier = Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .then(Modifier.liquidGlassBubble(CircleShape))
+                    .clickable { showBackupDialog = true },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.MoreVert,
+                    contentDescription = strings.backupTitle,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(22.dp)
                 )
             }
         }
@@ -469,6 +495,36 @@ fun ProfileScreen(
                     modifier = Modifier.clickable { showSleepDialog = true }
                 )
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as? PowerManager }
+                val isIgnoringBattery = remember(context) {
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+                    } else true
+                }
+                ListItem(
+                    headlineContent = { Text(strings.backgroundPlaybackTitle) },
+                    supportingContent = { Text(strings.backgroundPlaybackDesc) },
+                    leadingContent = { Icon(Icons.Filled.BatteryChargingFull, contentDescription = null) },
+                    trailingContent = {
+                        Icon(
+                            if (isIgnoringBattery) Icons.Filled.CheckCircle else Icons.Filled.OpenInNew,
+                            contentDescription = null,
+                            tint = if (isIgnoringBattery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                        )
+                    },
+                    modifier = Modifier.clickable {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                            try {
+                                val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                context.startActivity(intent)
+                            } catch (_: Exception) {
+                                val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
+                                context.startActivity(intent)
+                            }
+                        }
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text(strings.rescanLibraryTitle) },
                     supportingContent = { Text("$localSongsCount ${strings.tracksCount}") },
@@ -485,11 +541,11 @@ fun ProfileScreen(
                         if (updateClickCount == 10) {
                             playScreamSound()
                             easterEggStage = 1
-                            android.widget.Toast.makeText(context, "ХВАТИТ!!!! ОБНОВЫ НЕТ ЕЩЕ!!!", android.widget.Toast.LENGTH_LONG).show()
+                            android.widget.Toast.makeText(context, strings.easterEgg1Title, android.widget.Toast.LENGTH_LONG).show()
                         } else if (updateClickCount >= 20) {
                             playScreamSound()
                             easterEggStage = 2
-                            android.widget.Toast.makeText(context, "я смотрю ты ничего не понял... ИДИ УЖЕ ОТСЮДА!!!", android.widget.Toast.LENGTH_LONG).show()
+                            android.widget.Toast.makeText(context, "${strings.easterEgg2Title} ${strings.easterEgg2Text}", android.widget.Toast.LENGTH_LONG).show()
                         } else {
                             onCheckForUpdates()
                         }
@@ -769,12 +825,12 @@ fun ProfileScreen(
                     onClick = { easterEggStage = 0 },
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Понял...")
+                    Text(strings.easterEgg1Button)
                 }
             },
             title = {
                 Text(
-                    text = "ХВАТИТ!!!! ОБНОВЫ НЕТ ЕЩЕ!!!",
+                    text = strings.easterEgg1Title,
                     style = MaterialTheme.typography.titleLarge,
                     fontWeight = FontWeight.ExtraBold,
                     color = MaterialTheme.colorScheme.error
@@ -796,7 +852,7 @@ fun ProfileScreen(
                     )
                     Spacer(Modifier.height(12.dp))
                     Text(
-                        text = "ХВАТИТ ТЫКАТЬ! Новой версии ещё нет!",
+                        text = strings.easterEgg1Text,
                         style = MaterialTheme.typography.bodyMedium,
                         textAlign = TextAlign.Center
                     )
@@ -812,12 +868,12 @@ fun ProfileScreen(
                     onClick = { easterEggStage = 0 },
                     shape = RoundedCornerShape(16.dp)
                 ) {
-                    Text("Ухожу, ухожу...")
+                    Text(strings.easterEgg2Button)
                 }
             },
             title = {
                 Text(
-                    text = "я смотрю ты ничего не понял...",
+                    text = strings.easterEgg2Title,
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.primary
@@ -839,7 +895,7 @@ fun ProfileScreen(
                     )
                     Spacer(Modifier.height(14.dp))
                     Text(
-                        text = "ИДИ УЖЕ ОТСЮДА!!!",
+                        text = strings.easterEgg2Text,
                         style = MaterialTheme.typography.headlineSmall,
                         fontWeight = FontWeight.Black,
                         color = MaterialTheme.colorScheme.error,
@@ -848,6 +904,122 @@ fun ProfileScreen(
                 }
             },
             shape = RoundedCornerShape(28.dp)
+        )
+    }
+
+    if (showBackupDialog) {
+        AlertDialog(
+            onDismissRequest = { showBackupDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Backup, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.backupTitle)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(strings.backupDesc, style = MaterialTheme.typography.bodyMedium)
+                    Button(
+                        onClick = {
+                            val json = onExportBackup()
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val clip = android.content.ClipData.newPlainText("LorMusic Backup", json)
+                            clipboard.setPrimaryClip(clip)
+                            android.widget.Toast.makeText(context, strings.backupCopiedToast, android.widget.Toast.LENGTH_LONG).show()
+                            try {
+                                val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, json)
+                                    putExtra(Intent.EXTRA_SUBJECT, "LorMusic-Settings-Backup.json")
+                                }
+                                context.startActivity(Intent.createChooser(sendIntent, strings.shareBackup))
+                            } catch (_: Exception) {}
+                            showBackupDialog = false
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Filled.Save, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(strings.createBackup)
+                    }
+                    FilledTonalButton(
+                        onClick = {
+                            showBackupDialog = false
+                            restoreText = ""
+                            showRestoreDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Filled.Restore, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(strings.restoreBackup)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showBackupDialog = false }) {
+                    Text(strings.cancel)
+                }
+            }
+        )
+    }
+
+    if (showRestoreDialog) {
+        AlertDialog(
+            onDismissRequest = { showRestoreDialog = false },
+            title = {
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(Icons.Filled.Restore, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.width(8.dp))
+                    Text(strings.restoreBackup)
+                }
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    OutlinedTextField(
+                        value = restoreText,
+                        onValueChange = { restoreText = it },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(160.dp),
+                        placeholder = { Text(strings.pasteBackupHint) },
+                        shape = RoundedCornerShape(16.dp)
+                    )
+                    TextButton(
+                        onClick = {
+                            val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                            val item = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
+                            if (!item.isNullOrBlank()) restoreText = item
+                        }
+                    ) {
+                        Icon(Icons.Filled.ContentPaste, contentDescription = null, modifier = Modifier.size(18.dp))
+                        Spacer(Modifier.width(6.dp))
+                        Text(strings.pasteFromClipboard)
+                    }
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        if (restoreText.isNotBlank()) {
+                            val ok = onImportBackup(restoreText)
+                            if (ok) showRestoreDialog = false
+                        }
+                    },
+                    enabled = restoreText.isNotBlank()
+                ) {
+                    Text(strings.restore)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showRestoreDialog = false }) {
+                    Text(strings.cancel)
+                }
+            }
         )
     }
 }

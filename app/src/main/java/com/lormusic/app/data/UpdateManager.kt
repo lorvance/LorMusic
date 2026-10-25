@@ -30,7 +30,7 @@ sealed interface UpdateState {
 class UpdateManager(private val context: Context) {
 
     suspend fun checkForUpdates(
-        currentVersion: String = "1.6.3",
+        currentVersion: String = "1.6.3.1",
         includeBeta: Boolean = false
     ): UpdateState = withContext(Dispatchers.IO) {
         val baseRepos = listOf(

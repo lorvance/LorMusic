@@ -412,6 +412,76 @@ class PreferencesRepository(context: Context) {
         }
     }
 
+    fun hasSeenBackupNotice(): Boolean {
+        return prefs.getBoolean(KEY_HAS_SEEN_BACKUP_NOTICE_1631, false)
+    }
+
+    fun setHasSeenBackupNotice(seen: Boolean) {
+        prefs.edit().putBoolean(KEY_HAS_SEEN_BACKUP_NOTICE_1631, seen).apply()
+    }
+
+    fun exportBackupJson(): String {
+        val root = JSONObject()
+        root.put("app", "LorMusic")
+        root.put("version", "1.6.3.1")
+        root.put("timestamp", System.currentTimeMillis())
+        val data = JSONObject()
+        prefs.all.forEach { (key, value) ->
+            when (value) {
+                is Boolean -> data.put(key, value)
+                is Int -> data.put(key, value)
+                is Long -> data.put(key, value)
+                is Float -> data.put(key, value.toDouble())
+                is String -> data.put(key, value)
+                is Set<*> -> {
+                    val arr = JSONArray()
+                    value.forEach { if (it is String) arr.put(it) }
+                    data.put(key, arr)
+                }
+            }
+        }
+        root.put("preferences", data)
+        return root.toString(2)
+    }
+
+    fun importBackupJson(jsonString: String): Boolean {
+        return try {
+            val root = JSONObject(jsonString)
+            val data = if (root.has("preferences")) root.getJSONObject("preferences") else root
+            val editor = prefs.edit()
+            val keys = data.keys()
+            while (keys.hasNext()) {
+                val key = keys.next()
+                if (data.isNull(key)) continue
+                val value = data.get(key)
+                when (value) {
+                    is Boolean -> editor.putBoolean(key, value)
+                    is Int -> editor.putInt(key, value)
+                    is Long -> editor.putLong(key, value)
+                    is Double -> {
+                        if (key == KEY_PLAYBACK_SPEED) {
+                            editor.putFloat(key, value.toFloat())
+                        } else {
+                            editor.putLong(key, value.toLong())
+                        }
+                    }
+                    is String -> editor.putString(key, value)
+                    is JSONArray -> {
+                        val set = mutableSetOf<String>()
+                        for (i in 0 until value.length()) {
+                            set.add(value.getString(i))
+                        }
+                        editor.putStringSet(key, set)
+                    }
+                }
+            }
+            editor.apply()
+            true
+        } catch (_: Exception) {
+            false
+        }
+    }
+
     companion object {
         private const val KEY_FAVORITES = "favorite_song_ids"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"
@@ -446,5 +516,6 @@ class PreferencesRepository(context: Context) {
         private const val KEY_PURE_MATERIAL_YOU = "pure_material_you"
         private const val KEY_UNFAVORITED_SONGS = "unfavorited_song_ids"
         private const val KEY_SHOW_NAVBAR_LABELS = "show_navbar_labels"
+        private const val KEY_HAS_SEEN_BACKUP_NOTICE_1631 = "has_seen_backup_notice_1631"
     }
 }
