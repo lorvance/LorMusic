@@ -1,13 +1,8 @@
 package com.lormusic.app.service
 
-import android.app.Notification
-import android.app.NotificationChannel
-import android.app.NotificationManager
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
-import android.os.PowerManager
 import androidx.annotation.OptIn
 import androidx.media3.common.AudioAttributes
 import androidx.media3.common.C
@@ -18,46 +13,18 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
-import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.lormusic.app.MainActivity
 import com.lormusic.app.data.YouTubeMusicRepository
 
-@OptIn(UnstableApi::class)
 class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
-    private var wakeLock: PowerManager.WakeLock? = null
-
-    companion object {
-        const val NOTIFICATION_CHANNEL_ID = "lormusic_playback"
-    }
 
     override fun onCreate() {
         super.onCreate()
         val player = SharedPlayerHolder.getOrCreate(this)
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val nm = getSystemService(NotificationManager::class.java)
-            val channel = NotificationChannel(
-                NOTIFICATION_CHANNEL_ID,
-                "LorMusic Playback",
-                NotificationManager.IMPORTANCE_LOW
-            ).apply {
-                description = "LorMusic background playback and controls"
-                setShowBadge(false)
-                lockscreenVisibility = Notification.VISIBILITY_PUBLIC
-            }
-            nm.createNotificationChannel(channel)
-        }
-
-        setMediaNotificationProvider(
-            DefaultMediaNotificationProvider.Builder(this)
-                .setChannelId(NOTIFICATION_CHANNEL_ID)
-                .build()
-        )
-
         val activityIntent = Intent(this, MainActivity::class.java).apply {
             flags = Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP
         }
@@ -70,27 +37,6 @@ class PlaybackService : MediaSessionService() {
         mediaSession = MediaSession.Builder(this, player)
             .setSessionActivity(pendingIntent)
             .build()
-
-        val powerManager = getSystemService(Context.POWER_SERVICE) as? PowerManager
-        wakeLock = powerManager?.newWakeLock(PowerManager.PARTIAL_WAKE_LOCK, "LorMusic:PlaybackWakeLock")
-
-        player.addListener(object : Player.Listener {
-            override fun onIsPlayingChanged(isPlaying: Boolean) {
-                if (isPlaying) {
-                    if (wakeLock?.isHeld == false) {
-                        try {
-                            wakeLock?.acquire(24 * 60 * 60 * 1000L)
-                        } catch (_: Exception) {}
-                    }
-                } else {
-                    if (wakeLock?.isHeld == true) {
-                        try {
-                            wakeLock?.release()
-                        } catch (_: Exception) {}
-                    }
-                }
-            }
-        })
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -103,6 +49,7 @@ class PlaybackService : MediaSessionService() {
         if (player == null || !player.playWhenReady || player.mediaItemCount == 0 || player.playbackState == Player.STATE_ENDED) {
             stopSelf()
         }
+
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -110,11 +57,6 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        if (wakeLock?.isHeld == true) {
-            try {
-                wakeLock?.release()
-            } catch (_: Exception) {}
-        }
         mediaSession?.release()
         mediaSession = null
         super.onDestroy()
@@ -153,7 +95,7 @@ object SharedPlayerHolder {
                             .setUsage(C.USAGE_MEDIA)
                             .setContentType(C.AUDIO_CONTENT_TYPE_MUSIC)
                             .build(),
-                        true
+                         true
                     )
                     .setHandleAudioBecomingNoisy(true)
                     .setWakeMode(C.WAKE_MODE_NETWORK)

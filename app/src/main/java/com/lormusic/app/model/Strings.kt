@@ -265,6 +265,39 @@ val tagFixTitle: String,
     val dynamicPlayerColorsTitle: String,
     val dynamicPlayerColorsDesc: String,
     val downloadingSong: String,
+    val extra: ExtraStrings
+) {
+    val backupTitle: String get() = extra.backupTitle
+    val backupDesc: String get() = extra.backupDesc
+    val createBackup: String get() = extra.createBackup
+    val restoreBackup: String get() = extra.restoreBackup
+    val backupCopiedToast: String get() = extra.backupCopiedToast
+    val backupRestoredToast: String get() = extra.backupRestoredToast
+    val backupInvalidToast: String get() = extra.backupInvalidToast
+    val pasteBackupHint: String get() = extra.pasteBackupHint
+    val pasteFromClipboard: String get() = extra.pasteFromClipboard
+    val restore: String get() = extra.restore
+    val shareBackup: String get() = extra.shareBackup
+    val backupWarningTitle: String get() = extra.backupWarningTitle
+    val backupWarningMessage: String get() = extra.backupWarningMessage
+    val noThanks: String get() = extra.noThanks
+    val easterEgg1Title: String get() = extra.easterEgg1Title
+    val easterEgg1Text: String get() = extra.easterEgg1Text
+    val easterEgg1Button: String get() = extra.easterEgg1Button
+    val easterEgg2Title: String get() = extra.easterEgg2Title
+    val easterEgg2Text: String get() = extra.easterEgg2Text
+    val easterEgg2Button: String get() = extra.easterEgg2Button
+    val deletePlaylistConfirmTitle: String get() = extra.deletePlaylistConfirmTitle
+    val deletePlaylistConfirmMessage: String get() = extra.deletePlaylistConfirmMessage
+    val selectAll: String get() = extra.selectAll
+    val deselectAll: String get() = extra.deselectAll
+    val confirm: String get() = extra.confirm
+    val selectedCount: String get() = extra.selectedCount
+    val backgroundPlaybackTitle: String get() = extra.backgroundPlaybackTitle
+    val backgroundPlaybackDesc: String get() = extra.backgroundPlaybackDesc
+}
+
+class ExtraStrings(
     val backupTitle: String,
     val backupDesc: String,
     val createBackup: String,
@@ -295,12 +328,12 @@ val tagFixTitle: String,
     val backgroundPlaybackDesc: String
 )
 
+
 val StringsRu = AppStrings(
     navLibrary = "Медиатека",
     navYtMusic = "YouTube Music",
     navPlaylists = "Плейлисты",
     navSettings = "Настройки",
-
     nowPlaying = "Сейчас играет",
     nowPlayingTitle = "Сейчас играет",
     inQueue = "В очереди",
@@ -313,7 +346,6 @@ val StringsRu = AppStrings(
     addToPlaylist = "В плейлист",
     playNext = "Играть следующим",
     editTags = "Редактировать теги",
-
     recentsTitle = "Недавнее",
     recentsSubtitle = "Синхронизировано с историей YouTube Music",
     playAll = "Слушать всё",
@@ -340,7 +372,6 @@ val StringsRu = AppStrings(
     systemLanguage = "По умолчанию (Система)",
     understood = "Понятно",
     great = "Отлично",
-
     collapse = "Свернуть",
     songActions = "Действия с треком",
     shareSongLink = "Поделиться ссылкой на песню",
@@ -365,7 +396,6 @@ val StringsRu = AppStrings(
     refreshLyrics = "Обновить текст",
     syncedLyrics = "Синхронизирован",
     plainLyrics = "Простой",
-
     libraryTitle = "Медиатека",
     hiddenFolderName = "Скрытые",
     noTracksInHidden = "В папке «Скрытые» пока нет треков",
@@ -384,7 +414,6 @@ val StringsRu = AppStrings(
     sorting = "Сортировка",
     rescanMemory = "Сканировать память",
     mixMode = "Микс",
-
     newPlaylist = "Новый",
     newPlaylistDialogTitle = "Новый плейлист",
     playlistNameLabel = "Название плейлиста",
@@ -397,7 +426,6 @@ val StringsRu = AppStrings(
     addTracksButton = "Добавить треки",
     removeFromPlaylist = "Убрать из плейлиста",
     allTracksAlreadyInPlaylist = "Все треки медиатеки уже добавлены в этот плейлист.",
-
     deleteSongDialogTitle = "Удалить трек с устройства?",
     fileDetailsTitle = "Сведения о файле",
     playNow = "Воспроизвести сейчас",
@@ -419,7 +447,6 @@ val StringsRu = AppStrings(
     deleteFromDeviceSubtitle = "Удалить аудиофайл из памяти телефона",
     selectPlaylist = "Выберите плейлист",
     newPlaylistPlaceholder = "Новый плейлист…",
-
     tagEditorTitle = "Редактор тегов",
     coverFromGallery = "Обложка из галереи",
     autoSearchTags = "Автопоиск тегов",
@@ -430,7 +457,6 @@ val StringsRu = AppStrings(
     genreField = "Жанр",
     yearField = "Год",
     lyricsField = "Текст песни (обычный или LRC [мм:сс.хх])",
-
     settingsTitle = "Настройки",
     appearanceSection = "Оформление",
     themeModeTitle = "Тема оформления",
@@ -480,7 +506,6 @@ val StringsRu = AppStrings(
     artistProfile = "Исполнитель",
     tracksCount = "треков в медиатеке",
     searchOnYouTube = "Искать в YouTube Music",
-
     statsTracks = "Треков",
     statsFavorites = "Любимых",
     statsPlaylists = "Плейлистов",
@@ -497,7 +522,6 @@ val StringsRu = AppStrings(
     showNavBarLabelsTitle = "Подписи в навбаре",
     showNavBarLabelsDesc = "Отображать текст под иконками в нижней панели",
     squigglySliderDesc = "Живая бегущая волна при воспроизведении",
-
     updateAvailable = "Доступно обновление",
     changelogTitle = "Список изменений",
     downloadingUpdate = "Скачивание обновления...",
@@ -505,7 +529,6 @@ val StringsRu = AppStrings(
     downloadUpdate = "Скачать обновление",
     remindLater = "Напомнить позже",
     latestVersionInstalled = "У вас установлена последняя версия",
-
     moodForYourTaste = "Под твой вкус",
     moodEnergetic = "Энергичное",
     moodCalm = "Спокойное",
@@ -514,7 +537,7 @@ val StringsRu = AppStrings(
     refreshStream = "Обновить поток",
     ytSearchHeader = "Поиск YouTube Music",
     ytSearchPlaceholder = "Поиск…",
-tagFixTitle = "TagFix • Умное исправление тегов",
+    tagFixTitle = "TagFix • Умное исправление тегов",
     tagFixConfirmTitle = "Подтверждение TagFix",
     tagFixSubtitle = "Чистка названий, поиск обложек и Shazam-распознавание",
     tagFixConfirmSubtitle = "Проверьте найденные названия и обложки перед сохранением",
@@ -557,34 +580,36 @@ tagFixTitle = "TagFix • Умное исправление тегов",
     dynamicPlayerColorsTitle = "Цвета плеера под обложку",
     dynamicPlayerColorsDesc = "Окрашивать кнопки и элементы управления плеера в акцентные тона обложки",
     downloadingSong = "Скачивание трека",
-    backupTitle = "Резервная копия",
-    backupDesc = "Экспорт и импорт настроек",
-    createBackup = "Сделать бэкап",
-    restoreBackup = "Вставить бэкап",
-    backupCopiedToast = "Бэкап настроек скопирован в буфер обмена!",
-    backupRestoredToast = "Настройки успешно восстановлены!",
-    backupInvalidToast = "Неверный формат бэкапа JSON",
-    pasteBackupHint = "Вставьте JSON код бэкапа сюда...",
-    pasteFromClipboard = "Вставить из буфера",
-    restore = "Восстановить",
-    shareBackup = "Поделиться файлом",
-    backupWarningTitle = "Резервная копия настроек",
-    backupWarningMessage = "В следующем обновлении (1.6.4) планируется смена цифровой подписи и сертификата приложения. Обновление может потребовать чистой переустановки с очисткой данных.\n\nРекомендуем создать резервную копию настроек и плейлистов прямо сейчас!",
-    noThanks = "Нет, спасибо",
-    easterEgg1Title = "ХВАТИТ!!!! ОБНОВЫ НЕТ ЕЩЕ!!!",
-    easterEgg1Text = "ХВАТИТ ТЫКАТЬ! Новой версии ещё нет!",
-    easterEgg1Button = "Понял...",
-    easterEgg2Title = "я смотрю ты ничего не понял...",
-    easterEgg2Text = "ИДИ УЖЕ ОТСЮДА!!!",
-    easterEgg2Button = "Ухожу, ухожу...",
-    deletePlaylistConfirmTitle = "Удалить плейлист?",
-    deletePlaylistConfirmMessage = "Вы уверены, что хотите удалить плейлист «%s»? Это действие нельзя отменить.",
-    selectAll = "Выбрать все",
-    deselectAll = "Снять выбор",
-    confirm = "Подтвердить",
-    selectedCount = "Выбрано",
-    backgroundPlaybackTitle = "Работа в фоне без ограничений",
-    backgroundPlaybackDesc = "Отключить оптимизацию батареи, чтобы система не останавливала музыку в фоне"
+    extra = ExtraStrings(
+        backupTitle = "Резервная копия",
+        backupDesc = "Экспорт и импорт настроек",
+        createBackup = "Сделать бэкап",
+        restoreBackup = "Вставить бэкап",
+        backupCopiedToast = "Бэкап настроек скопирован в буфер обмена!",
+        backupRestoredToast = "Настройки успешно восстановлены!",
+        backupInvalidToast = "Неверный формат бэкапа JSON",
+        pasteBackupHint = "Вставьте JSON код бэкапа сюда...",
+        pasteFromClipboard = "Вставить из буфера",
+        restore = "Восстановить",
+        shareBackup = "Поделиться файлом",
+        backupWarningTitle = "Резервная копия настроек",
+        backupWarningMessage = "В следующем обновлении (1.6.4) планируется смена цифровой подписи и сертификата приложения. Обновление может потребовать чистой переустановки с очисткой данных.\n\nРекомендуем создать резервную копию настроек и плейлистов прямо сейчас!",
+        noThanks = "Нет, спасибо",
+        easterEgg1Title = "ХВАТИТ!!!! ОБНОВЫ НЕТ ЕЩЕ!!!",
+        easterEgg1Text = "ХВАТИТ ТЫКАТЬ! Новой версии ещё нет!",
+        easterEgg1Button = "Понял...",
+        easterEgg2Title = "я смотрю ты ничего не понял...",
+        easterEgg2Text = "ИДИ УЖЕ ОТСЮДА!!!",
+        easterEgg2Button = "Ухожу, ухожу...",
+        deletePlaylistConfirmTitle = "Удалить плейлист?",
+        deletePlaylistConfirmMessage = "Вы уверены, что хотите удалить плейлист «%s»? Это действие нельзя отменить.",
+        selectAll = "Выбрать все",
+        deselectAll = "Снять выбор",
+        confirm = "Подтвердить",
+        selectedCount = "Выбрано",
+        backgroundPlaybackTitle = "Работа в фоне без ограничений",
+        backgroundPlaybackDesc = "Отключить оптимизацию батареи, чтобы система не останавливала музыку в фоне"
+    )
 )
 
 val StringsEn = AppStrings(
@@ -592,7 +617,6 @@ val StringsEn = AppStrings(
     navYtMusic = "YouTube Music",
     navPlaylists = "Playlists",
     navSettings = "Settings",
-
     nowPlaying = "Now Playing",
     nowPlayingTitle = "Now Playing",
     inQueue = "In Queue",
@@ -605,7 +629,6 @@ val StringsEn = AppStrings(
     addToPlaylist = "Add to playlist",
     playNext = "Play next",
     editTags = "Edit tags",
-
     recentsTitle = "Recents",
     recentsSubtitle = "Synced with YouTube Music history",
     playAll = "Play all",
@@ -632,7 +655,6 @@ val StringsEn = AppStrings(
     systemLanguage = "System default",
     understood = "Got it",
     great = "Great",
-
     collapse = "Collapse",
     songActions = "Track actions",
     shareSongLink = "Share song link",
@@ -657,7 +679,6 @@ val StringsEn = AppStrings(
     refreshLyrics = "Refresh lyrics",
     syncedLyrics = "Synced",
     plainLyrics = "Plain",
-
     libraryTitle = "Library",
     hiddenFolderName = "Hidden",
     noTracksInHidden = "No tracks in \"Hidden\" yet",
@@ -676,7 +697,6 @@ val StringsEn = AppStrings(
     sorting = "Sorting",
     rescanMemory = "Rescan storage",
     mixMode = "Mix",
-
     newPlaylist = "New",
     newPlaylistDialogTitle = "New Playlist",
     playlistNameLabel = "Playlist name",
@@ -689,7 +709,6 @@ val StringsEn = AppStrings(
     addTracksButton = "Add tracks",
     removeFromPlaylist = "Remove from playlist",
     allTracksAlreadyInPlaylist = "All library tracks are already in this playlist.",
-
     deleteSongDialogTitle = "Delete track from device?",
     fileDetailsTitle = "File Details",
     playNow = "Play now",
@@ -711,7 +730,6 @@ val StringsEn = AppStrings(
     deleteFromDeviceSubtitle = "Delete audio file from device storage",
     selectPlaylist = "Select playlist",
     newPlaylistPlaceholder = "New playlist…",
-
     tagEditorTitle = "Tag Editor",
     coverFromGallery = "Cover from gallery",
     autoSearchTags = "Auto search tags",
@@ -722,7 +740,6 @@ val StringsEn = AppStrings(
     genreField = "Genre",
     yearField = "Year",
     lyricsField = "Lyrics (plain or LRC [mm:ss.xx])",
-
     settingsTitle = "Settings",
     appearanceSection = "Appearance",
     themeModeTitle = "App Theme",
@@ -772,7 +789,6 @@ val StringsEn = AppStrings(
     artistProfile = "Artist",
     tracksCount = "tracks in library",
     searchOnYouTube = "Search on YouTube Music",
-
     statsTracks = "Tracks",
     statsFavorites = "Favorites",
     statsPlaylists = "Playlists",
@@ -789,7 +805,6 @@ val StringsEn = AppStrings(
     showNavBarLabelsTitle = "Navbar labels",
     showNavBarLabelsDesc = "Show text under icons in the bottom bar",
     squigglySliderDesc = "Animated wavy progress bar during playback",
-
     updateAvailable = "Update Available",
     changelogTitle = "Changelog",
     downloadingUpdate = "Downloading update...",
@@ -797,7 +812,6 @@ val StringsEn = AppStrings(
     downloadUpdate = "Download update",
     remindLater = "Remind later",
     latestVersionInstalled = "You have the latest version installed",
-
     moodForYourTaste = "For your taste",
     moodEnergetic = "Energetic",
     moodCalm = "Calm",
@@ -806,7 +820,7 @@ val StringsEn = AppStrings(
     refreshStream = "Refresh stream",
     ytSearchHeader = "YouTube Music Search",
     ytSearchPlaceholder = "Search…",
-tagFixTitle = "TagFix • Smart tag recovery",
+    tagFixTitle = "TagFix • Smart tag recovery",
     tagFixConfirmTitle = "TagFix Confirmation",
     tagFixSubtitle = "Title cleanup, cover search, and Shazam recognition",
     tagFixConfirmSubtitle = "Review detected titles and covers before saving",
@@ -849,34 +863,36 @@ tagFixTitle = "TagFix • Smart tag recovery",
     dynamicPlayerColorsTitle = "Cover-adaptive player colors",
     dynamicPlayerColorsDesc = "Tint player buttons and controls based on current album cover colors",
     downloadingSong = "Downloading track",
-    backupTitle = "Backup Settings",
-    backupDesc = "Export and import settings",
-    createBackup = "Create backup",
-    restoreBackup = "Restore backup",
-    backupCopiedToast = "Settings backup copied to clipboard!",
-    backupRestoredToast = "Settings successfully restored!",
-    backupInvalidToast = "Invalid JSON backup format",
-    pasteBackupHint = "Paste JSON backup code here...",
-    pasteFromClipboard = "Paste from clipboard",
-    restore = "Restore",
-    shareBackup = "Share file",
-    backupWarningTitle = "Settings Backup",
-    backupWarningMessage = "Version 1.6.4 will switch to a new application signing key and certificate. Updating may require a clean reinstall and data clear.\n\nWe strongly recommend creating a backup of your settings and playlists right now!",
-    noThanks = "No, thanks",
-    easterEgg1Title = "ENOUGH ALREADY!!!! THERE IS NO UPDATE YET!!!",
-    easterEgg1Text = "STOP SPAMMING! The update isn't out yet!",
-    easterEgg1Button = "Got it...",
-    easterEgg2Title = "I see you didn't get the hint...",
-    easterEgg2Text = "GET OUT OF HERE ALREADY!!!",
-    easterEgg2Button = "Leaving, leaving...",
-    deletePlaylistConfirmTitle = "Delete playlist?",
-    deletePlaylistConfirmMessage = "Are you sure you want to delete playlist «%s»? This action cannot be undone.",
-    selectAll = "Select all",
-    deselectAll = "Deselect all",
-    confirm = "Confirm",
-    selectedCount = "Selected",
-    backgroundPlaybackTitle = "Unrestricted background playback",
-    backgroundPlaybackDesc = "Disable battery optimization so system won't stop playback in background"
+    extra = ExtraStrings(
+        backupTitle = "Backup Settings",
+        backupDesc = "Export and import settings",
+        createBackup = "Create backup",
+        restoreBackup = "Restore backup",
+        backupCopiedToast = "Settings backup copied to clipboard!",
+        backupRestoredToast = "Settings successfully restored!",
+        backupInvalidToast = "Invalid JSON backup format",
+        pasteBackupHint = "Paste JSON backup code here...",
+        pasteFromClipboard = "Paste from clipboard",
+        restore = "Restore",
+        shareBackup = "Share file",
+        backupWarningTitle = "Settings Backup",
+        backupWarningMessage = "Version 1.6.4 will switch to a new application signing key and certificate. Updating may require a clean reinstall and data clear.\n\nWe strongly recommend creating a backup of your settings and playlists right now!",
+        noThanks = "No, thanks",
+        easterEgg1Title = "ENOUGH ALREADY!!!! THERE IS NO UPDATE YET!!!",
+        easterEgg1Text = "STOP SPAMMING! The update isn't out yet!",
+        easterEgg1Button = "Got it...",
+        easterEgg2Title = "I see you didn't get the hint...",
+        easterEgg2Text = "GET OUT OF HERE ALREADY!!!",
+        easterEgg2Button = "Leaving, leaving...",
+        deletePlaylistConfirmTitle = "Delete playlist?",
+        deletePlaylistConfirmMessage = "Are you sure you want to delete playlist «%s»? This action cannot be undone.",
+        selectAll = "Select all",
+        deselectAll = "Deselect all",
+        confirm = "Confirm",
+        selectedCount = "Selected",
+        backgroundPlaybackTitle = "Unrestricted background playback",
+        backgroundPlaybackDesc = "Disable battery optimization so system won't stop playback in background"
+    )
 )
 
 val StringsUk = AppStrings(
@@ -884,7 +900,6 @@ val StringsUk = AppStrings(
     navYtMusic = "YouTube Music",
     navPlaylists = "Плейлісти",
     navSettings = "Параметри",
-
     nowPlaying = "Зараз грає",
     nowPlayingTitle = "Зараз грає",
     inQueue = "У черзі",
@@ -897,7 +912,6 @@ val StringsUk = AppStrings(
     addToPlaylist = "У плейліст",
     playNext = "Грати наступним",
     editTags = "Редагувати теги",
-
     recentsTitle = "Недавні",
     recentsSubtitle = "Синхронізовано з історією YouTube Music",
     playAll = "Слухати все",
@@ -924,7 +938,6 @@ val StringsUk = AppStrings(
     systemLanguage = "За замовчуванням (Система)",
     understood = "Зрозуміло",
     great = "Чудово",
-
     collapse = "Згорнути",
     songActions = "Дії з треком",
     shareSongLink = "Поділитися посиланням на пісню",
@@ -949,7 +962,6 @@ val StringsUk = AppStrings(
     refreshLyrics = "Оновити текст",
     syncedLyrics = "Синхронізовано",
     plainLyrics = "Простий",
-
     libraryTitle = "Медіатека",
     hiddenFolderName = "Приховані",
     noTracksInHidden = "У папці «Приховані» ще немає треків",
@@ -968,7 +980,6 @@ val StringsUk = AppStrings(
     sorting = "Сортування",
     rescanMemory = "Сканувати сховище",
     mixMode = "Мікс",
-
     newPlaylist = "Новий",
     newPlaylistDialogTitle = "Новий плейліст",
     playlistNameLabel = "Назва плейліста",
@@ -981,7 +992,6 @@ val StringsUk = AppStrings(
     addTracksButton = "Додати треки",
     removeFromPlaylist = "Прибрати з плейліста",
     allTracksAlreadyInPlaylist = "Усі треки медіатеки вже додано до цього плейліста.",
-
     deleteSongDialogTitle = "Видалити трек із пристрою?",
     fileDetailsTitle = "Відомості про файл",
     playNow = "Відтворити зараз",
@@ -1003,7 +1013,6 @@ val StringsUk = AppStrings(
     deleteFromDeviceSubtitle = "Видалити аудіофайл із пам'яті телефону",
     selectPlaylist = "Виберіть плейліст",
     newPlaylistPlaceholder = "Новий плейліст…",
-
     tagEditorTitle = "Редактор тегів",
     coverFromGallery = "Обкладинка з галереї",
     autoSearchTags = "Автопошук тегів",
@@ -1014,7 +1023,6 @@ val StringsUk = AppStrings(
     genreField = "Жанр",
     yearField = "Рік",
     lyricsField = "Текст пісні (звичайний або LRC [хх:сс.хх])",
-
     settingsTitle = "Налаштування",
     appearanceSection = "Оформлення",
     themeModeTitle = "Тема оформлення",
@@ -1064,7 +1072,6 @@ val StringsUk = AppStrings(
     artistProfile = "Виконавець",
     tracksCount = "треків у медіатеці",
     searchOnYouTube = "Шукати в YouTube Music",
-
     statsTracks = "Треків",
     statsFavorites = "Улюблених",
     statsPlaylists = "Плейлістів",
@@ -1081,7 +1088,6 @@ val StringsUk = AppStrings(
     showNavBarLabelsTitle = "Підписи в навбарі",
     showNavBarLabelsDesc = "Показувати текст під іконками в нижній панелі",
     squigglySliderDesc = "Жива біжуча хвиля під час відтворення",
-
     updateAvailable = "Доступне оновлення",
     changelogTitle = "Список змін",
     downloadingUpdate = "Завантаження оновлення...",
@@ -1089,7 +1095,6 @@ val StringsUk = AppStrings(
     downloadUpdate = "Завантажити оновлення",
     remindLater = "Нагадати пізніше",
     latestVersionInstalled = "У вас встановлена остання версія",
-
     moodForYourTaste = "На твій смак",
     moodEnergetic = "Енергійне",
     moodCalm = "Спокійне",
@@ -1098,7 +1103,7 @@ val StringsUk = AppStrings(
     refreshStream = "Оновити потік",
     ytSearchHeader = "Пошук YouTube Music",
     ytSearchPlaceholder = "Пошук…",
-tagFixTitle = "TagFix • Розумне виправлення тегів",
+    tagFixTitle = "TagFix • Розумне виправлення тегів",
     tagFixConfirmTitle = "Підтвердження TagFix",
     tagFixSubtitle = "Очищення назв, пошук обкладинок та Shazam-розпізнавання",
     tagFixConfirmSubtitle = "Перевірте знайдені назви та обкладинки перед збереженням",
@@ -1141,34 +1146,36 @@ tagFixTitle = "TagFix • Розумне виправлення тегів",
     dynamicPlayerColorsTitle = "Динамічні кольори плеєра",
     dynamicPlayerColorsDesc = "Підлаштовувати кнопки та елементи керування плеєра під обкладинку треку",
     downloadingSong = "Завантаження треку",
-    backupTitle = "Резервна копія",
-    backupDesc = "Експорт та імпорт налаштувань",
-    createBackup = "Створити бекап",
-    restoreBackup = "Вставити бекап",
-    backupCopiedToast = "Бекап налаштувань скопійовано в буфер обміну!",
-    backupRestoredToast = "Налаштування успішно відновлено!",
-    backupInvalidToast = "Неправильний формат бекапу JSON",
-    pasteBackupHint = "Вставте JSON код бекапу сюди...",
-    pasteFromClipboard = "Вставити з буфера",
-    restore = "Відновити",
-    shareBackup = "Поділитися файлом",
-    backupWarningTitle = "Резервна копія налаштувань",
-    backupWarningMessage = "У наступному оновленні (1.6.4) планується зміна цифрового підпису та сертифіката додатку. Оновлення може вимагати чистого перевстановлення з очищенням даних.\n\nРекомендуємо створити резервну копію налаштувань та плейлістів просто зараз!",
-    noThanks = "Ні, дякую",
-    easterEgg1Title = "ГОДІ ВЖЕ!!!! ОНОВЛЕННЯ ЩЕ НЕМАЄ!!!",
-    easterEgg1Text = "ГОДІ ТИКАТИ! Нової версії ще не підвезли!",
-    easterEgg1Button = "Зрозумів...",
-    easterEgg2Title = "Бачу, ти так нічого й не второпав...",
-    easterEgg2Text = "ІДИ ВЖЕ ЗВІДСИ!!!",
-    easterEgg2Button = "Йду, вже йду...",
-    deletePlaylistConfirmTitle = "Видалити плейліст?",
-    deletePlaylistConfirmMessage = "Ви впевнені, що хочете видалити плейліст «%s»? Цю дію неможливо скасувати.",
-    selectAll = "Обрати все",
-    deselectAll = "Зняти вибір",
-    confirm = "Підтвердити",
-    selectedCount = "Обрано",
-    backgroundPlaybackTitle = "Робота у фоні без обмежень",
-    backgroundPlaybackDesc = "Вимкнути оптимізацію батареї, щоб система не призупиняла музику у фоні"
+    extra = ExtraStrings(
+        backupTitle = "Резервна копія",
+        backupDesc = "Експорт та імпорт налаштувань",
+        createBackup = "Створити бекап",
+        restoreBackup = "Вставити бекап",
+        backupCopiedToast = "Бекап налаштувань скопійовано в буфер обміну!",
+        backupRestoredToast = "Налаштування успішно відновлено!",
+        backupInvalidToast = "Неправильний формат бекапу JSON",
+        pasteBackupHint = "Вставте JSON код бекапу сюди...",
+        pasteFromClipboard = "Вставити з буфера",
+        restore = "Відновити",
+        shareBackup = "Поділитися файлом",
+        backupWarningTitle = "Резервна копія налаштувань",
+        backupWarningMessage = "У наступному оновленні (1.6.4) планується зміна цифрового підпису та сертифіката додатку. Оновлення може вимагати чистого перевстановлення з очищенням даних.\n\nРекомендуємо створити резервну копію налаштувань та плейлістів просто зараз!",
+        noThanks = "Ні, дякую",
+        easterEgg1Title = "ГОДІ ВЖЕ!!!! ОНОВЛЕННЯ ЩЕ НЕМАЄ!!!",
+        easterEgg1Text = "ГОДІ ТИКАТИ! Нової версії ще не підвезли!",
+        easterEgg1Button = "Зрозумів...",
+        easterEgg2Title = "Бачу, ти так нічого й не второпав...",
+        easterEgg2Text = "ІДИ ВЖЕ ЗВІДСИ!!!",
+        easterEgg2Button = "Йду, вже йду...",
+        deletePlaylistConfirmTitle = "Видалити плейліст?",
+        deletePlaylistConfirmMessage = "Ви впевнені, що хочете видалити плейліст «%s»? Цю дію неможливо скасувати.",
+        selectAll = "Обрати все",
+        deselectAll = "Зняти вибір",
+        confirm = "Підтвердити",
+        selectedCount = "Обрано",
+        backgroundPlaybackTitle = "Робота у фоні без обмежень",
+        backgroundPlaybackDesc = "Вимкнути оптимізацію батареї, щоб система не призупиняла музику у фоні"
+    )
 )
 
 fun resolveStrings(language: AppLanguage): AppStrings {

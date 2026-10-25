@@ -68,6 +68,9 @@ fun LibraryScreen(
     onSelectFilter: (LibraryFilter) -> Unit,
     onSelectSort: (SortOption) -> Unit,
     onRequestPermissionAndScan: () -> Unit,
+    showBackupNotice: Boolean = false,
+    onDismissBackupNotice: () -> Unit = {},
+    onExportBackup: () -> Unit = {},
     onOpenTagFix: () -> Unit,
     onOpenYtMusic: () -> Unit = {},
     onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
@@ -244,6 +247,55 @@ fun LibraryScreen(
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    if (showBackupNotice) {
+                        item(key = "backup_notice_card") {
+                            ElevatedCard(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 4.dp, vertical = 4.dp),
+                                shape = RoundedCornerShape(20.dp),
+                                colors = CardDefaults.elevatedCardColors(
+                                    containerColor = MaterialTheme.colorScheme.surfaceContainerHigh
+                                )
+                            ) {
+                                Column(modifier = Modifier.padding(14.dp)) {
+                                    Row(verticalAlignment = Alignment.CenterVertically) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Info,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary
+                                        )
+                                        Spacer(Modifier.width(8.dp))
+                                        Text(
+                                            text = strings.backupWarningTitle,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.Bold
+                                        )
+                                    }
+                                    Spacer(Modifier.height(6.dp))
+                                    Text(
+                                        text = strings.backupWarningMessage,
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
+                                    )
+                                    Spacer(Modifier.height(10.dp))
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.End
+                                    ) {
+                                        TextButton(onClick = onDismissBackupNotice) {
+                                            Text(strings.noThanks)
+                                        }
+                                        Spacer(Modifier.width(8.dp))
+                                        Button(onClick = onExportBackup) {
+                                            Text(strings.createBackup)
+                                        }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
                     if (!hasStoragePermission) {
                         item(key = "perm_card") {
                             ElevatedCard(

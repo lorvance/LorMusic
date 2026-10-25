@@ -1305,11 +1305,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         try {
             val app = getApplication<Application>()
             val intent = Intent(app, PlaybackService::class.java)
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                ContextCompat.startForegroundService(app, intent)
-            } else {
-                app.startService(intent)
-            }
+            app.startService(intent)
         } catch (_: Exception) {
 
         }

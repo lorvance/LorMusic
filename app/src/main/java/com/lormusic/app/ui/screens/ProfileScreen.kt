@@ -504,10 +504,10 @@ fun ProfileScreen(
                 ListItem(
                     headlineContent = { Text(strings.backgroundPlaybackTitle) },
                     supportingContent = { Text(strings.backgroundPlaybackDesc) },
-                    leadingContent = { Icon(Icons.Filled.BatteryChargingFull, contentDescription = null) },
+                    leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
                     trailingContent = {
                         Icon(
-                            if (isIgnoringBattery) Icons.Filled.CheckCircle else Icons.Filled.OpenInNew,
+                            if (isIgnoringBattery) Icons.Filled.Check else Icons.Filled.ChevronRight,
                             contentDescription = null,
                             tint = if (isIgnoringBattery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                         )

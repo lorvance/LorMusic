@@ -54,6 +54,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.delay
 
 class MainActivity : ComponentActivity() {
 
@@ -110,20 +111,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     ) { result ->
         playerViewModel.onDeviceDeletePermissionResult(result.resultCode == Activity.RESULT_OK)
     }
-
-    val notificationPermissionLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.RequestPermission()
-    ) {}
-
-    LaunchedEffect(Unit) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
-            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
-            }
-        }
-    }
-
-    var showBackupNoticeDialog by remember { mutableStateOf(!playerViewModel.hasSeenBackupNotice()) }
 
     var selectedTab by remember { mutableStateOf(LorTab.LIBRARY) }
     var showNowPlaying by remember { mutableStateOf(false) }
@@ -325,6 +312,24 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     hazeState = hazeState,
                                     onSelectFilter = playerViewModel::setLibraryFilter,
                                     onSelectSort = playerViewModel::setSortOption,
+                                    showBackupNotice = !playerViewModel.hasSeenBackupNotice(),
+                                    onDismissBackupNotice = { playerViewModel.dismissBackupNotice() },
+                                    onExportBackup = {
+                                        playerViewModel.dismissBackupNotice()
+                                        val json = playerViewModel.exportBackup()
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
+                                        val clip = android.content.ClipData.newPlainText("LorMusic Backup", json)
+                                        clipboard.setPrimaryClip(clip)
+                                        android.widget.Toast.makeText(context, currentStrings.backupCopiedToast, android.widget.Toast.LENGTH_LONG).show()
+                                        try {
+                                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                                type = "text/plain"
+                                                putExtra(Intent.EXTRA_TEXT, json)
+                                                putExtra(Intent.EXTRA_SUBJECT, "LorMusic-Settings-Backup.json")
+                                            }
+                                            context.startActivity(Intent.createChooser(sendIntent, currentStrings.shareBackup))
+                                        } catch (_: Exception) {}
+                                    },
                                     onRequestPermissionAndScan = {
                                         if (hasStoragePermission) {
                                             playerViewModel.rescanLocalMusic()
@@ -649,65 +654,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     }
                 }
             }
-
-    if (showBackupNoticeDialog) {
-        AlertDialog(
-            onDismissRequest = {
-                playerViewModel.dismissBackupNotice()
-                showBackupNoticeDialog = false
-            },
-            title = {
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Icon(
-                        imageVector = Icons.Filled.WarningAmber,
-                        contentDescription = null,
-                        tint = MaterialTheme.colorScheme.primary
-                    )
-                    Spacer(Modifier.width(8.dp))
-                    Text(currentStrings.backupWarningTitle)
-                }
-            },
-            text = {
-                Text(
-                    text = currentStrings.backupWarningMessage,
-                    style = MaterialTheme.typography.bodyMedium
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        playerViewModel.dismissBackupNotice()
-                        showBackupNoticeDialog = false
-                        val json = playerViewModel.exportBackup()
-                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                        val clip = android.content.ClipData.newPlainText("LorMusic Backup", json)
-                        clipboard.setPrimaryClip(clip)
-                        android.widget.Toast.makeText(context, currentStrings.backupCopiedToast, android.widget.Toast.LENGTH_LONG).show()
-                        try {
-                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, json)
-                                putExtra(Intent.EXTRA_SUBJECT, "LorMusic-Settings-Backup.json")
-                            }
-                            context.startActivity(Intent.createChooser(sendIntent, currentStrings.shareBackup))
-                        } catch (_: Exception) {}
-                    }
-                ) {
-                    Text(currentStrings.createBackup)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        playerViewModel.dismissBackupNotice()
-                        showBackupNoticeDialog = false
-                    }
-                ) {
-                    Text(currentStrings.noThanks)
-                }
-            }
-        )
-    }
 
             AnimatedVisibility(
                 visible = showNowPlaying && currentSong != null,
