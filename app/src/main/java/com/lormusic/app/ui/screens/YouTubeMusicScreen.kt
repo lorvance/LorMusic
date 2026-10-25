@@ -114,6 +114,7 @@ fun YouTubeMusicScreen(
     var showWebLoginDialog by remember { mutableStateOf(false) }
     var showLoginChoiceDialog by remember { mutableStateOf(false) }
     var showAccountMenuDialog by remember { mutableStateOf(false) }
+    var pendingLoginEmail by remember { mutableStateOf<String?>(null) }
 
     val accountPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.StartActivityForResult()
@@ -123,6 +124,8 @@ fun YouTubeMusicScreen(
             if (!accountName.isNullOrBlank()) {
                 val displayName = accountName.substringBefore("@")
                 onSignInNativeAccount(displayName, accountName)
+                pendingLoginEmail = accountName
+                showWebLoginDialog = true
             }
         }
     }
@@ -309,6 +312,7 @@ fun YouTubeMusicScreen(
 
     if (showWebLoginDialog) {
         YtMusicRealWebLoginDialog(
+            initialEmail = pendingLoginEmail,
             onDismiss = { showWebLoginDialog = false },
             onAuthSuccess = { cookie ->
                 showWebLoginDialog = false
@@ -397,13 +401,15 @@ fun YouTubeMusicScreen(
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun YtMusicRealWebLoginDialog(
+    initialEmail: String? = null,
     onDismiss: () -> Unit,
     onAuthSuccess: (String) -> Unit
 ) {
     var isPageLoading by remember { mutableStateOf(true) }
-    var currentUrl by remember {
+    val emailParam = if (!initialEmail.isNullOrBlank()) "&Email=${android.net.Uri.encode(initialEmail)}&login_hint=${android.net.Uri.encode(initialEmail)}" else ""
+    var currentUrl by remember(initialEmail) {
         mutableStateOf(
-            "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true&continue=" +
+            "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true$emailParam&continue=" +
                 "https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dru%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
         )
     }

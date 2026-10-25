@@ -391,18 +391,7 @@ fun ProfileScreen(
                     leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
                     modifier = Modifier.clickable { showLanguageDialog = true }
                 )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.classicLibraryDesignTitle) },
-                    supportingContent = { Text(strings.classicLibraryDesignDesc) },
-                    leadingContent = { Icon(Icons.Filled.ViewAgenda, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = classicLibraryDesign,
-                            onCheckedChange = onToggleClassicLibraryDesign
-                        )
-                    }
-                )
+
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text(strings.hideDemoTracksTitle) },

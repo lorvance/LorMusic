@@ -22,6 +22,7 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
+import androidx.compose.ui.BiasAlignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
@@ -95,6 +96,7 @@ fun NowPlayingScreen(
     onOpenSongActions: () -> Unit,
     onOpenTagEditor: () -> Unit,
     onOpenArtistProfile: ((String) -> Unit)? = null,
+    onTranslateLyrics: (() -> Unit)? = null,
     onClose: () -> Unit
 ) {
     val view = LocalView.current
@@ -144,7 +146,7 @@ fun NowPlayingScreen(
     val cachedDominant = remember(song.id, gradientColors) {
         coverAccentCache.get(song.id) ?: gradientColors.firstOrNull()?.copy(alpha = 1.0f) ?: accentColor
     }
-    val effectiveAccentColor = if (useDynamicPlayerColors) cachedDominant else accentColor
+    val effectiveAccentColor = if (useDynamicPlayerColors) ensureReadableAccent(cachedDominant) else accentColor
     val playButtonContentColor = if (useDynamicPlayerColors) getContrastingContentColor(effectiveAccentColor) else MaterialTheme.colorScheme.onPrimary
 
     Box(
@@ -212,6 +214,7 @@ fun NowPlayingScreen(
                         onSeek(timestampMs)
                     },
                     onRefresh = onRefreshLyrics,
+                    onTranslate = onTranslateLyrics,
                     onBackToCover = {
                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                         showLyrics = false
@@ -584,7 +587,7 @@ fun NowPlayingScreen(
 
                     Row(
                         modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                        horizontalArrangement = Arrangement.spacedBy(28.dp, Alignment.CenterHorizontally),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         IconButton(
@@ -644,8 +647,6 @@ fun NowPlayingScreen(
                                     tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
                                 )
                             }
-                        } else {
-                            Spacer(Modifier.size(48.dp))
                         }
 
                         IconButton(
@@ -1116,6 +1117,7 @@ private fun FullScreenLyricsLayout(
     onNext: () -> Unit,
     onSeekToLine: (Long) -> Unit,
     onRefresh: () -> Unit,
+    onTranslate: (() -> Unit)? = null,
     onBackToCover: () -> Unit
 ) {
     var displayMode by remember { mutableStateOf(LyricsDisplayMode.SYNCED) }
@@ -1417,7 +1419,37 @@ private fun FullScreenLyricsLayout(
                     )
                 }
 
-                Row(
+                if (onTranslate != null) {
+                    val hasTranslations = lyrics.any { it.isTranslation }
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .hazeEffect(state = lyricsHazeState) {
+                                blurEnabled = true
+                                backgroundColor = controlsSurface
+                                blurRadius = 24.dp
+                                tints = listOf(HazeTint(controlsSurface.copy(alpha = 0.55f)))
+                            }
+                            .clickable { onTranslate() },
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Translate,
+                            contentDescription = strings.translateLyrics,
+                            tint = if (hasTranslations) accentColor else MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                val syncedSelected = displayMode == LyricsDisplayMode.SYNCED
+                val animatedBias by animateFloatAsState(
+                    targetValue = if (syncedSelected) -1f else 1f,
+                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+                    label = "lyricsPillBias"
+                )
+
+                Box(
                     modifier = Modifier
                         .weight(1f)
                         .height(46.dp)
@@ -1428,51 +1460,54 @@ private fun FullScreenLyricsLayout(
                             blurRadius = 24.dp
                             tints = listOf(HazeTint(controlsSurface.copy(alpha = 0.55f)))
                         }
-                        .padding(3.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(3.dp)
                 ) {
-                    val syncedSelected = displayMode == LyricsDisplayMode.SYNCED
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .fillMaxWidth(0.5f)
                             .fillMaxHeight()
+                            .align(BiasAlignment(animatedBias, 0f))
                             .clip(CircleShape)
-                            .background(
-                                if (syncedSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                                else Color.Transparent
-                            )
-                            .clickable { displayMode = LyricsDisplayMode.SYNCED },
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = strings.syncedLyrics,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (syncedSelected) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                        )
-                    }
+                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f))
+                    )
 
-                    val plainSelected = displayMode == LyricsDisplayMode.PLAIN
-                    Box(
-                        modifier = Modifier
-                            .weight(1f)
-                            .fillMaxHeight()
-                            .clip(CircleShape)
-                            .background(
-                                if (plainSelected) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f)
-                                else Color.Transparent
-                            )
-                            .clickable { displayMode = LyricsDisplayMode.PLAIN },
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.fillMaxSize(),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Text(
-                            text = strings.plainLyrics,
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold,
-                            color = if (plainSelected) MaterialTheme.colorScheme.surface
-                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                        )
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(CircleShape)
+                                .clickable { displayMode = LyricsDisplayMode.SYNCED },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.syncedLyrics,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (syncedSelected) MaterialTheme.colorScheme.surface
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .weight(1f)
+                                .fillMaxHeight()
+                                .clip(CircleShape)
+                                .clickable { displayMode = LyricsDisplayMode.PLAIN },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.plainLyrics,
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = if (!syncedSelected) MaterialTheme.colorScheme.surface
+                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                            )
+                        }
                     }
                 }
             }
@@ -1576,6 +1611,18 @@ val coverAccentCache = LruCache<String, Color>(100)
 fun getContrastingContentColor(backgroundColor: Color): Color {
     val luminance = 0.299f * backgroundColor.red + 0.587f * backgroundColor.green + 0.114f * backgroundColor.blue
     return if (luminance > 0.52f) Color.Black else Color.White
+}
+
+fun ensureReadableAccent(color: Color, minLuminance: Float = 0.52f): Color {
+    val lum = 0.299f * color.red + 0.587f * color.green + 0.114f * color.blue
+    if (lum >= minLuminance) return color
+    val factor = ((minLuminance - lum) / (1f - lum.coerceAtMost(0.9f))).coerceIn(0f, 0.85f)
+    return Color(
+        red = (color.red + (1f - color.red) * factor).coerceIn(0f, 1f),
+        green = (color.green + (1f - color.green) * factor).coerceIn(0f, 1f),
+        blue = (color.blue + (1f - color.blue) * factor).coerceIn(0f, 1f),
+        alpha = 1.0f
+    )
 }
 
 private fun extractSongGradientColors(

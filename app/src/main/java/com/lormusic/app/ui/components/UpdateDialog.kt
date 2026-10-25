@@ -38,13 +38,20 @@ import java.net.URLEncoder
 private suspend fun translateChangelog(text: String, targetLang: String): String = withContext(Dispatchers.IO) {
     if (text.isBlank()) return@withContext text
     try {
-        val encoded = URLEncoder.encode(text, "UTF-8")
-        val url = URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t&q=$encoded")
+        val token = "___LORMUSIC_BRAND___"
+        val preprocessed = text.replace("LorMusic", token, ignoreCase = false).replace("LorMuisc", token, ignoreCase = false)
+        val encoded = URLEncoder.encode(preprocessed, "UTF-8")
+        val url = URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t")
         val conn = (url.openConnection() as HttpURLConnection).apply {
-            connectTimeout = 6000
-            readTimeout = 6000
+            requestMethod = "POST"
+            doOutput = true
+            connectTimeout = 8000
+            readTimeout = 8000
+            setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+
             setRequestProperty("User-Agent", "Mozilla/5.0")
         }
+        conn.outputStream.use { it.write("q=$encoded".toByteArray(Charsets.UTF_8)) }
         if (conn.responseCode in 200..299) {
             val resp = conn.inputStream.bufferedReader().use { it.readText() }
             val jsonArray = JSONArray(resp)
@@ -57,7 +64,17 @@ private suspend fun translateChangelog(text: String, targetLang: String): String
                 }
             }
             val res = sb.toString()
-            if (res.isNotBlank()) res else text
+            if (res.isNotBlank()) {
+                res.replace(token, "LorMusic")
+                    .replace("___ LORMUSIC_BRAND ___", "LorMusic")
+                    .replace("___LORMUSIC_BRAND___", "LorMusic")
+                    .replace("ЛорМьюзик", "LorMusic", ignoreCase = true)
+                    .replace("Лормьюзик", "LorMusic", ignoreCase = true)
+                    .replace("Лормузик", "LorMusic", ignoreCase = true)
+                    .replace("Лор Музыка", "LorMusic", ignoreCase = true)
+                    .replace("ЛорМузік", "LorMusic", ignoreCase = true)
+                    .replace("Лормузік", "LorMusic", ignoreCase = true)
+            } else text
         } else {
             text
         }

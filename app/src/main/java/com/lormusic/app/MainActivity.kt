@@ -36,6 +36,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.Song
@@ -315,7 +316,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     hideDemoTracks = hideDemoTracks,
                                     enableBlur = effectiveEnableBlur,
                                     useLiquidGlass = effectiveUseLiquidGlass,
-                                    classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                     showTopSearchBar = isLocalSearchTop,
                                     externalSearchActive = isBottomLocalSearchActive,
                                     selectedFilter = selectedFilter,
@@ -325,24 +325,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     hazeState = hazeState,
                                     onSelectFilter = playerViewModel::setLibraryFilter,
                                     onSelectSort = playerViewModel::setSortOption,
-                                    showBackupNotice = !playerViewModel.hasSeenBackupNotice(),
-                                    onDismissBackupNotice = { playerViewModel.dismissBackupNotice() },
-                                    onExportBackup = {
-                                        playerViewModel.dismissBackupNotice()
-                                        val json = playerViewModel.exportBackup()
-                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                                        val clip = android.content.ClipData.newPlainText("LorMusic Backup", json)
-                                        clipboard.setPrimaryClip(clip)
-                                        android.widget.Toast.makeText(context, currentStrings.backupCopiedToast, android.widget.Toast.LENGTH_LONG).show()
-                                        try {
-                                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                                                type = "text/plain"
-                                                putExtra(Intent.EXTRA_TEXT, json)
-                                                putExtra(Intent.EXTRA_SUBJECT, "LorMusic-Settings-Backup.json")
-                                            }
-                                            context.startActivity(Intent.createChooser(sendIntent, currentStrings.shareBackup))
-                                        } catch (_: Exception) {}
-                                    },
                                     onRequestPermissionAndScan = {
                                         if (hasStoragePermission) {
                                             playerViewModel.rescanLocalMusic()
@@ -410,7 +392,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         pureMaterialYou = pureMaterialYou,
                                         showNavBarLabels = playerViewModel.showNavBarLabels.value,
                                         useLiquidGlass = playerViewModel.useLiquidGlass.value,
-                                        classicLibraryDesign = playerViewModel.classicLibraryDesign.value,
                                         useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
                                         enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
                                         useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
@@ -429,7 +410,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onTogglePureMaterialYou = playerViewModel::setPureMaterialYou,
                                         onToggleShowNavBarLabels = playerViewModel::setShowNavBarLabels,
                                         onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
-                                        onToggleClassicLibraryDesign = playerViewModel::setClassicLibraryDesign,
                                         onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
                                         onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
                                         onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
@@ -726,6 +706,14 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             },
                             onRemoveFromQueue = playerViewModel::removeQueueItemAt,
                             onRefreshLyrics = { playerViewModel.loadLyricsFor(song) },
+                            onTranslateLyrics = {
+                                val target = when (appLanguage) {
+                                    AppLanguage.UK -> "uk"
+                                    AppLanguage.EN -> "en"
+                                    else -> "ru"
+                                }
+                                playerViewModel.translateCurrentLyrics(target)
+                            },
                             onOpenSongActions = { songForActionsSheet = song },
                             onOpenTagEditor = { songForTagEditor = song },
                             onOpenArtistProfile = { artist -> showNowPlaying = false; playerViewModel.openArtistProfile(artist) },
@@ -857,6 +845,33 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             dismissButton = {
                 TextButton(onClick = { playerViewModel.dismissAutoTagFixPrompt() }) {
                     Text(currentStrings.remindLaterBtn)
+                }
+            }
+        )
+    }
+
+    val showClassicRemovedNotice by playerViewModel.showClassicRemovedNotice
+    if (showClassicRemovedNotice) {
+        AlertDialog(
+            onDismissRequest = { playerViewModel.dismissClassicRemovedNotice() },
+            title = {
+                Text(
+                    text = currentStrings.classicRemovedTitle,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = currentStrings.classicRemovedMessage,
+                    style = MaterialTheme.typography.bodyMedium
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { playerViewModel.dismissClassicRemovedNotice() },
+                    shape = RoundedCornerShape(16.dp)
+                ) {
+                    Text(currentStrings.classicRemovedConfirm)
                 }
             }
         )

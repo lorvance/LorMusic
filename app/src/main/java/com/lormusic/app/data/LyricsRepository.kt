@@ -84,6 +84,7 @@ object LyricsRepository {
         }
 
         val fetchedLrc = fetchLrcFromNetwork(song.title, song.artist, song.durationMs)
+            ?: fetchFromLyricsOvh(song.title, song.artist, song.durationMs)
         if (!fetchedLrc.isNullOrBlank()) {
             runCatching { cachedFile.writeText(fetchedLrc) }
             val parsed = parseLrcString(fetchedLrc)
@@ -232,5 +233,94 @@ object LyricsRepository {
         }
 
         return enriched
+    }
+
+    private fun fetchFromLyricsOvh(rawTitle: String, rawArtist: String, durationMs: Long): String? {
+        val cleanTitle = cleanQueryTitle(rawTitle)
+        if (cleanTitle.length < 2 || rawArtist.isBlank()) return null
+        try {
+            val encArtist = URLEncoder.encode(rawArtist.trim(), "UTF-8")
+            val encTitle = URLEncoder.encode(cleanTitle, "UTF-8")
+            val url = URL("https://api.lyrics.ovh/v1/$encArtist/$encTitle")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "GET"
+                connectTimeout = 5000
+                readTimeout = 5000
+                setRequestProperty("User-Agent", "Mozilla/5.0")
+            }
+            if (conn.responseCode == 200) {
+                val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                val json = org.json.JSONObject(resp)
+                val lyricsText = json.optString("lyrics", "")
+                if (lyricsText.isNotBlank()) {
+                    val lines = lyricsText.lines().map { it.trim() }.filter { it.isNotEmpty() }
+                    if (lines.isNotEmpty()) {
+                        val totalMs = durationMs.coerceAtLeast(30_000L)
+                        val stepMs = (totalMs / (lines.size + 1)).coerceAtLeast(2000L)
+                        val sb = StringBuilder()
+                        lines.forEachIndexed { idx, line ->
+                            val ms = (idx * stepMs) + 2500L
+                            val min = ms / 60000
+                            val sec = (ms % 60000) / 1000
+                            val hundredths = (ms % 1000) / 10
+                            sb.append(String.format(java.util.Locale.US, "[%02d:%02d.%02d] %s\n", min, sec, hundredths, line))
+                        }
+                        return sb.toString()
+                    }
+                }
+            }
+        } catch (_: Exception) {
+        }
+        return null
+    }
+
+    suspend fun translateLyricLines(lines: List<LyricLine>, targetLang: String): List<LyricLine> = withContext(Dispatchers.IO) {
+        val textLines = lines.filter { !it.isInstrumental && !it.isTranslation && it.content.isNotBlank() }
+        if (textLines.isEmpty()) return@withContext lines
+
+        val joined = textLines.joinToString("\n") { it.content }
+        val translatedText = runCatching {
+            val encoded = URLEncoder.encode(joined, "UTF-8")
+            val url = URL("https://translate.googleapis.com/translate_a/single?client=gtx&sl=auto&tl=$targetLang&dt=t")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 7000
+                readTimeout = 7000
+                setRequestProperty("User-Agent", "Mozilla/5.0")
+                setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8")
+            }
+            conn.outputStream.use { it.write("q=$encoded".toByteArray(Charsets.UTF_8)) }
+            if (conn.responseCode in 200..299) {
+                val resp = conn.inputStream.bufferedReader().use { it.readText() }
+                val jsonArr = org.json.JSONArray(resp)
+                val sentences = jsonArr.optJSONArray(0)
+                val sb = StringBuilder()
+                if (sentences != null) {
+                    for (i in 0 until sentences.length()) {
+                        val item = sentences.optJSONArray(i)
+                        if (item != null) sb.append(item.optString(0))
+                    }
+                }
+                sb.toString()
+            } else null
+        }.getOrNull()
+
+        if (translatedText.isNullOrBlank()) return@withContext lines
+
+        val translatedLines = translatedText.lines().map { it.trim() }
+        var transIdx = 0
+        val result = mutableListOf<LyricLine>()
+        for (line in lines) {
+            result.add(line)
+            if (!line.isInstrumental && !line.isTranslation && line.content.isNotBlank() && transIdx < translatedLines.size) {
+                val transContent = translatedLines[transIdx].ifBlank { null }
+                if (transContent != null) {
+                    result.add(LyricLine(timeStampMs = line.timeStampMs, content = transContent, isTranslation = true))
+                }
+                transIdx++
+            }
+        }
+        result
     }
 }

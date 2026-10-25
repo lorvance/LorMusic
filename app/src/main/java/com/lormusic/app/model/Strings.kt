@@ -309,6 +309,11 @@ val tagFixTitle: String,
     val nativeGoogleSignIn: String get() = extra.nativeGoogleSignIn
     val webGoogleSignIn: String get() = extra.webGoogleSignIn
     val selectGoogleAccount: String get() = extra.selectGoogleAccount
+    val translateLyrics: String get() = extra.translateLyrics
+    val translatingLyrics: String get() = extra.translatingLyrics
+    val classicRemovedTitle: String get() = extra.classicRemovedTitle
+    val classicRemovedMessage: String get() = extra.classicRemovedMessage
+    val classicRemovedConfirm: String get() = extra.classicRemovedConfirm
 }
 
 class ExtraStrings(
@@ -353,7 +358,12 @@ class ExtraStrings(
     val artistShuffle: String,
     val nativeGoogleSignIn: String,
     val webGoogleSignIn: String,
-    val selectGoogleAccount: String
+    val selectGoogleAccount: String,
+    val translateLyrics: String,
+    val translatingLyrics: String,
+    val classicRemovedTitle: String,
+    val classicRemovedMessage: String,
+    val classicRemovedConfirm: String
 )
 
 
@@ -523,7 +533,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "Версия 1.6.4",
+    appVersion = "Версия 1.6.4.1",
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -650,7 +660,12 @@ val StringsRu = AppStrings(
         artistShuffle = "Перемешать",
         nativeGoogleSignIn = "Войти через Google",
         webGoogleSignIn = "Войти через браузер",
-        selectGoogleAccount = "Выберите аккаунт Google"
+        selectGoogleAccount = "Выберите аккаунт Google",
+        translateLyrics = "Перевести текст",
+        translatingLyrics = "Перевод...",
+        classicRemovedTitle = "Классический дизайн удален",
+        classicRemovedMessage = "Классический дизайн медиатеки был удален из приложения из-за ограниченного функционала и в рамках подготовки к обновлению 1.7.0.",
+        classicRemovedConfirm = "Понятно"
     )
 )
 
@@ -820,7 +835,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "Version 1.6.4",
+    appVersion = "Version 1.6.4.1",
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -947,7 +962,12 @@ val StringsEn = AppStrings(
         artistShuffle = "Shuffle",
         nativeGoogleSignIn = "Sign in with Google",
         webGoogleSignIn = "Sign in via Browser",
-        selectGoogleAccount = "Select Google Account"
+        selectGoogleAccount = "Select Google Account",
+        translateLyrics = "Translate lyrics",
+        translatingLyrics = "Translating...",
+        classicRemovedTitle = "Classic Design Removed",
+        classicRemovedMessage = "The classic library design has been removed from the app due to limited functionality and in preparation for update 1.7.0.",
+        classicRemovedConfirm = "Got it"
     )
 )
 
@@ -1117,7 +1137,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "Версія 1.6.4",
+    appVersion = "Версія 1.6.4.1",
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1244,7 +1264,12 @@ val StringsUk = AppStrings(
         artistShuffle = "Перемішати",
         nativeGoogleSignIn = "Увійти через Google",
         webGoogleSignIn = "Увійти через браузер",
-        selectGoogleAccount = "Оберіть обліковий запис Google"
+        selectGoogleAccount = "Оберіть обліковий запис Google",
+        translateLyrics = "Перекласти текст",
+        translatingLyrics = "Переклад...",
+        classicRemovedTitle = "Класичний дизайн видалено",
+        classicRemovedMessage = "Класичний дизайн медіатеки було видалено з додатку через обмежений функціонал та в рамках підготовки до оновлення 1.7.0.",
+        classicRemovedConfirm = "Зрозуміло"
     )
 )
 

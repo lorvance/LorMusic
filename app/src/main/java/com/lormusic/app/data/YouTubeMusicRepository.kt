@@ -676,16 +676,14 @@ object YouTubeMusicRepository {
         seedSongs: List<Song>,
         cookie: String? = null
     ): Pair<List<Song>, List<Song>> = withContext(Dispatchers.IO) {
-        if (!hasValidAuthCookie(cookie)) {
-            return@withContext emptyList<Song>() to emptyList<Song>()
-        }
-        currentAuthCookie = cookie
+        if (!cookie.isNullOrBlank()) currentAuthCookie = cookie
 
         coroutineScope {
-            val homeDef = async { fetchBrowseTracks("FEmusic_home", cookie, limit = 18) }
-            val likedDef = async { fetchBrowseTracks("FEmusic_liked_videos", cookie, limit = 16) }
-            val homeTracks = homeDef.await()
-            val likedOrHistory = likedDef.await()
+            val hasAuth = hasValidAuthCookie(cookie)
+            val homeDef = if (hasAuth) async { fetchBrowseTracks("FEmusic_home", cookie, limit = 18) } else null
+            val likedDef = if (hasAuth) async { fetchBrowseTracks("FEmusic_liked_videos", cookie, limit = 16) } else null
+            val homeTracks = homeDef?.await() ?: emptyList()
+            val likedOrHistory = likedDef?.await() ?: emptyList()
 
             if (homeTracks.isNotEmpty() || likedOrHistory.isNotEmpty()) {
                 val recs = homeTracks.ifEmpty { likedOrHistory }
@@ -721,10 +719,7 @@ object YouTubeMusicRepository {
         mood: WaveMood,
         cookie: String? = null
     ): List<Song> = withContext(Dispatchers.IO) {
-        if (!hasValidAuthCookie(cookie)) {
-            return@withContext emptyList()
-        }
-        currentAuthCookie = cookie
+        if (!cookie.isNullOrBlank()) currentAuthCookie = cookie
 
         val userArtists = seedSongs
             .map { it.artist.trim() }

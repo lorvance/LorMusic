@@ -204,6 +204,12 @@ class PreferencesRepository(context: Context) {
             .apply()
     }
 
+    fun hasSeenClassicRemovedNotice(): Boolean = prefs.getBoolean(KEY_CLASSIC_REMOVED_NOTICE_SEEN, false)
+
+    fun setSeenClassicRemovedNotice(seen: Boolean = true) {
+        prefs.edit().putBoolean(KEY_CLASSIC_REMOVED_NOTICE_SEEN, seen).apply()
+    }
+
     fun saveYtMusicCookie(cookie: String?) {
         prefs.edit()
             .putString(KEY_YT_MUSIC_COOKIE, cookie)
@@ -620,6 +626,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_GOOGLE_EMAIL = "google_account_email"
         private const val KEY_GOOGLE_AVATAR = "google_account_avatar"
         private const val KEY_CLASSIC_LIBRARY = "classic_library_design"
+        private const val KEY_CLASSIC_REMOVED_NOTICE_SEEN = "classic_removed_notice_seen"
         private const val KEY_YT_MUSIC_COOKIE = "yt_music_cookie_raw"
         private const val KEY_TAG_OVERRIDES = "song_tag_overrides_json"
         private const val KEY_SAVED_YT_SONGS = "saved_yt_music_songs_json"

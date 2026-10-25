@@ -136,7 +136,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return cleaned
     }
 
-    val classicLibraryDesign = mutableStateOf(prefs.getClassicLibraryDesign())
+    val classicLibraryDesign = mutableStateOf(false)
+    val showClassicRemovedNotice = mutableStateOf(prefs.getClassicLibraryDesign() && !prefs.hasSeenClassicRemovedNotice())
     val selectedArtistProfile = mutableStateOf<String?>(null)
 
     private fun loadInitialGoogleProfile(): GoogleAccountProfile? {
@@ -269,7 +270,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getRecentlyPlayedSongs(): List<Song> {
-        if (googleAccount.value == null || !YouTubeMusicRepository.hasValidAuthCookie(ytMusicCookie.value)) {
+        if (googleAccount.value == null) {
             return emptyList()
         }
         val pool = (savedYtSongs.value + ytRecommendations.value + ytMyWaveSongs.value)
@@ -431,7 +432,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refreshYtHomeFeed() {
         val cookie = ytMusicCookie.value
-        if (googleAccount.value == null || !YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
+        if (googleAccount.value == null) {
             ytRecommendations.value = emptyList()
             ytRadioMixes.value = emptyList()
             return
@@ -476,7 +477,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun refreshYtMyWave(moodQuery: String?) {
         val cookie = ytMusicCookie.value
-        if (googleAccount.value == null || !YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
+        if (googleAccount.value == null) {
             ytMyWaveSongs.value = emptyList()
             return
         }
@@ -494,7 +495,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun searchYtMusic(query: String) {
         ytSearchJob?.cancel()
         val cookie = ytMusicCookie.value
-        if (query.isBlank() || googleAccount.value == null || !YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
+        if (query.isBlank()) {
             ytSearchResults.value = emptyList()
             isSearchingYt.value = false
             return
@@ -670,6 +671,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val lines = LyricsRepository.getLyricsForSong(getApplication(), song)
             currentLyrics.value = lines
             isLoadingLyrics.value = false
+        }
+    }
+
+    fun translateCurrentLyrics(targetLang: String) {
+        val current = currentLyrics.value
+        if (current.isEmpty()) return
+        viewModelScope.launch(Dispatchers.IO) {
+            val hasTrans = current.any { it.isTranslation }
+            if (hasTrans) {
+                currentLyrics.value = current.filter { !it.isTranslation }
+                return@launch
+            }
+            val translated = LyricsRepository.translateLyricLines(current, targetLang)
+            currentLyrics.value = translated
         }
     }
 
@@ -1067,12 +1082,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setQueueAndPlay(songs: List<Song>, startIndex: Int, shuffle: Boolean = false) {
         if (songs.isEmpty()) return
-        val effectiveShuffle = shuffle || shuffleOn.value
-        shuffleOn.value = effectiveShuffle
-        exoPlayer.shuffleModeEnabled = effectiveShuffle
+        shuffleOn.value = shuffle
+        exoPlayer.shuffleModeEnabled = false
 
-        val effectiveQueue = if (effectiveShuffle) songs.shuffled() else songs
-        val targetIdx = if (effectiveShuffle) 0 else startIndex.coerceIn(0, effectiveQueue.lastIndex)
+        val effectiveQueue = if (shuffle) {
+            val clicked = songs.getOrNull(startIndex) ?: songs.first()
+            val remaining = songs.filter { it.id != clicked.id }.shuffled()
+            listOf(clicked) + remaining
+        } else songs
+        val targetIdx = if (shuffle) 0 else startIndex.coerceIn(0, effectiveQueue.lastIndex)
 
         queue.value = effectiveQueue
         val targetSong = effectiveQueue[targetIdx]
@@ -1154,29 +1172,19 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun skipNext() {
         val q = queue.value
         if (q.isEmpty()) return
-        if (shuffleOn.value) {
-            if (exoPlayer.hasNextMediaItem()) {
-                exoPlayer.seekToNextMediaItem()
+        val current = currentSong.value
+        val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
+        val nextIdx = if (idx >= 0 && idx < q.lastIndex) idx + 1 else 0
+        if (nextIdx == 0 && repeatMode.value == RepeatMode.OFF && idx == q.lastIndex) {
+            isPlaying.value = false
+            positionMs.value = 0L
+            seekTo(0L)
+        } else {
+            if (nextIdx in 0 until exoPlayer.mediaItemCount) {
+                exoPlayer.seekToDefaultPosition(nextIdx)
                 exoPlayer.play()
             } else {
-                val nextIdx = q.indices.random()
-                setQueueAndPlay(q, nextIdx, shuffle = true)
-            }
-        } else {
-            val current = currentSong.value
-            val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
-            val nextIdx = if (idx >= 0 && idx < q.lastIndex) idx + 1 else 0
-            if (nextIdx == 0 && repeatMode.value == RepeatMode.OFF && idx == q.lastIndex) {
-                isPlaying.value = false
-                positionMs.value = 0L
-                seekTo(0L)
-            } else {
-                if (nextIdx in 0 until exoPlayer.mediaItemCount && !exoPlayer.shuffleModeEnabled) {
-                    exoPlayer.seekToDefaultPosition(nextIdx)
-                    exoPlayer.play()
-                } else {
-                    setQueueAndPlay(q, nextIdx, shuffle = false)
-                }
+                setQueueAndPlay(q, nextIdx, shuffle = shuffleOn.value)
             }
         }
     }
@@ -1188,31 +1196,30 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
         val q = queue.value
         if (q.isEmpty()) return
-        if (shuffleOn.value) {
-            if (exoPlayer.hasPreviousMediaItem()) {
-                exoPlayer.seekToPreviousMediaItem()
-                exoPlayer.play()
-            } else {
-                val prevIdx = q.indices.random()
-                setQueueAndPlay(q, prevIdx, shuffle = true)
-            }
+        val current = currentSong.value
+        val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
+        val prevIdx = if (idx > 0) idx - 1 else (if (repeatMode.value == RepeatMode.ALL) q.lastIndex else 0)
+        if (prevIdx in 0 until exoPlayer.mediaItemCount) {
+            exoPlayer.seekToDefaultPosition(prevIdx)
+            exoPlayer.play()
         } else {
-            val current = currentSong.value
-            val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
-            val prevIdx = if (idx > 0) idx - 1 else (if (repeatMode.value == RepeatMode.ALL) q.lastIndex else 0)
-            if (prevIdx in 0 until exoPlayer.mediaItemCount && !exoPlayer.shuffleModeEnabled) {
-                exoPlayer.seekToDefaultPosition(prevIdx)
-                exoPlayer.play()
-            } else {
-                setQueueAndPlay(q, prevIdx, shuffle = false)
-            }
+            setQueueAndPlay(q, prevIdx, shuffle = shuffleOn.value)
         }
     }
 
     fun toggleShuffle() {
         val newValue = !shuffleOn.value
         shuffleOn.value = newValue
-        exoPlayer.shuffleModeEnabled = newValue
+        exoPlayer.shuffleModeEnabled = false
+        val current = currentSong.value
+        val curQueue = queue.value
+        if (newValue && current != null && curQueue.size > 1) {
+            val remaining = curQueue.filter { it.id != current.id }.shuffled()
+            val newQueue = listOf(current) + remaining
+            queue.value = newQueue
+            val mediaItems = newQueue.map { it.toMediaItem() }
+            exoPlayer.setMediaItems(mediaItems, 0, exoPlayer.currentPosition)
+        }
     }
 
     fun cycleRepeatMode() {
@@ -1425,9 +1432,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveUseLiquidGlass(enabled)
     }
 
+    fun dismissClassicRemovedNotice() {
+        showClassicRemovedNotice.value = false
+        prefs.setSeenClassicRemovedNotice(true)
+        prefs.setClassicLibraryDesign(false)
+    }
+
     fun setClassicLibraryDesign(enabled: Boolean) {
-        classicLibraryDesign.value = enabled
-        prefs.setClassicLibraryDesign(enabled)
+        classicLibraryDesign.value = false
+        prefs.setClassicLibraryDesign(false)
     }
 
     fun openArtistProfile(artist: String) {
