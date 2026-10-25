@@ -13,15 +13,18 @@ import androidx.media3.datasource.DefaultHttpDataSource
 import androidx.media3.datasource.ResolvingDataSource
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.session.DefaultMediaNotificationProvider
 import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.lormusic.app.MainActivity
+import com.lormusic.app.R
 import com.lormusic.app.data.YouTubeMusicRepository
 
 class PlaybackService : MediaSessionService() {
 
     private var mediaSession: MediaSession? = null
 
+    @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
         val player = SharedPlayerHolder.getOrCreate(this)
@@ -34,9 +37,15 @@ class PlaybackService : MediaSessionService() {
             activityIntent,
             PendingIntent.FLAG_IMMUTABLE or PendingIntent.FLAG_UPDATE_CURRENT
         )
-        mediaSession = MediaSession.Builder(this, player)
+        val session = MediaSession.Builder(this, player)
             .setSessionActivity(pendingIntent)
             .build()
+        mediaSession = session
+        addSession(session)
+
+        val notificationProvider = DefaultMediaNotificationProvider(this)
+        notificationProvider.setSmallIcon(R.drawable.ic_launcher_regular_mono)
+        setMediaNotificationProvider(notificationProvider)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -49,7 +58,6 @@ class PlaybackService : MediaSessionService() {
         if (player == null || !player.playWhenReady || player.mediaItemCount == 0 || player.playbackState == Player.STATE_ENDED) {
             stopSelf()
         }
-
     }
 
     override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaSession? {
@@ -57,7 +65,10 @@ class PlaybackService : MediaSessionService() {
     }
 
     override fun onDestroy() {
-        mediaSession?.release()
+        mediaSession?.let {
+            removeSession(it)
+            it.release()
+        }
         mediaSession = null
         super.onDestroy()
     }

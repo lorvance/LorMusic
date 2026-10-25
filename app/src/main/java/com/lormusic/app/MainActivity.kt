@@ -112,6 +112,18 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         playerViewModel.onDeviceDeletePermissionResult(result.resultCode == Activity.RESULT_OK)
     }
 
+    val notificationPermissionLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.RequestPermission()
+    ) { _ -> }
+
+    LaunchedEffect(Unit) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+            if (ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
+                notificationPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
+            }
+        }
+    }
+
     var selectedTab by remember { mutableStateOf(LorTab.LIBRARY) }
     var showNowPlaying by remember { mutableStateOf(false) }
     var songForActionsSheet by remember { mutableStateOf<Song?>(null) }

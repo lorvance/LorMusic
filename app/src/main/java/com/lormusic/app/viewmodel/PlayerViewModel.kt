@@ -198,6 +198,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     init {
         exoPlayer.addListener(playerListener)
         exoPlayer.setPlaybackSpeed(playbackSpeed.value)
+        startPlaybackServiceIfNeeded()
 
         viewModelScope.launch {
             val context = getApplication<Application>()
@@ -1463,7 +1464,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.3.1", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.6.3.2", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
@@ -1471,9 +1472,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.3.1)"
-                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.3.1)"
-                        else -> "У вас установлена последняя версия (1.6.3.1)"
+                        AppLanguage.EN -> "You have the latest version installed (1.6.3.2)"
+                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.3.2)"
+                        else -> "У вас установлена последняя версия (1.6.3.2)"
                     }
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message

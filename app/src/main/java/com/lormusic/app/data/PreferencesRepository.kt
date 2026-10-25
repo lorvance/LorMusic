@@ -423,7 +423,7 @@ class PreferencesRepository(context: Context) {
     fun exportBackupJson(): String {
         val root = JSONObject()
         root.put("app", "LorMusic")
-        root.put("version", "1.6.3.1")
+        root.put("version", "1.6.3.2")
         root.put("timestamp", System.currentTimeMillis())
         val data = JSONObject()
         prefs.all.forEach { (key, value) ->
