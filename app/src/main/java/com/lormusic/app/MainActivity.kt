@@ -275,6 +275,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             onSearchQuery = playerViewModel::searchYtMusic,
                             onRefreshFeed = playerViewModel::refreshYtHomeFeed,
                             onRefreshMyWave = playerViewModel::refreshYtMyWave,
+                            onSignInNativeAccount = { name, email -> playerViewModel.setGoogleAccount(name, email) },
                             onSignInWithCookie = playerViewModel::signInWithCookie,
                             onSignOutGoogle = playerViewModel::signOutGoogle,
                             onSyncGoogleLibrary = playerViewModel::syncGoogleLibrary,
@@ -369,6 +370,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         currentSong = currentSong,
                                         isPlaying = isPlaying,
                                         favoriteIds = favoriteIds,
+                                        topPlayedSong = playerViewModel.topPlayedSong.value,
+                                        totalListeningTimeMs = playerViewModel.totalListeningTimeMs.value,
+                                        topAlbum = playerViewModel.topAlbum.value,
                                         onPlayQueue = { list, idx, shuffle ->
                                             playerViewModel.setQueueAndPlay(list, idx, shuffle)
                                         },
@@ -724,7 +728,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             onRefreshLyrics = { playerViewModel.loadLyricsFor(song) },
                             onOpenSongActions = { songForActionsSheet = song },
                             onOpenTagEditor = { songForTagEditor = song },
-                            onOpenArtistProfile = playerViewModel::openArtistProfile,
+                            onOpenArtistProfile = { artist -> showNowPlaying = false; playerViewModel.openArtistProfile(artist) },
                             onClose = { showNowPlaying = false }
                         )
                     }
@@ -750,6 +754,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             onPlayNext = { playerViewModel.playNextInQueue(targetSong) },
             onToggleFavorite = { playerViewModel.toggleFavorite(targetSong) },
             onOpenTagEditor = { songForTagEditor = targetSong },
+            onOpenArtistProfile = { artist ->
+                songForActionsSheet = null
+                playerViewModel.openArtistProfile(artist)
+            },
             onDownloadSong = { playerViewModel.downloadYtSongWithTags(targetSong) },
             onToggleHidden = { playerViewModel.toggleHiddenSong(targetSong) },
             onDeleteFromDevice = {
@@ -762,8 +770,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             },
             onCreateNewPlaylistWithSong = { name ->
                 playerViewModel.createPlaylist(name, listOf(targetSong))
-            },
-            onOpenArtistProfile = playerViewModel::openArtistProfile
+            }
         )
     }
 
@@ -780,22 +787,25 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     val selectedArtist = playerViewModel.selectedArtistProfile.value
     if (selectedArtist != null) {
-        ArtistProfileSheet(
+        val artistSongs = remember(selectedArtist, allSongs) { playerViewModel.getArtistSongs(selectedArtist) }
+        val topTracks = remember(selectedArtist, allSongs) { playerViewModel.getArtistTopTracks(selectedArtist) }
+        val albums = remember(selectedArtist, allSongs) { playerViewModel.getArtistAlbums(selectedArtist) }
+        val singles = remember(selectedArtist, allSongs) { playerViewModel.getArtistSingles(selectedArtist) }
+
+        ArtistProfileDialog(
             artistName = selectedArtist,
-            allSongs = allSongs,
+            allArtistSongs = artistSongs,
+            topTracks = topTracks,
+            albums = albums,
+            singlesAndEPs = singles,
             currentSong = currentSong,
             isPlaying = isPlaying,
-            favoriteIds = favoriteIds,
+            isFavorite = playerViewModel::isFavorite,
             onDismiss = playerViewModel::closeArtistProfile,
-            onPlayQueue = { list, idx, shuffle ->
-                playerViewModel.setQueueAndPlay(list, idx, shuffle)
-            },
+            onPlaySongAt = { list, idx -> playerViewModel.setQueueAndPlay(list, idx, false) },
+            onPlayAll = { list, shuffle -> playerViewModel.setQueueAndPlay(list, 0, shuffle) },
             onToggleFavorite = playerViewModel::toggleFavorite,
-            onSongMoreClick = { songForActionsSheet = it },
-            onSearchOnYouTube = { query ->
-                playerViewModel.enterYtMusicMode()
-                playerViewModel.searchYtMusic(query)
-            }
+            onSongMoreClick = { songForActionsSheet = it }
         )
     }
 

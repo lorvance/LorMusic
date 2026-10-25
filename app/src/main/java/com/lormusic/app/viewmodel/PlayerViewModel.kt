@@ -40,7 +40,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val allSongs = mutableStateOf<List<Song>>(SampleData.songs)
     val localSongsCount = mutableStateOf(0)
     val isScanningLocal = mutableStateOf(false)
-    val favoriteIds = mutableStateOf(prefs.getFavoriteIds())
+    val localFavoriteIds = mutableStateOf(prefs.getLocalFavoriteIds())
+    val ytFavoriteIds = mutableStateOf(prefs.getYtFavoriteIds())
+    val favoriteIds = mutableStateOf(localFavoriteIds.value)
+    val topPlayedSong = mutableStateOf(prefs.getTopPlayedSong())
+    val totalListeningTimeMs = mutableStateOf(prefs.getTotalListeningTimeMs())
+    val topAlbum = mutableStateOf(prefs.getTopAlbum())
     val hiddenSongIds = mutableStateOf(prefs.getHiddenSongIds())
     val customPlaylists = mutableStateOf<List<Playlist>>(emptyList())
     val recentlyPlayedIds = mutableStateOf(prefs.getRecentlyPlayedIds())
@@ -167,6 +172,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 positionMs.value = exoPlayer.currentPosition.coerceAtLeast(0L)
                 prefs.saveLastPlayedSongId(withTags.id)
                 recordRecentlyPlayed(withTags)
+                recordSongPlay(withTags)
                 loadLyricsFor(withTags)
             }
         }
@@ -242,6 +248,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         viewModelScope.launch {
+            var counter = 0
             while (true) {
                 delay(100)
                 if (exoPlayer.isPlaying) {
@@ -249,6 +256,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     val realDur = exoPlayer.duration
                     if (realDur > 0 && realDur != durationMs.value) {
                         durationMs.value = realDur
+                    }
+                    counter++
+                    if (counter >= 10) {
+                        counter = 0
+                        prefs.addListeningTimeMs(1000L)
+                        totalListeningTimeMs.value = prefs.getTotalListeningTimeMs()
                     }
                 }
             }
@@ -267,6 +280,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             .mapNotNull { pool[it] }
             .filterNot { it.isLocal }
             .take(22)
+    }
+
+    fun recordSongPlay(song: Song) {
+        prefs.recordSongPlay(song.id, song.title, song.artist, song.album)
+        topPlayedSong.value = prefs.getTopPlayedSong()
+        topAlbum.value = prefs.getTopAlbum()
     }
 
     private fun recordRecentlyPlayed(song: Song) {
@@ -569,10 +588,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
 
             if (filteredLiked.isNotEmpty()) {
-                val updatedFavs = favoriteIds.value.toMutableSet()
+                val updatedFavs = ytFavoriteIds.value.toMutableSet()
                 filteredLiked.forEach { updatedFavs.add(it.id) }
-                favoriteIds.value = updatedFavs
-                prefs.saveFavoriteIds(updatedFavs)
+                ytFavoriteIds.value = updatedFavs
+                prefs.saveYtFavoriteIds(updatedFavs)
             }
 
             if (syncData.homeRecommendations.isNotEmpty() || syncData.likedSongs.isNotEmpty()) {
@@ -721,11 +740,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getAllPlaylistsWithFavorites(): List<Playlist> {
-        val pool = (allSongs.value + savedYtSongs.value).distinctBy { it.id }
-        val favSongs = pool.filter { favoriteIds.value.contains(it.id) }
+        val pool = allSongs.value.distinctBy { it.id }
+        val favSongs = pool.filter { localFavoriteIds.value.contains(it.id) }
         val favPlaylist = Playlist(
             id = "sys_favorites",
-                    name = resolveStrings(appLanguage.value).favorites,
+            name = resolveStrings(appLanguage.value).favorites,
             songs = favSongs,
             coverColorSeed = 777,
             isSystem = true
@@ -733,7 +752,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return listOf(favPlaylist) + customPlaylists.value
     }
 
-    fun isFavorite(songId: String): Boolean = favoriteIds.value.contains(songId)
+    fun isFavorite(songId: String): Boolean {
+        return if (songId.startsWith("yt_")) {
+            ytFavoriteIds.value.contains(songId)
+        } else {
+            localFavoriteIds.value.contains(songId)
+        }
+    }
 
     fun isSongHidden(songId: String): Boolean = hiddenSongIds.value.contains(songId)
 
@@ -880,13 +905,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleFavorite(song: Song) {
-        val updated = favoriteIds.value.toMutableSet()
+        val isYt = song.isRemoteYt || song.id.startsWith("yt_")
+        val currentFavs = if (isYt) ytFavoriteIds.value else localFavoriteIds.value
+        val updated = currentFavs.toMutableSet()
         val cookie = ytMusicCookie.value
         val added = if (updated.contains(song.id)) {
             updated.remove(song.id)
             prefs.addUnfavoritedSongId(song.id)
             prefs.addUnfavoritedSongId(song.id.removePrefix("yt_"))
-            if (!cookie.isNullOrBlank()) {
+            if (!cookie.isNullOrBlank() && isYt) {
                 viewModelScope.launch(Dispatchers.IO) {
                     YouTubeMusicRepository.removeLikeFromYtMusic(song.id, cookie)
                 }
@@ -896,20 +923,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             updated.add(song.id)
             prefs.removeUnfavoritedSongId(song.id)
             prefs.removeUnfavoritedSongId(song.id.removePrefix("yt_"))
-            if (!cookie.isNullOrBlank() && (song.isRemoteYt || song.id.startsWith("yt_"))) {
+            if (!cookie.isNullOrBlank() && isYt) {
                 viewModelScope.launch(Dispatchers.IO) {
                     YouTubeMusicRepository.likeYtMusicVideo(song.id, cookie)
                 }
             }
-            if (song.isRemoteYt || song.id.startsWith("yt_")) {
+            if (isYt) {
                 val saved = (listOf(song) + savedYtSongs.value).distinctBy { it.id }
                 savedYtSongs.value = saved
                 prefs.saveYtSongs(saved)
             }
             true
         }
-        favoriteIds.value = updated
-        prefs.saveFavoriteIds(updated)
+        if (isYt) {
+            ytFavoriteIds.value = updated
+            prefs.saveYtFavoriteIds(updated)
+        } else {
+            localFavoriteIds.value = updated
+            favoriteIds.value = updated
+            prefs.saveLocalFavoriteIds(updated)
+        }
         statusMessage.value = when (appLanguage.value) {
             AppLanguage.EN -> if (added) "Added to Favorites" else "Removed from Favorites"
             AppLanguage.UK -> if (added) "Додано до Улюбленого" else "Вилучено з Улюбленого"
@@ -1048,6 +1081,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         positionMs.value = 0L
         prefs.saveLastPlayedSongId(targetSong.id)
         recordRecentlyPlayed(targetSong)
+        recordSongPlay(targetSong)
         loadLyricsFor(targetSong)
 
         startPlaybackServiceIfNeeded()
@@ -1407,6 +1441,37 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         selectedArtistProfile.value = null
     }
 
+    fun getArtistSongs(artist: String): List<Song> {
+        val clean = artist.trim()
+        val all = allSongs.value + savedYtSongs.value
+        return all.filter { it.artist.equals(clean, ignoreCase = true) }
+    }
+
+    fun getArtistTopTracks(artist: String): List<Song> {
+        return getArtistSongs(artist).sortedByDescending { song ->
+            val isFav = if (song.id.startsWith("yt_")) ytFavoriteIds.value.contains(song.id) else localFavoriteIds.value.contains(song.id)
+            if (isFav) 100 else 0
+        }
+    }
+
+    fun getArtistAlbums(artist: String): Map<String, List<Song>> {
+        return getArtistSongs(artist)
+            .filter { it.album.isNotBlank() && it.album != "Unknown" && it.album != "YouTube Music" }
+            .groupBy { it.album }
+    }
+
+    fun getArtistSingles(artist: String): List<Song> {
+        val allGrouped = getArtistAlbums(artist)
+        val albumsOnly = allGrouped.filter { it.value.size >= 2 }.keys
+        return getArtistSongs(artist).filter { !albumsOnly.contains(it.album) }
+    }
+
+    fun setGoogleAccount(displayName: String, email: String, avatarUrl: String? = null) {
+        val profile = GoogleAccountProfile(displayName = displayName, email = email, avatarUrl = avatarUrl)
+        googleAccount.value = profile
+        prefs.saveGoogleAccount(displayName, email, avatarUrl)
+    }
+
     fun setEnableBetaUpdates(enabled: Boolean) {
         enableBetaUpdates.value = enabled
         prefs.saveEnableBetaUpdates(enabled)
@@ -1464,7 +1529,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.3.2", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.6.4", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
@@ -1472,7 +1537,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.3.2)"
+                        AppLanguage.EN -> "You have the latest version installed (1.6.4)"
                         AppLanguage.UK -> "У вас встановлена остання версія (1.6.3.2)"
                         else -> "У вас установлена последняя версия (1.6.3.2)"
                     }

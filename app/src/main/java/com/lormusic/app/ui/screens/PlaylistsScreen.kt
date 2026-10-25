@@ -13,6 +13,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -64,6 +65,9 @@ fun PlaylistsScreen(
     onAddSongsToPlaylist: (String, List<Song>) -> Unit = { id, list -> list.forEach { onAddSongToPlaylist(id, it) } },
     onRemoveSongFromPlaylist: (String, String) -> Unit,
     onToggleFavorite: (Song) -> Unit,
+    topPlayedSong: Triple<String, String, Int>? = null,
+    totalListeningTimeMs: Long = 0L,
+    topAlbum: Pair<String, Int>? = null,
     hazeState: HazeState? = null,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false
@@ -142,31 +146,79 @@ fun PlaylistsScreen(
                     verticalArrangement = Arrangement.spacedBy(16.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    item(span = { GridItemSpan(2) }, key = "stats_row") {
-                        Row(
+                    item(span = { GridItemSpan(2) }, key = "enhanced_stats_carousel") {
+                        val totalSec = totalListeningTimeMs / 1000L
+                        val hours = totalSec / 3600L
+                        val minutes = (totalSec % 3600L) / 60L
+                        val timeStr = if (hours > 0) {
+                            strings.hoursMinutesFormat.format(hours, minutes)
+                        } else if (minutes > 0) {
+                            strings.minutesFormat.format(minutes)
+                        } else {
+                            strings.noStatsYet
+                        }
+
+                        LazyRow(
                             modifier = Modifier
                                 .fillMaxWidth()
-                                .padding(bottom = 2.dp),
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)
+                                .padding(bottom = 6.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            contentPadding = PaddingValues(horizontal = 2.dp)
                         ) {
-                            StatCard(
-                                title = strings.statsTracks,
-                                value = allSongs.size.toString(),
-                                modifier = Modifier.weight(1f),
-                                bubbleModifier = { bubbleModifier(it) }
-                            )
-                            StatCard(
-                                title = strings.statsFavorites,
-                                value = favoriteIds.size.toString(),
-                                modifier = Modifier.weight(1f),
-                                bubbleModifier = { bubbleModifier(it) }
-                            )
-                            StatCard(
-                                title = strings.statsPlaylists,
-                                value = playlists.size.toString(),
-                                modifier = Modifier.weight(1f),
-                                bubbleModifier = { bubbleModifier(it) }
-                            )
+                            item(key = "stat_top_track") {
+                                EnhancedStatBubble(
+                                    icon = Icons.Filled.Whatshot,
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    title = strings.mostPlayedTrack,
+                                    primaryValue = topPlayedSong?.first ?: strings.noStatsYet,
+                                    subtitle = if (topPlayedSong != null) {
+                                        "${topPlayedSong.second} • ${strings.playsCountFormat.format(topPlayedSong.third)}"
+                                    } else strings.statsTracks,
+                                    bubbleModifier = { bubbleModifier(it) }
+                                )
+                            }
+                            item(key = "stat_time") {
+                                EnhancedStatBubble(
+                                    icon = Icons.Filled.AccessTime,
+                                    iconTint = MaterialTheme.colorScheme.secondary,
+                                    title = strings.totalListeningTime,
+                                    primaryValue = timeStr,
+                                    subtitle = strings.statsTracks,
+                                    bubbleModifier = { bubbleModifier(it) }
+                                )
+                            }
+                            item(key = "stat_top_album") {
+                                EnhancedStatBubble(
+                                    icon = Icons.Filled.Album,
+                                    iconTint = MaterialTheme.colorScheme.tertiary,
+                                    title = strings.topAlbumOnRepeat,
+                                    primaryValue = topAlbum?.first ?: strings.noStatsYet,
+                                    subtitle = if (topAlbum != null) {
+                                        "${topAlbum.second} ${strings.statsTracks.lowercase()}"
+                                    } else strings.statsTracks,
+                                    bubbleModifier = { bubbleModifier(it) }
+                                )
+                            }
+                            item(key = "stat_library_tracks") {
+                                EnhancedStatBubble(
+                                    icon = Icons.Filled.MusicNote,
+                                    iconTint = MaterialTheme.colorScheme.primary,
+                                    title = strings.statsTracks,
+                                    primaryValue = allSongs.size.toString(),
+                                    subtitle = "${favoriteIds.size} ${strings.statsFavorites.lowercase()}",
+                                    bubbleModifier = { bubbleModifier(it) }
+                                )
+                            }
+                            item(key = "stat_playlists") {
+                                EnhancedStatBubble(
+                                    icon = Icons.Filled.LibraryMusic,
+                                    iconTint = MaterialTheme.colorScheme.secondary,
+                                    title = strings.statsPlaylists,
+                                    primaryValue = playlists.size.toString(),
+                                    subtitle = strings.myPlaylistsCount.format(playlists.size),
+                                    bubbleModifier = { bubbleModifier(it) }
+                                )
+                            }
                         }
                     }
 
@@ -914,6 +966,67 @@ private fun PlaylistDetailContent(
                         }
                     }
                 }
+            }
+        }
+    }
+}
+
+@Composable
+private fun EnhancedStatBubble(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    iconTint: Color,
+    title: String,
+    primaryValue: String,
+    subtitle: String,
+    bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { Modifier }
+) {
+    val shape = RoundedCornerShape(20.dp)
+    Box(
+        modifier = Modifier
+            .width(180.dp)
+            .height(86.dp)
+            .clip(shape)
+            .then(bubbleModifier(shape))
+            .padding(horizontal = 12.dp, vertical = 10.dp)
+    ) {
+        Column(
+            modifier = Modifier.fillMaxSize(),
+            verticalArrangement = Arrangement.SpaceBetween
+        ) {
+            Row(
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(6.dp)
+            ) {
+                Icon(
+                    imageVector = icon,
+                    contentDescription = null,
+                    tint = iconTint,
+                    modifier = Modifier.size(15.dp)
+                )
+                Text(
+                    text = title,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+            }
+            Column {
+                Text(
+                    text = primaryValue,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
+                Text(
+                    text = subtitle,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.8f),
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
     }

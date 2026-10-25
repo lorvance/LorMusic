@@ -45,8 +45,8 @@ import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 
 enum class LorTab(val route: String, val label: String, val filled: ImageVector, val outline: ImageVector) {
-    LIBRARY("library", "Library", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
-    PLAYLISTS("playlists", "Playlists", Icons.AutoMirrored.Filled.QueueMusic, Icons.AutoMirrored.Outlined.QueueMusic),
+    LIBRARY("library", "Tracks", Icons.Filled.MusicNote, Icons.Outlined.MusicNote),
+    PLAYLISTS("playlists", "Library", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
     SETTINGS("settings", "Settings", Icons.Filled.Settings, Icons.Outlined.Settings);
 
     fun getDisplayName(strings: com.lormusic.app.model.AppStrings): String {

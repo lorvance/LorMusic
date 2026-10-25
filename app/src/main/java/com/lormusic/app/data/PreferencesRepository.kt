@@ -16,13 +16,37 @@ class PreferencesRepository(context: Context) {
 
     private val prefs = context.getSharedPreferences("lormusic_prefs", Context.MODE_PRIVATE)
 
-    fun getFavoriteIds(): Set<String> {
-        return prefs.getStringSet(KEY_FAVORITES, emptySet())?.toSet() ?: emptySet()
+    fun getLocalFavoriteIds(): Set<String> {
+        val stored = prefs.getStringSet(KEY_LOCAL_FAVORITES, null)
+        if (stored != null) return stored.toSet()
+        val legacy = prefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()
+        val local = legacy.filterNot { it.startsWith("yt_") }.toSet()
+        saveLocalFavoriteIds(local)
+        return local
     }
 
-    fun saveFavoriteIds(ids: Set<String>) {
-        prefs.edit().putStringSet(KEY_FAVORITES, ids).apply()
+    fun saveLocalFavoriteIds(ids: Set<String>) {
+        val filtered = ids.filterNot { it.startsWith("yt_") }.toSet()
+        prefs.edit().putStringSet(KEY_LOCAL_FAVORITES, filtered).apply()
     }
+
+    fun getYtFavoriteIds(): Set<String> {
+        val stored = prefs.getStringSet(KEY_YT_FAVORITES, null)
+        if (stored != null) return stored.toSet()
+        val legacy = prefs.getStringSet(KEY_FAVORITES, emptySet()) ?: emptySet()
+        val yt = legacy.filter { it.startsWith("yt_") }.toSet()
+        saveYtFavoriteIds(yt)
+        return yt
+    }
+
+    fun saveYtFavoriteIds(ids: Set<String>) {
+        val filtered = ids.filter { it.startsWith("yt_") }.toSet()
+        prefs.edit().putStringSet(KEY_YT_FAVORITES, filtered).apply()
+    }
+
+    fun getFavoriteIds(): Set<String> = getLocalFavoriteIds()
+
+    fun saveFavoriteIds(ids: Set<String>) = saveLocalFavoriteIds(ids)
 
     fun getHiddenSongIds(): Set<String> {
         return prefs.getStringSet(KEY_HIDDEN_SONGS, emptySet())?.toSet() ?: emptySet()
@@ -420,10 +444,104 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_HAS_SEEN_BACKUP_NOTICE_1631, seen).apply()
     }
 
+    fun recordSongPlay(songId: String, title: String, artist: String, album: String) {
+        try {
+            val countsJson = prefs.getString(KEY_SONG_PLAY_COUNTS, "{}") ?: "{}"
+            val countsObj = JSONObject(countsJson)
+            val currentCount = countsObj.optInt(songId, 0)
+            countsObj.put(songId, currentCount + 1)
+
+            val titlesJson = prefs.getString(KEY_SONG_META_MAP, "{}") ?: "{}"
+            val titlesObj = JSONObject(titlesJson)
+            titlesObj.put(songId, "$title///$artist")
+
+            val albumsJson = prefs.getString(KEY_ALBUM_PLAY_COUNTS, "{}") ?: "{}"
+            val albumsObj = JSONObject(albumsJson)
+            val cleanAlbum = album.trim().ifBlank { "Unknown" }
+            if (cleanAlbum != "Unknown" && cleanAlbum != "YouTube Music") {
+                val albumCount = albumsObj.optInt(cleanAlbum, 0)
+                albumsObj.put(cleanAlbum, albumCount + 1)
+            }
+
+            prefs.edit()
+                .putString(KEY_SONG_PLAY_COUNTS, countsObj.toString())
+                .putString(KEY_SONG_META_MAP, titlesObj.toString())
+                .putString(KEY_ALBUM_PLAY_COUNTS, albumsObj.toString())
+                .apply()
+        } catch (_: Exception) {}
+    }
+
+    fun addListeningTimeMs(ms: Long) {
+        if (ms <= 0) return
+        val current = prefs.getLong(KEY_TOTAL_LISTENING_MS, 0L)
+        prefs.edit().putLong(KEY_TOTAL_LISTENING_MS, current + ms).apply()
+    }
+
+    fun getTotalListeningTimeMs(): Long {
+        return prefs.getLong(KEY_TOTAL_LISTENING_MS, 0L)
+    }
+
+    fun getTopPlayedSong(): Triple<String, String, Int>? {
+        return try {
+            val countsJson = prefs.getString(KEY_SONG_PLAY_COUNTS, "{}") ?: "{}"
+            val countsObj = JSONObject(countsJson)
+            val titlesJson = prefs.getString(KEY_SONG_META_MAP, "{}") ?: "{}"
+            val titlesObj = JSONObject(titlesJson)
+
+            var maxId: String? = null
+            var maxCount = 0
+            val keys = countsObj.keys()
+            while (keys.hasNext()) {
+                val id = keys.next()
+                val count = countsObj.optInt(id, 0)
+                if (count > maxCount) {
+                    maxCount = count
+                    maxId = id
+                }
+            }
+            if (maxId != null && maxCount > 0) {
+                val meta = titlesObj.optString(maxId, "")
+                val parts = meta.split("///")
+                val title = parts.getOrNull(0) ?: maxId
+                val artist = parts.getOrNull(1) ?: ""
+                Triple(title, artist, maxCount)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun getTopAlbum(): Pair<String, Int>? {
+        return try {
+            val albumsJson = prefs.getString(KEY_ALBUM_PLAY_COUNTS, "{}") ?: "{}"
+            val albumsObj = JSONObject(albumsJson)
+            var maxAlbum: String? = null
+            var maxCount = 0
+            val keys = albumsObj.keys()
+            while (keys.hasNext()) {
+                val alb = keys.next()
+                val count = albumsObj.optInt(alb, 0)
+                if (count > maxCount) {
+                    maxCount = count
+                    maxAlbum = alb
+                }
+            }
+            if (maxAlbum != null && maxCount > 0) {
+                Pair(maxAlbum, maxCount)
+            } else {
+                null
+            }
+        } catch (_: Exception) {
+            null
+        }
+    }
+
     fun exportBackupJson(): String {
         val root = JSONObject()
         root.put("app", "LorMusic")
-        root.put("version", "1.6.3.2")
+        root.put("version", "1.6.4")
         root.put("timestamp", System.currentTimeMillis())
         val data = JSONObject()
         prefs.all.forEach { (key, value) ->
@@ -517,5 +635,11 @@ class PreferencesRepository(context: Context) {
         private const val KEY_UNFAVORITED_SONGS = "unfavorited_song_ids"
         private const val KEY_SHOW_NAVBAR_LABELS = "show_navbar_labels"
         private const val KEY_HAS_SEEN_BACKUP_NOTICE_1631 = "has_seen_backup_notice_1631"
+        private const val KEY_LOCAL_FAVORITES = "local_favorite_song_ids"
+        private const val KEY_YT_FAVORITES = "yt_favorite_song_ids"
+        private const val KEY_SONG_PLAY_COUNTS = "song_play_counts_json"
+        private const val KEY_SONG_META_MAP = "song_meta_map_json"
+        private const val KEY_ALBUM_PLAY_COUNTS = "album_play_counts_json"
+        private const val KEY_TOTAL_LISTENING_MS = "total_listening_ms"
     }
 }

@@ -6,6 +6,10 @@ import android.annotation.SuppressLint
 import android.graphics.Bitmap
 import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
+import android.accounts.AccountManager
+import android.app.Activity
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebView
@@ -97,6 +101,7 @@ fun YouTubeMusicScreen(
     onSearchQuery: (String) -> Unit,
     onRefreshFeed: () -> Unit,
     onRefreshMyWave: (String?) -> Unit,
+    onSignInNativeAccount: (String, String) -> Unit = { _, _ -> },
     onSignInWithCookie: (String) -> Unit,
     onSignOutGoogle: () -> Unit,
     onSyncGoogleLibrary: () -> Unit,
@@ -105,8 +110,22 @@ fun YouTubeMusicScreen(
     onSongMoreClick: (Song) -> Unit,
     onSwitchToLocal: () -> Unit
 ) {
+    val strings = LocalStrings.current
     var showWebLoginDialog by remember { mutableStateOf(false) }
+    var showLoginChoiceDialog by remember { mutableStateOf(false) }
     var showAccountMenuDialog by remember { mutableStateOf(false) }
+
+    val accountPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            val accountName = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
+            if (!accountName.isNullOrBlank()) {
+                val displayName = accountName.substringBefore("@")
+                onSignInNativeAccount(displayName, accountName)
+            }
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -120,7 +139,7 @@ fun YouTubeMusicScreen(
                 hazeState = hazeState,
                 enableBlur = enableBlur,
                 useLiquidGlass = useLiquidGlass,
-                onSignInClick = { showWebLoginDialog = true },
+                onSignInClick = { showLoginChoiceDialog = true },
                 onBackToLocal = onSwitchToLocal
             )
         } else {
@@ -215,6 +234,79 @@ fun YouTubeMusicScreen(
 
 
 
+    if (showLoginChoiceDialog) {
+        AlertDialog(
+            onDismissRequest = { showLoginChoiceDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.AccountCircle,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = strings.googleSignInTitle,
+                    fontWeight = FontWeight.ExtraBold
+                )
+            },
+            text = {
+                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Text(
+                        text = strings.googleSignInSubtitle,
+                        style = MaterialTheme.typography.bodyMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Spacer(Modifier.height(4.dp))
+                    Button(
+                        onClick = {
+                            showLoginChoiceDialog = false
+                            try {
+                                val intent = AccountManager.newChooseAccountIntent(
+                                    null,
+                                    null,
+                                    arrayOf("com.google"),
+                                    null,
+                                    null,
+                                    null,
+                                    null
+                                )
+                                accountPickerLauncher.launch(intent)
+                            } catch (_: Exception) {
+                                showWebLoginDialog = true
+                            }
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Filled.AccountCircle, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(strings.nativeGoogleSignIn, fontWeight = FontWeight.Bold)
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            showLoginChoiceDialog = false
+                            showWebLoginDialog = true
+                        },
+                        modifier = Modifier.fillMaxWidth(),
+                        shape = RoundedCornerShape(16.dp)
+                    ) {
+                        Icon(Icons.Filled.Language, contentDescription = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(strings.webGoogleSignIn)
+                    }
+                }
+            },
+            confirmButton = {},
+            dismissButton = {
+                TextButton(onClick = { showLoginChoiceDialog = false }) {
+                    Text(strings.cancel)
+                }
+            }
+        )
+    }
+
     if (showWebLoginDialog) {
         YtMusicRealWebLoginDialog(
             onDismiss = { showWebLoginDialog = false },
@@ -225,7 +317,6 @@ fun YouTubeMusicScreen(
         )
     }
 
-    val strings = LocalStrings.current
     if (showAccountMenuDialog && googleAccount != null) {
         AlertDialog(
             onDismissRequest = { showAccountMenuDialog = false },

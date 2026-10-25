@@ -277,7 +277,7 @@ object TagFixEngine {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 6000
                 readTimeout = 6000
-                setRequestProperty("User-Agent", "LorMusic/1.6.3.2 (Android; ShazamEngine)")
+                setRequestProperty("User-Agent", "LorMusic/1.6.4 (Android; ShazamEngine)")
             }
             if (conn.responseCode == 200) {
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -334,7 +334,7 @@ object TagFixEngine {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 6000
                 readTimeout = 6000
-                setRequestProperty("User-Agent", "LorMusic/1.6.3.2 (Android; ShazamEngine)")
+                setRequestProperty("User-Agent", "LorMusic/1.6.4 (Android; ShazamEngine)")
             }
             if (conn.responseCode == 200) {
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
@@ -403,6 +403,37 @@ object TagFixEngine {
         return false
     }
 
+    suspend fun fetchArtistAvatar(artist: String): String? = withContext(Dispatchers.IO) {
+        val cleanArtist = artist.trim()
+        if (cleanArtist.isBlank() || cleanArtist.equals("<unknown>", true) || cleanArtist.equals("Неизвестный исполнитель", true)) {
+            return@withContext null
+        }
+        runCatching {
+            val encoded = URLEncoder.encode(cleanArtist, "UTF-8")
+            val url = URL("https://api.deezer.com/search/artist?q=$encoded&limit=1")
+            val conn = (url.openConnection() as HttpURLConnection).apply {
+                connectTimeout = 4000
+                readTimeout = 4000
+                setRequestProperty("User-Agent", "LorMusic/1.6.4 (Android; DeezerSearch)")
+            }
+            if (conn.responseCode == 200) {
+                val body = conn.inputStream.bufferedReader().use { it.readText() }
+                conn.disconnect()
+                val root = JSONObject(body)
+                val data = root.optJSONArray("data")
+                if (data != null && data.length() > 0) {
+                    val obj = data.getJSONObject(0)
+                    val pic = obj.optString("picture_big", "").takeIf { it.isNotBlank() }
+                        ?: obj.optString("picture_medium", "").takeIf { it.isNotBlank() }
+                    return@runCatching pic
+                }
+            } else {
+                conn.disconnect()
+            }
+            null
+        }.getOrNull()
+    }
+
     fun cacheRemoteCoverToDisk(context: Context, songId: String, imageUrl: String): String? {
         return runCatching {
             val safeId = songId.replace(Regex("[^a-zA-Z0-9_]"), "_")
@@ -413,7 +444,7 @@ object TagFixEngine {
             val conn = (url.openConnection() as HttpURLConnection).apply {
                 connectTimeout = 8000
                 readTimeout = 8000
-                setRequestProperty("User-Agent", "LorMusic/1.6.3.2")
+                setRequestProperty("User-Agent", "LorMusic/1.6.4")
             }
             if (conn.responseCode == 200) {
                 conn.inputStream.use { input ->

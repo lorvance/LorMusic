@@ -9,11 +9,31 @@ android {
     compileSdk = 36
 
     defaultConfig {
-        applicationId = "com.lormusic.app"
+        applicationId = "com.lorvance.lormusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 19
-        versionName = "1.6.3.2"
+        versionCode = 20
+        versionName = "1.6.4"
+    }
+
+    signingConfigs {
+        create("release") {
+            storeFile = file("lormusic.keystore")
+            storePassword = "lormusic123"
+            keyAlias = "lormusic"
+            keyPassword = "lormusic123"
+        }
+    }
+
+    buildTypes {
+        debug {
+            signingConfig = signingConfigs.getByName("release")
+        }
+        release {
+            isMinifyEnabled = false
+            signingConfig = signingConfigs.getByName("release")
+            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+        }
     }
 
     buildFeatures {

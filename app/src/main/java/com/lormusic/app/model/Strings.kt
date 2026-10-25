@@ -295,6 +295,20 @@ val tagFixTitle: String,
     val selectedCount: String get() = extra.selectedCount
     val backgroundPlaybackTitle: String get() = extra.backgroundPlaybackTitle
     val backgroundPlaybackDesc: String get() = extra.backgroundPlaybackDesc
+    val mostPlayedTrack: String get() = extra.mostPlayedTrack
+    val playsCountFormat: String get() = extra.playsCountFormat
+    val totalListeningTime: String get() = extra.totalListeningTime
+    val topAlbumOnRepeat: String get() = extra.topAlbumOnRepeat
+    val hoursMinutesFormat: String get() = extra.hoursMinutesFormat
+    val noStatsYet: String get() = extra.noStatsYet
+    val artistTopTracks: String get() = extra.artistTopTracks
+    val artistAlbums: String get() = extra.artistAlbums
+    val artistSinglesAndEPs: String get() = extra.artistSinglesAndEPs
+    val artistPlayAll: String get() = extra.artistPlayAll
+    val artistShuffle: String get() = extra.artistShuffle
+    val nativeGoogleSignIn: String get() = extra.nativeGoogleSignIn
+    val webGoogleSignIn: String get() = extra.webGoogleSignIn
+    val selectGoogleAccount: String get() = extra.selectGoogleAccount
 }
 
 class ExtraStrings(
@@ -325,14 +339,28 @@ class ExtraStrings(
     val confirm: String,
     val selectedCount: String,
     val backgroundPlaybackTitle: String,
-    val backgroundPlaybackDesc: String
+    val backgroundPlaybackDesc: String,
+    val mostPlayedTrack: String,
+    val playsCountFormat: String,
+    val totalListeningTime: String,
+    val topAlbumOnRepeat: String,
+    val hoursMinutesFormat: String,
+    val noStatsYet: String,
+    val artistTopTracks: String,
+    val artistAlbums: String,
+    val artistSinglesAndEPs: String,
+    val artistPlayAll: String,
+    val artistShuffle: String,
+    val nativeGoogleSignIn: String,
+    val webGoogleSignIn: String,
+    val selectGoogleAccount: String
 )
 
 
 val StringsRu = AppStrings(
-    navLibrary = "Медиатека",
+    navLibrary = "Треки",
     navYtMusic = "YouTube Music",
-    navPlaylists = "Плейлисты",
+    navPlaylists = "Библиотека",
     navSettings = "Настройки",
     nowPlaying = "Сейчас играет",
     nowPlayingTitle = "Сейчас играет",
@@ -495,7 +523,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "Версия 1.6.3.2",
+    appVersion = "Версия 1.6.4",
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -608,14 +636,28 @@ val StringsRu = AppStrings(
         confirm = "Подтвердить",
         selectedCount = "Выбрано",
         backgroundPlaybackTitle = "Работа в фоне без ограничений",
-        backgroundPlaybackDesc = "Отключить оптимизацию батареи, чтобы система не останавливала музыку в фоне"
+        backgroundPlaybackDesc = "Отключить оптимизацию батареи, чтобы система не останавливала музыку в фоне",
+        mostPlayedTrack = "Частый трек",
+        playsCountFormat = "%d воспр.",
+        totalListeningTime = "Время музыки",
+        topAlbumOnRepeat = "Любимый альбом",
+        hoursMinutesFormat = "%d ч %d мин",
+        noStatsYet = "Пока нет данных",
+        artistTopTracks = "Популярные треки",
+        artistAlbums = "Альбомы",
+        artistSinglesAndEPs = "Синглы и EP",
+        artistPlayAll = "Слушать",
+        artistShuffle = "Перемешать",
+        nativeGoogleSignIn = "Войти через Google",
+        webGoogleSignIn = "Войти через браузер",
+        selectGoogleAccount = "Выберите аккаунт Google"
     )
 )
 
 val StringsEn = AppStrings(
-    navLibrary = "Library",
+    navLibrary = "Tracks",
     navYtMusic = "YouTube Music",
-    navPlaylists = "Playlists",
+    navPlaylists = "Library",
     navSettings = "Settings",
     nowPlaying = "Now Playing",
     nowPlayingTitle = "Now Playing",
@@ -778,7 +820,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "Version 1.6.3.2",
+    appVersion = "Version 1.6.4",
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -891,14 +933,28 @@ val StringsEn = AppStrings(
         confirm = "Confirm",
         selectedCount = "Selected",
         backgroundPlaybackTitle = "Unrestricted background playback",
-        backgroundPlaybackDesc = "Disable battery optimization so system won't stop playback in background"
+        backgroundPlaybackDesc = "Disable battery optimization so system won't stop playback in background",
+        mostPlayedTrack = "Top Track",
+        playsCountFormat = "%d plays",
+        totalListeningTime = "Listening Time",
+        topAlbumOnRepeat = "Top Album",
+        hoursMinutesFormat = "%d h %d m",
+        noStatsYet = "No stats yet",
+        artistTopTracks = "Top Tracks",
+        artistAlbums = "Albums",
+        artistSinglesAndEPs = "Singles & EPs",
+        artistPlayAll = "Play All",
+        artistShuffle = "Shuffle",
+        nativeGoogleSignIn = "Sign in with Google",
+        webGoogleSignIn = "Sign in via Browser",
+        selectGoogleAccount = "Select Google Account"
     )
 )
 
 val StringsUk = AppStrings(
-    navLibrary = "Медіатека",
+    navLibrary = "Треки",
     navYtMusic = "YouTube Music",
-    navPlaylists = "Плейлісти",
+    navPlaylists = "Бібліотека",
     navSettings = "Параметри",
     nowPlaying = "Зараз грає",
     nowPlayingTitle = "Зараз грає",
@@ -1061,7 +1117,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "Версія 1.6.3.2",
+    appVersion = "Версія 1.6.4",
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1174,7 +1230,21 @@ val StringsUk = AppStrings(
         confirm = "Підтвердити",
         selectedCount = "Обрано",
         backgroundPlaybackTitle = "Робота у фоні без обмежень",
-        backgroundPlaybackDesc = "Вимкнути оптимізацію батареї, щоб система не призупиняла музику у фоні"
+        backgroundPlaybackDesc = "Вимкнути оптимізацію батареї, щоб система не призупиняла музику у фоні",
+        mostPlayedTrack = "Топ трек",
+        playsCountFormat = "%d відтвор.",
+        totalListeningTime = "Час прослуховування",
+        topAlbumOnRepeat = "Улюблений альбом",
+        hoursMinutesFormat = "%d год %d хв",
+        noStatsYet = "Ще немає даних",
+        artistTopTracks = "Популярні треки",
+        artistAlbums = "Альбоми",
+        artistSinglesAndEPs = "Сингли та EP",
+        artistPlayAll = "Слухати",
+        artistShuffle = "Перемішати",
+        nativeGoogleSignIn = "Увійти через Google",
+        webGoogleSignIn = "Увійти через браузер",
+        selectGoogleAccount = "Оберіть обліковий запис Google"
     )
 )
 
