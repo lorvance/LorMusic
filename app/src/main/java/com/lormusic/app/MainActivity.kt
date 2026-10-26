@@ -800,6 +800,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         val albums = playerViewModel.getArtistAlbums(selectedArtist)
         val singles = playerViewModel.getArtistSingles(selectedArtist)
 
+        val effectiveDur = (if (durationMs > 0) durationMs else currentSong?.durationMs ?: 1L).coerceAtLeast(1L)
+        val playerProgress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f)
+
         ArtistProfileDialog(
             artistName = selectedArtist,
             allArtistSongs = artistSongs,
@@ -809,12 +812,19 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             currentSong = currentSong,
             isPlaying = isPlaying,
             isFavorite = playerViewModel::isFavorite,
+            progress = playerProgress,
             initialAvatarUrl = artistData?.avatarUrl,
+            enableBlur = effectiveEnableBlur,
+            useLiquidGlass = effectiveUseLiquidGlass,
             onDismiss = playerViewModel::closeArtistProfile,
             onPlaySongAt = { list, idx -> playerViewModel.setQueueAndPlay(list, idx, false) },
             onPlayAll = { list, shuffle -> playerViewModel.setQueueAndPlay(list, 0, shuffle) },
             onToggleFavorite = playerViewModel::toggleFavorite,
-            onSongMoreClick = { songForActionsSheet = it }
+            onSongMoreClick = { songForActionsSheet = it },
+            onTogglePlay = playerViewModel::togglePlayPause,
+            onPrevious = playerViewModel::skipPrevious,
+            onNext = playerViewModel::skipNext,
+            onOpenPlayer = { showNowPlaying = true }
         )
     }
 

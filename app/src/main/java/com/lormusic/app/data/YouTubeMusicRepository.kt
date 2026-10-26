@@ -810,31 +810,38 @@ object YouTubeMusicRepository {
             }
             .take(20)
 
+        val isSinglePredicate: (Song) -> Boolean = { song ->
+            val alb = song.album.trim()
+            val title = song.title.trim()
+            alb.isBlank() ||
+                alb.equals("Unknown", ignoreCase = true) ||
+                alb.equals("YouTube Music", ignoreCase = true) ||
+                alb.equals(clean, ignoreCase = true) ||
+                alb.equals(title, ignoreCase = true) ||
+                alb.contains("Single", ignoreCase = true) ||
+                alb.contains(" - Single", ignoreCase = true) ||
+                alb.contains(" - EP", ignoreCase = true) ||
+                alb.contains("(EP)", ignoreCase = true) ||
+                alb.equals("EP", ignoreCase = true) ||
+                title.contains(" - Single", ignoreCase = true) ||
+                title.contains("(Single)", ignoreCase = true)
+        }
+
         val albumsRaw = searchYtMusic("$clean album", limit = 25, cookie = cookie)
-        val groupedAlbums = (topTracksRaw + albumsRaw)
-            .filter {
-                it.album.isNotBlank() &&
-                    !it.album.equals("Unknown", ignoreCase = true) &&
-                    !it.album.equals("YouTube Music", ignoreCase = true) &&
-                    !it.album.equals(it.title, ignoreCase = true)
-            }
+        val allArtistTracks = (topTracksRaw + albumsRaw).distinctBy { it.id }
+
+        val groupedAlbums = allArtistTracks
+            .filter { !isSinglePredicate(it) }
             .groupBy { it.album }
-            .filter { it.value.isNotEmpty() }
+            .filter { it.value.size >= 2 || (it.value.size == 1 && !it.key.contains("Single", ignoreCase = true) && !it.key.equals(it.value.first().title, ignoreCase = true)) }
+
+        val albumTrackIds = groupedAlbums.values.flatten().map { it.id }.toSet()
 
         val singlesRaw = searchYtMusic("$clean single", limit = 20, cookie = cookie)
-        val knownAlbumNames = groupedAlbums.keys.toSet()
-        val singlesList = (singlesRaw + topTracksRaw)
-            .filter { song ->
-                song.album.isBlank() ||
-                    song.album.equals("Unknown", ignoreCase = true) ||
-                    song.album.equals("YouTube Music", ignoreCase = true) ||
-                    song.album.equals(song.title, ignoreCase = true) ||
-                    song.album.contains("Single", ignoreCase = true) ||
-                    song.album.contains("EP", ignoreCase = true) ||
-                    !knownAlbumNames.contains(song.album)
-            }
+        val singlesList = (singlesRaw + allArtistTracks)
+            .filter { !albumTrackIds.contains(it.id) || isSinglePredicate(it) }
             .distinctBy { it.title.lowercase() }
-            .take(15)
+            .take(20)
 
         val avatar = TagFixEngine.fetchArtistAvatar(clean)
             ?: sortedTopTracks.firstOrNull { !it.albumArtUri.isNullOrBlank() }?.albumArtUri
@@ -846,6 +853,22 @@ object YouTubeMusicRepository {
             albums = groupedAlbums,
             singles = singlesList
         )
+    }
+
+    suspend fun fetchAlbumTracks(
+        artist: String,
+        album: String,
+        cookie: String? = null
+    ): List<Song> = withContext(Dispatchers.IO) {
+        val cleanArtist = artist.trim()
+        val cleanAlbum = album.trim()
+        if (cleanAlbum.isBlank()) return@withContext emptyList()
+        val results = searchYtMusic("$cleanArtist $cleanAlbum", limit = 30, cookie = cookie)
+        results.filter { song ->
+            song.album.equals(cleanAlbum, ignoreCase = true) ||
+                song.album.contains(cleanAlbum, ignoreCase = true) ||
+                (song.artist.contains(cleanArtist, ignoreCase = true) && !song.title.contains(" - Single", ignoreCase = true))
+        }
     }
 
     fun getShareUrl(song: Song): String? {

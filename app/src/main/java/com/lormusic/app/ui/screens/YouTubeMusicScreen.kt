@@ -42,6 +42,7 @@ import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -1928,7 +1929,7 @@ private fun YtMyWaveTab(
         defaultSecondary = themeSecondary
     )
 
-    var wavePhase by remember { mutableFloatStateOf(0f) }
+    var wavePhase by rememberSaveable { mutableFloatStateOf(0f) }
     LaunchedEffect(isPlaying, useMyWaveCoverGradient) {
         if (isPlaying && useMyWaveCoverGradient) {
             var lastTimeNanos = withFrameNanos { it }
@@ -1993,7 +1994,7 @@ private fun YtMyWaveTab(
                 contentPadding = PaddingValues(
                     start = 16.dp,
                     end = 16.dp,
-                    top = statusBarTop + 76.dp,
+                    top = statusBarTop + 16.dp,
                     bottom = 225.dp
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
@@ -2250,113 +2251,6 @@ private fun YtMyWaveTab(
                         onDownload = { onDownloadSong(song) },
                         onMoreClick = { onSongMoreClick(song) }
                     )
-                }
-            }
-        }
-
-        Box(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .clipToBounds()
-        ) {
-            val topScrimColor = MaterialTheme.colorScheme.background
-            if (enableBlur) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .hazeEffect(state = hazeState) {
-                            blurEnabled = true
-                            backgroundColor = topScrimColor
-                            blurRadius = 24.dp
-                            tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
-                        }
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    topScrimColor.copy(alpha = 0.85f),
-                                    topScrimColor.copy(alpha = 0.50f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    topScrimColor.copy(alpha = 0.96f),
-                                    topScrimColor.copy(alpha = 0.78f),
-                                    topScrimColor.copy(alpha = 0.42f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            }
-
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Box(
-                    modifier = Modifier
-                        .height(46.dp)
-                        .clip(RoundedCornerShape(23.dp))
-                        .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                        .padding(horizontal = 16.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.GraphicEq,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(20.dp)
-                        )
-                        Text(
-                            text = strings.myWaveTitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .height(46.dp)
-                        .clip(RoundedCornerShape(23.dp))
-                        .clickable { onRefreshWave(moods.find { it.first == selectedMood }?.second) }
-                        .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(6.dp)
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Refresh,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary,
-                            modifier = Modifier.size(18.dp)
-                        )
-                        Text(
-                            text = "${waveSongs.size.coerceAtLeast(50)} треков",
-                            style = MaterialTheme.typography.labelLarge,
-                            fontWeight = FontWeight.Bold
-                        )
-                    }
                 }
             }
         }

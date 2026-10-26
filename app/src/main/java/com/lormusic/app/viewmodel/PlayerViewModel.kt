@@ -1450,21 +1450,41 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.setClassicLibraryDesign(false)
     }
 
+    private fun isSingleTrack(song: Song): Boolean {
+        val alb = song.album.trim()
+        val title = song.title.trim()
+        val art = song.artist.trim()
+        return alb.isBlank() ||
+            alb.equals("Unknown", ignoreCase = true) ||
+            alb.equals("YouTube Music", ignoreCase = true) ||
+            alb.equals(title, ignoreCase = true) ||
+            alb.equals(art, ignoreCase = true) ||
+            alb.contains("Single", ignoreCase = true) ||
+            alb.contains(" - Single", ignoreCase = true) ||
+            alb.contains(" - EP", ignoreCase = true) ||
+            alb.contains("(EP)", ignoreCase = true) ||
+            alb.equals("EP", ignoreCase = true) ||
+            title.contains(" - Single", ignoreCase = true) ||
+            title.contains("(Single)", ignoreCase = true)
+    }
+
     fun openArtistProfile(artist: String) {
         val trimmed = artist.trim()
         if (trimmed.isNotBlank()) {
             selectedArtistProfile.value = trimmed
             val localSongs = (allSongs.value + savedYtSongs.value).filter { it.artist.contains(trimmed, ignoreCase = true) }
-            val localAlbums = localSongs
-                .filter { it.album.isNotBlank() && it.album != "Unknown" && it.album != "YouTube Music" }
+            val localGrouped = localSongs
+                .filter { !isSingleTrack(it) }
                 .groupBy { it.album }
-            val localSingles = localSongs.filter { !localAlbums.keys.contains(it.album) }
+                .filter { it.value.size >= 2 || (it.value.size == 1 && !it.key.contains("Single", ignoreCase = true)) }
+            val albumSongIds = localGrouped.values.flatten().map { it.id }.toSet()
+            val localSingles = localSongs.filter { !albumSongIds.contains(it.id) || isSingleTrack(it) }
 
             currentArtistProfileData.value = com.lormusic.app.data.ArtistProfileData(
                 artistName = trimmed,
                 avatarUrl = null,
                 topTracks = localSongs.take(20),
-                albums = localAlbums,
+                albums = localGrouped,
                 singles = localSingles
             )
 
@@ -1473,11 +1493,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 val data = com.lormusic.app.data.YouTubeMusicRepository.fetchArtistProfile(trimmed, cookie = ytMusicCookie.value)
                 if (selectedArtistProfile.value == trimmed) {
                     val mergedTopTracks = (data.topTracks + localSongs).distinctBy { it.id }.take(20)
-                    val mergedAlbums = (data.albums + localAlbums)
+                    val mergedAlbums = mutableMapOf<String, List<Song>>()
+                    data.albums.forEach { (name, songs) -> mergedAlbums[name] = songs }
+                    localGrouped.forEach { (name, songs) ->
+                        val existing = mergedAlbums[name] ?: emptyList()
+                        mergedAlbums[name] = (existing + songs).distinctBy { it.id }
+                    }
                     val mergedSingles = (data.singles + localSingles).distinctBy { it.title.lowercase() }
                     currentArtistProfileData.value = data.copy(
                         topTracks = if (mergedTopTracks.isNotEmpty()) mergedTopTracks else localSongs.take(20),
-                        albums = if (mergedAlbums.isNotEmpty()) mergedAlbums else localAlbums,
+                        albums = if (mergedAlbums.isNotEmpty()) mergedAlbums else localGrouped,
                         singles = if (mergedSingles.isNotEmpty()) mergedSingles else localSingles
                     )
                     isArtistProfileLoading.value = false
@@ -1520,8 +1545,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             return profileData.albums
         }
         return getArtistSongs(artist)
-            .filter { it.album.isNotBlank() && it.album != "Unknown" && it.album != "YouTube Music" }
+            .filter { !isSingleTrack(it) }
             .groupBy { it.album }
+            .filter { it.value.size >= 2 || (it.value.size == 1 && !it.key.contains("Single", ignoreCase = true)) }
     }
 
     fun getArtistSingles(artist: String): List<Song> {
@@ -1529,9 +1555,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (profileData != null && profileData.artistName.equals(artist.trim(), ignoreCase = true) && profileData.singles.isNotEmpty()) {
             return profileData.singles
         }
-        val allGrouped = getArtistAlbums(artist)
-        val albumsOnly = allGrouped.filter { it.value.size >= 2 }.keys
-        return getArtistSongs(artist).filter { !albumsOnly.contains(it.album) }
+        val albumSongIds = getArtistAlbums(artist).values.flatten().map { it.id }.toSet()
+        return getArtistSongs(artist).filter { !albumSongIds.contains(it.id) || isSingleTrack(it) }
     }
 
     fun setGoogleAccount(displayName: String, email: String, avatarUrl: String? = null) {
@@ -1597,7 +1622,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.4.2", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.6.4.3", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
@@ -1605,9 +1630,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.4.2 (27))"
-                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.4.2 (27))"
-                        else -> "У вас установлена последняя версия (1.6.4.2 (27))"
+                        AppLanguage.EN -> "You have the latest version installed (1.6.4.3 (32))"
+                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.4.3 (32))"
+                        else -> "У вас установлена последняя версия (1.6.4.3 (32))"
                     }
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message

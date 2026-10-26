@@ -314,6 +314,7 @@ val tagFixTitle: String,
     val classicRemovedTitle: String get() = extra.classicRemovedTitle
     val classicRemovedMessage: String get() = extra.classicRemovedMessage
     val classicRemovedConfirm: String get() = extra.classicRemovedConfirm
+    val tracksInAlbum: String get() = extra.tracksInAlbum
 }
 
 class ExtraStrings(
@@ -363,7 +364,8 @@ class ExtraStrings(
     val translatingLyrics: String,
     val classicRemovedTitle: String,
     val classicRemovedMessage: String,
-    val classicRemovedConfirm: String
+    val classicRemovedConfirm: String,
+    val tracksInAlbum: String
 )
 
 
@@ -533,7 +535,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "Версия 1.6.4.2 (27)",
+    appVersion = "Версия 1.6.4.3 (32)",
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -665,7 +667,8 @@ val StringsRu = AppStrings(
         translatingLyrics = "Перевод...",
         classicRemovedTitle = "Классический дизайн удален",
         classicRemovedMessage = "Классический дизайн медиатеки был удален из приложения из-за ограниченного функционала и в рамках подготовки к обновлению 1.7.0.",
-        classicRemovedConfirm = "Понятно"
+        classicRemovedConfirm = "Понятно",
+        tracksInAlbum = "Треки в альбоме"
     )
 )
 
@@ -835,7 +838,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "Version 1.6.4.2 (27)",
+    appVersion = "Version 1.6.4.3 (32)",
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -967,7 +970,8 @@ val StringsEn = AppStrings(
         translatingLyrics = "Translating...",
         classicRemovedTitle = "Classic Design Removed",
         classicRemovedMessage = "The classic library design has been removed from the app due to limited functionality and in preparation for update 1.7.0.",
-        classicRemovedConfirm = "Got it"
+        classicRemovedConfirm = "Got it",
+        tracksInAlbum = "Tracks in album"
     )
 )
 
@@ -1137,7 +1141,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "Версія 1.6.4.2 (27)",
+    appVersion = "Версія 1.6.4.3 (32)",
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1269,7 +1273,8 @@ val StringsUk = AppStrings(
         translatingLyrics = "Переклад...",
         classicRemovedTitle = "Класичний дизайн видалено",
         classicRemovedMessage = "Класичний дизайн медіатеки було видалено з додатку через обмежений функціонал та в рамках підготовки до оновлення 1.7.0.",
-        classicRemovedConfirm = "Зрозуміло"
+        classicRemovedConfirm = "Зрозуміло",
+        tracksInAlbum = "Треки в альбомі"
     )
 )
 

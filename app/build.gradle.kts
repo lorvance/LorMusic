@@ -12,8 +12,8 @@ android {
         applicationId = "com.lorvance.lormusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 27
-        versionName = "1.6.4.2 (27)"
+        versionCode = 32
+        versionName = "1.6.4.3 (32)"
     }
 
     signingConfigs {
