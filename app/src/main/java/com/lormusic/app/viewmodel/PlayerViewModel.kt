@@ -90,6 +90,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val selectedSort = mutableStateOf(prefs.getSortOption())
     val selectedFilter = mutableStateOf(prefs.getLibraryFilter())
     val selectedAppIcon = mutableStateOf(prefs.getAppIconOption())
+    val isHalloweenMode = mutableStateOf(prefs.getHalloweenMode())
+    val halloweenCandies = mutableStateOf(prefs.getHalloweenCandies())
+    val showHalloweenGreeting = mutableStateOf(false)
+    val triggerHalloweenTrickJumpscare = mutableStateOf(false)
 
     val isYtMusicMode = mutableStateOf(false)
     val activeYtTab = mutableStateOf(YtMusicTab.HOME)
@@ -106,6 +110,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val ytMusicCookie = mutableStateOf(prefs.getYtMusicCookie())
     val googleAccount = mutableStateOf<GoogleAccountProfile?>(loadInitialGoogleProfile())
     private var ytSearchJob: Job? = null
+
+    val isSoundCloudMode = mutableStateOf(false)
+    val activeScTab = mutableStateOf(com.lormusic.app.ui.components.ScTab.HOME)
+    val scFavoriteIds = mutableStateOf(prefs.getScFavoriteIds())
+    val unifiedFavoriteIds = mutableStateOf(prefs.getUnifiedFavoriteIds())
+    val savedScSongs = mutableStateOf(prefs.getSavedScSongs())
+    val soundCloudProfile = mutableStateOf<SoundCloudUserProfile?>(prefs.getScProfile())
+    val soundCloudAuthToken = mutableStateOf<String?>(prefs.getScAuthToken())
+    val soundCloudSearchResults = mutableStateOf<List<Song>>(emptyList())
+    val soundCloudCharts = mutableStateOf<List<Song>>(emptyList())
+    val soundCloudLikes = mutableStateOf<List<Song>>(emptyList())
+    val isLoadingSoundCloud = mutableStateOf(false)
+    val isSearchingSoundCloud = mutableStateOf(false)
+    private var scSearchJob: Job? = null
 
     val updateManager = UpdateManager(application)
     val updateState = mutableStateOf<UpdateState>(UpdateState.Idle)
@@ -209,6 +227,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         exoPlayer.addListener(playerListener)
         exoPlayer.setPlaybackSpeed(playbackSpeed.value)
         startPlaybackServiceIfNeeded()
+        checkAndEnforceHalloweenExpiry()
+        checkHalloweenAutoTrigger()
 
         viewModelScope.launch {
             val context = getApplication<Application>()
@@ -241,6 +261,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val existingCookie = ytMusicCookie.value
             if (!existingCookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(existingCookie)) {
                 syncGoogleLibrary()
+            }
+
+            val existingScToken = soundCloudAuthToken.value
+            if (!existingScToken.isNullOrBlank()) {
+                val prof = prefs.getScProfile()
+                if (existingScToken == "guest" || prof?.username == "Гость") {
+                    soundCloudAuthToken.value = null
+                    soundCloudProfile.value = null
+                    prefs.saveScAuthToken(null)
+                    prefs.saveScProfile(null)
+                    SoundCloudRepository.currentAuthToken = null
+                    SoundCloudRepository.currentProfile = null
+                } else {
+                    SoundCloudRepository.currentAuthToken = existingScToken
+                    if (prof != null) {
+                        SoundCloudRepository.currentProfile = prof
+                        soundCloudProfile.value = prof
+                    }
+                }
             }
 
             if (autoTagFixEnabled.value) {
@@ -400,6 +439,77 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun checkAndEnforceHalloweenExpiry() {
+        if (AppIconOption.isHalloweenExpired()) {
+            if (selectedAppIcon.value == AppIconOption.HALLOWEEN) {
+                setAppIconOption(AppIconOption.REGULAR)
+                if (!prefs.getHalloweenExpiredNotified()) {
+                    prefs.saveHalloweenExpiredNotified(true)
+                    val currentStrings = resolveStrings(appLanguage.value)
+                    statusMessage.value = currentStrings.halloweenEndedNotice
+                }
+            }
+            if (halloweenCandies.value) {
+                setHalloweenCandies(false)
+            }
+            if (isHalloweenMode.value) {
+                setHalloweenMode(false)
+            }
+        }
+    }
+
+    fun setHalloweenMode(enabled: Boolean) {
+        isHalloweenMode.value = enabled
+        prefs.saveHalloweenMode(enabled)
+    }
+
+    fun setHalloweenCandies(enabled: Boolean) {
+        halloweenCandies.value = enabled
+        prefs.saveHalloweenCandies(enabled)
+    }
+
+    fun triggerHalloweenTest() {
+        showHalloweenGreeting.value = true
+    }
+
+    fun selectHalloweenTreat() {
+        showHalloweenGreeting.value = false
+        setHalloweenCandies(true)
+        setHalloweenMode(true)
+        val s = resolveStrings(appLanguage.value)
+        statusMessage.value = s.halloweenTreatSelected
+    }
+
+    fun selectHalloweenTrick() {
+        showHalloweenGreeting.value = false
+        triggerHalloweenTrickJumpscare.value = true
+    }
+
+    fun dismissHalloweenGreeting() {
+        showHalloweenGreeting.value = false
+    }
+
+    fun checkHalloweenAutoTrigger() {
+        if (AppIconOption.isHalloweenExpired()) {
+            checkAndEnforceHalloweenExpiry()
+            return
+        }
+        val cal = java.util.Calendar.getInstance()
+        val month = cal.get(java.util.Calendar.MONTH)
+        val day = cal.get(java.util.Calendar.DAY_OF_MONTH)
+        if (month == java.util.Calendar.OCTOBER && day == 31) {
+            if (!isHalloweenMode.value) {
+                setHalloweenMode(true)
+            }
+            val year = cal.get(java.util.Calendar.YEAR)
+            val todayKey = "$year-10-31"
+            if (!prefs.hasSeenHalloweenGreeting(todayKey)) {
+                prefs.saveSeenHalloweenGreeting(todayKey)
+                showHalloweenGreeting.value = true
+            }
+        }
+    }
+
     fun enterYtMusicMode() {
         isYtMusicMode.value = true
         activeYtTab.value = YtMusicTab.HOME
@@ -420,6 +530,25 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun exitYtMusicMode() {
         isYtMusicMode.value = false
+    }
+
+    fun enterSoundCloudMode() {
+        isSoundCloudMode.value = true
+        activeScTab.value = com.lormusic.app.ui.components.ScTab.HOME
+        if (soundCloudCharts.value.isEmpty()) {
+            loadSoundCloudCharts()
+        }
+    }
+
+    fun exitSoundCloudMode() {
+        isSoundCloudMode.value = false
+    }
+
+    fun selectScTab(tab: com.lormusic.app.ui.components.ScTab) {
+        activeScTab.value = tab
+        if (tab == com.lormusic.app.ui.components.ScTab.CHARTS && soundCloudCharts.value.isEmpty()) {
+            loadSoundCloudCharts()
+        }
     }
 
     fun selectYtTab(tab: YtMusicTab) {
@@ -550,6 +679,51 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     AppLanguage.EN -> "Failed to download track «${song.title}»"
                     AppLanguage.UK -> "Не вдалося завантажити трек «${song.title}»"
                     else -> "Не удалось скачать трек «${song.title}»"
+                }
+            }
+        }
+    }
+
+    fun downloadScSongWithTags(song: Song) {
+        if (downloadingSongIds.value.contains(song.id)) return
+        viewModelScope.launch {
+            downloadingSongIds.value = downloadingSongIds.value + song.id
+            downloadingSongs.value = downloadingSongs.value + (song.id to song)
+            downloadProgress.value = downloadProgress.value + (song.id to 0f)
+            val result = SoundCloudRepository.downloadTrackToPhoneWithTags(getApplication(), song) { frac ->
+                downloadProgress.value = downloadProgress.value + (song.id to frac)
+            }
+            downloadingSongIds.value = downloadingSongIds.value - song.id
+            downloadingSongs.value = downloadingSongs.value - song.id
+            downloadProgress.value = downloadProgress.value - song.id
+
+            if (result != null) {
+                val (downloaded, override) = result
+                val updatedOverrides = tagOverrides.value.toMutableMap()
+                updatedOverrides[override.songId] = override
+                prefs.saveTagOverrides(updatedOverrides)
+                tagOverrides.value = updatedOverrides
+
+                rawAllSongs = listOf(downloaded) + rawAllSongs.filterNot { it.id == downloaded.id }
+                applyTagOverridesToState(updatedOverrides)
+                localSongsCount.value = allSongs.value.count { it.isLocal }
+
+                val updatedSaved = listOf(downloaded) + savedScSongs.value.filterNot { it.id == song.id || it.id == downloaded.id }
+                savedScSongs.value = updatedSaved
+                prefs.saveScSongs(updatedSaved)
+                if (autoTagFixEnabled.value) {
+                    checkBrokenTracksForAutoTagFix()
+                }
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Track «${downloaded.title}» downloaded locally from SoundCloud with tags and artwork!"
+                    AppLanguage.UK -> "Трек «${downloaded.title}» завантажено локально з SoundCloud з тегами та обкладинкою!"
+                    else -> "Трек «${downloaded.title}» скачан локально из SoundCloud со всеми тегами и обложкой!"
+                }
+            } else {
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Failed to download track «${song.title}» from SoundCloud"
+                    AppLanguage.UK -> "Не вдалося завантажити трек «${song.title}» з SoundCloud"
+                    else -> "Не удалось скачать трек «${song.title}» из SoundCloud"
                 }
             }
         }
@@ -722,7 +896,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun rebuildPlaylists(songsPool: List<Song>) {
-        val songMap = (songsPool + savedYtSongs.value).associateBy { it.id }
+        val songMap = (songsPool + savedYtSongs.value + savedScSongs.value).associateBy { it.id }
         val saved = prefs.getCustomPlaylists()
         if (saved == null) {
             val initial = SampleData.playlists.map { pl ->
@@ -736,7 +910,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     id = sp.id,
                     name = sp.name,
                     songs = sp.songIds.mapNotNull { songMap[it] },
-                    coverColorSeed = sp.coverColorSeed
+                    coverColorSeed = sp.coverColorSeed,
+                    isUnified = sp.isUnified
                 )
             }
         }
@@ -749,30 +924,44 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                     id = pl.id,
                     name = pl.name,
                     songIds = pl.songs.map { it.id },
-                    coverColorSeed = pl.coverColorSeed
+                    coverColorSeed = pl.coverColorSeed,
+                    isUnified = pl.isUnified
                 )
             }
         )
     }
 
     fun getAllPlaylistsWithFavorites(): List<Playlist> {
-        val pool = allSongs.value.distinctBy { it.id }
+        val pool = (allSongs.value + savedYtSongs.value + savedScSongs.value).distinctBy { it.id }
+        val strings = resolveStrings(appLanguage.value)
         val favSongs = pool.filter { localFavoriteIds.value.contains(it.id) }
         val favPlaylist = Playlist(
             id = "sys_favorites",
-            name = resolveStrings(appLanguage.value).favorites,
+            name = strings.favorites,
             songs = favSongs,
             coverColorSeed = 777,
-            isSystem = true
+            isSystem = true,
+            isUnified = false
         )
-        return listOf(favPlaylist) + customPlaylists.value
+        val unifiedFavSongs = pool.filter {
+            unifiedFavoriteIds.value.contains(it.id)
+        }
+        val unifiedFavPlaylist = Playlist(
+            id = "sys_unified_favorites",
+            name = strings.unifiedFavorites,
+            songs = unifiedFavSongs,
+            coverColorSeed = 888,
+            isSystem = true,
+            isUnified = true
+        )
+        return listOf(favPlaylist, unifiedFavPlaylist) + customPlaylists.value
     }
 
     fun isFavorite(songId: String): Boolean {
-        return if (songId.startsWith("yt_")) {
-            ytFavoriteIds.value.contains(songId)
-        } else {
-            localFavoriteIds.value.contains(songId)
+        return when {
+            songId.startsWith("yt_") -> ytFavoriteIds.value.contains(songId)
+            songId.startsWith("sc_") -> scFavoriteIds.value.contains(songId)
+            else -> localFavoriteIds.value.contains(songId)
         }
     }
 
@@ -922,42 +1111,63 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun toggleFavorite(song: Song) {
         val isYt = song.isRemoteYt || song.id.startsWith("yt_")
-        val currentFavs = if (isYt) ytFavoriteIds.value else localFavoriteIds.value
+        val isSc = song.isRemoteSc || song.id.startsWith("sc_")
+        val currentFavs = when {
+            isYt -> ytFavoriteIds.value
+            isSc -> scFavoriteIds.value
+            else -> localFavoriteIds.value
+        }
         val updated = currentFavs.toMutableSet()
         val cookie = ytMusicCookie.value
         val added = if (updated.contains(song.id)) {
             updated.remove(song.id)
             prefs.addUnfavoritedSongId(song.id)
-            prefs.addUnfavoritedSongId(song.id.removePrefix("yt_"))
-            if (!cookie.isNullOrBlank() && isYt) {
-                viewModelScope.launch(Dispatchers.IO) {
-                    YouTubeMusicRepository.removeLikeFromYtMusic(song.id, cookie)
+            if (isYt) {
+                prefs.addUnfavoritedSongId(song.id.removePrefix("yt_"))
+                if (!cookie.isNullOrBlank()) {
+                    viewModelScope.launch(Dispatchers.IO) {
+                        YouTubeMusicRepository.removeLikeFromYtMusic(song.id, cookie)
+                    }
                 }
+            } else if (isSc) {
+                soundCloudLikes.value = soundCloudLikes.value.filterNot { it.id == song.id }
             }
             false
         } else {
             updated.add(song.id)
             prefs.removeUnfavoritedSongId(song.id)
-            prefs.removeUnfavoritedSongId(song.id.removePrefix("yt_"))
-            if (!cookie.isNullOrBlank() && isYt) {
-                viewModelScope.launch(Dispatchers.IO) {
-                    YouTubeMusicRepository.likeYtMusicVideo(song.id, cookie)
-                }
-            }
             if (isYt) {
+                prefs.removeUnfavoritedSongId(song.id.removePrefix("yt_"))
+                if (!cookie.isNullOrBlank()) {
+                    viewModelScope.launch(Dispatchers.IO) {
+                        YouTubeMusicRepository.likeYtMusicVideo(song.id, cookie)
+                    }
+                }
                 val saved = (listOf(song) + savedYtSongs.value).distinctBy { it.id }
                 savedYtSongs.value = saved
                 prefs.saveYtSongs(saved)
+            } else if (isSc) {
+                val saved = (listOf(song) + savedScSongs.value).distinctBy { it.id }
+                savedScSongs.value = saved
+                prefs.saveScSongs(saved)
+                soundCloudLikes.value = (listOf(song) + soundCloudLikes.value).distinctBy { it.id }
             }
             true
         }
-        if (isYt) {
-            ytFavoriteIds.value = updated
-            prefs.saveYtFavoriteIds(updated)
-        } else {
-            localFavoriteIds.value = updated
-            favoriteIds.value = updated
-            prefs.saveLocalFavoriteIds(updated)
+        when {
+            isYt -> {
+                ytFavoriteIds.value = updated
+                prefs.saveYtFavoriteIds(updated)
+            }
+            isSc -> {
+                scFavoriteIds.value = updated
+                prefs.saveScFavoriteIds(updated)
+            }
+            else -> {
+                localFavoriteIds.value = updated
+                favoriteIds.value = updated
+                prefs.saveLocalFavoriteIds(updated)
+            }
         }
         statusMessage.value = when (appLanguage.value) {
             AppLanguage.EN -> if (added) "Added to Favorites" else "Removed from Favorites"
@@ -966,22 +1176,23 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun createPlaylist(name: String, initialSongs: List<Song> = emptyList()) {
+    fun createPlaylist(name: String, initialSongs: List<Song> = emptyList(), isUnified: Boolean = false) {
         val cleanName = name.trim()
         if (cleanName.isEmpty()) return
         val newPlaylist = Playlist(
-            id = "pl_${System.currentTimeMillis()}",
+            id = if (isUnified) "pl_uni_${System.currentTimeMillis()}" else "pl_${System.currentTimeMillis()}",
             name = cleanName,
             songs = initialSongs,
-            coverColorSeed = cleanName.hashCode()
+            coverColorSeed = cleanName.hashCode(),
+            isUnified = isUnified
         )
         val updated = customPlaylists.value + newPlaylist
         customPlaylists.value = updated
         persistPlaylists(updated)
         statusMessage.value = when (appLanguage.value) {
-            AppLanguage.EN -> "Playlist «$cleanName» created"
-            AppLanguage.UK -> "Плейліст «$cleanName» створено"
-            else -> "Плейлист «$cleanName» создан"
+            AppLanguage.EN -> "${if (isUnified) "Unified playlist" else "Playlist"} «$cleanName» created"
+            AppLanguage.UK -> "${if (isUnified) "Спільний плейліст" else "Плейліст"} «$cleanName» створено"
+            else -> "${if (isUnified) "Общий плейлист" else "Плейлист"} «$cleanName» создан"
         }
     }
 
@@ -997,6 +1208,38 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun addSongToPlaylist(playlistId: String, song: Song) {
+        if (playlistId == "sys_unified_favorites") {
+            val current = unifiedFavoriteIds.value.toMutableSet()
+            if (current.contains(song.id)) {
+                current.remove(song.id)
+                unifiedFavoriteIds.value = current
+                prefs.saveUnifiedFavoriteIds(current)
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Removed from Unified Favorites"
+                    AppLanguage.UK -> "Вилучено із загального обраного"
+                    else -> "Удалено из общего избранного"
+                }
+            } else {
+                current.add(song.id)
+                unifiedFavoriteIds.value = current
+                prefs.saveUnifiedFavoriteIds(current)
+                if (song.isRemoteYt || song.id.startsWith("yt_")) {
+                    val saved = (listOf(song) + savedYtSongs.value).distinctBy { it.id }
+                    savedYtSongs.value = saved
+                    prefs.saveYtSongs(saved)
+                } else if (song.isRemoteSc || song.id.startsWith("sc_")) {
+                    val saved = (listOf(song) + savedScSongs.value).distinctBy { it.id }
+                    savedScSongs.value = saved
+                    prefs.saveScSongs(saved)
+                }
+                statusMessage.value = when (appLanguage.value) {
+                    AppLanguage.EN -> "Added to Unified Favorites"
+                    AppLanguage.UK -> "Додано до загального обраного"
+                    else -> "Добавлено в общее избранное"
+                }
+            }
+            return
+        }
         if (playlistId == "sys_favorites") {
             if (!isFavorite(song.id)) toggleFavorite(song)
             return
@@ -1005,28 +1248,105 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val saved = (listOf(song) + savedYtSongs.value).distinctBy { it.id }
             savedYtSongs.value = saved
             prefs.saveYtSongs(saved)
+        } else if (song.isRemoteSc || song.id.startsWith("sc_")) {
+            val saved = (listOf(song) + savedScSongs.value).distinctBy { it.id }
+            savedScSongs.value = saved
+            prefs.saveScSongs(saved)
         }
         val updated = customPlaylists.value.map { pl ->
             if (pl.id == playlistId) {
                 if (pl.songs.any { it.id == song.id }) {
-            statusMessage.value = when (appLanguage.value) {
-                AppLanguage.EN -> "Track is already in playlist «${pl.name}»"
-                AppLanguage.UK -> "Трек уже є в плейлісті «${pl.name}»"
-                else -> "Трек уже есть в плейлисте «${pl.name}»"
-            }
+                    statusMessage.value = when (appLanguage.value) {
+                        AppLanguage.EN -> "Track is already in playlist «${pl.name}»"
+                        AppLanguage.UK -> "Трек уже є в плейлісті «${pl.name}»"
+                        else -> "Трек уже есть в плейлисте «${pl.name}»"
+                    }
                     pl
                 } else {
-            statusMessage.value = when (appLanguage.value) {
-                AppLanguage.EN -> "Added to «${pl.name}»"
-                AppLanguage.UK -> "Додано до «${pl.name}»"
-                else -> "Добавлено в «${pl.name}»"
-            }
+                    statusMessage.value = when (appLanguage.value) {
+                        AppLanguage.EN -> "Added to «${pl.name}»"
+                        AppLanguage.UK -> "Додано до «${pl.name}»"
+                        else -> "Добавлено в «${pl.name}»"
+                    }
                     pl.copy(songs = pl.songs + song)
                 }
             } else pl
         }
         customPlaylists.value = updated
         persistPlaylists(updated)
+    }
+
+    fun loadSoundCloudCharts() {
+        viewModelScope.launch {
+            isLoadingSoundCloud.value = true
+            val charts = SoundCloudRepository.fetchCharts(30)
+            soundCloudCharts.value = charts
+            if (!soundCloudAuthToken.value.isNullOrBlank()) {
+                soundCloudLikes.value = SoundCloudRepository.fetchUserLikes(30)
+            }
+            isLoadingSoundCloud.value = false
+        }
+    }
+
+    fun searchSoundCloud(query: String) {
+        scSearchJob?.cancel()
+        if (query.isBlank()) {
+            soundCloudSearchResults.value = emptyList()
+            isSearchingSoundCloud.value = false
+            return
+        }
+        scSearchJob = viewModelScope.launch {
+            isSearchingSoundCloud.value = true
+            val results = SoundCloudRepository.searchSoundCloud(query, limit = 30)
+            soundCloudSearchResults.value = results
+            isSearchingSoundCloud.value = false
+        }
+    }
+
+    fun onSoundCloudAuthSuccess(token: String) {
+        val clean = SoundCloudRepository.cleanToken(token)
+        if (clean.isBlank() || clean == "guest") return
+        viewModelScope.launch {
+            soundCloudAuthToken.value = clean
+            prefs.saveScAuthToken(clean)
+            SoundCloudRepository.currentAuthToken = clean
+            var profile = SoundCloudRepository.fetchUserProfile(clean)
+            if (profile == null) {
+                kotlinx.coroutines.delay(600)
+                profile = SoundCloudRepository.fetchUserProfile(clean)
+            }
+            val finalProfile = profile ?: SoundCloudUserProfile(username = "SoundCloud User", avatarUrl = null)
+            soundCloudProfile.value = finalProfile
+            prefs.saveScProfile(finalProfile)
+            soundCloudLikes.value = SoundCloudRepository.fetchUserLikes(40)
+            loadSoundCloudCharts()
+            statusMessage.value = when (appLanguage.value) {
+                AppLanguage.EN -> "Signed in to SoundCloud as ${finalProfile.username}"
+                AppLanguage.UK -> "Успішний вхід у SoundCloud як ${finalProfile.username}"
+                else -> "Вы успешно вошли в SoundCloud как ${finalProfile.username}"
+            }
+        }
+    }
+
+    fun signOutSoundCloud() {
+        soundCloudAuthToken.value = null
+        soundCloudProfile.value = null
+        soundCloudLikes.value = emptyList()
+        soundCloudCharts.value = emptyList()
+        soundCloudSearchResults.value = emptyList()
+        prefs.saveScAuthToken(null)
+        prefs.saveScProfile(null)
+        SoundCloudRepository.currentAuthToken = null
+        SoundCloudRepository.currentProfile = null
+        runCatching {
+            android.webkit.CookieManager.getInstance().removeAllCookies(null)
+            android.webkit.CookieManager.getInstance().flush()
+        }
+        statusMessage.value = when (appLanguage.value) {
+            AppLanguage.EN -> "Signed out of SoundCloud"
+            AppLanguage.UK -> "Ви вийшли з SoundCloud"
+            else -> "Вы вышли из SoundCloud"
+        }
     }
 
     fun addSongsToPlaylist(playlistId: String, songs: List<Song>) {
@@ -1058,8 +1378,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun removeSongFromPlaylist(playlistId: String, songId: String) {
+        if (playlistId == "sys_unified_favorites") {
+            val current = unifiedFavoriteIds.value.toMutableSet()
+            current.remove(songId)
+            unifiedFavoriteIds.value = current
+            prefs.saveUnifiedFavoriteIds(current)
+            return
+        }
         if (playlistId == "sys_favorites") {
-            (allSongs.value + savedYtSongs.value).find { it.id == songId }?.let { toggleFavorite(it) }
+            (allSongs.value + savedYtSongs.value + savedScSongs.value).find { it.id == songId }?.let { toggleFavorite(it) }
             return
         }
         val updated = customPlaylists.value.map { pl ->
@@ -1419,14 +1746,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
         val effectiveUri = if (id.startsWith("yt_v_") && !isLocal) {
             "yt://${id.removePrefix("yt_v_")}"
+        } else if ((id.startsWith("sc_") || isRemoteSc) && !isLocal) {
+            "sc://${id.removePrefix("sc_")}.m3u8"
         } else {
             uri
         }
-        return MediaItem.Builder()
+        val mediaItemBuilder = MediaItem.Builder()
             .setMediaId(id)
             .setUri(effectiveUri)
             .setMediaMetadata(metadataBuilder.build())
-            .build()
+
+        if (id.startsWith("sc_") || isRemoteSc || uri.startsWith("sc://") || effectiveUri.contains(".m3u8")) {
+            mediaItemBuilder.setMimeType(androidx.media3.common.MimeTypes.APPLICATION_M3U8)
+        }
+
+        return mediaItemBuilder.build()
     }
 
     fun setUseLiquidGlass(enabled: Boolean) {
@@ -1622,18 +1956,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates("1.6.4.3", includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates("1.7.0", includeBeta = enableBetaUpdates.value)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info
                 showUpdateDialog.value = true
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
-                    statusMessage.value = when (appLanguage.value) {
-                        AppLanguage.EN -> "You have the latest version installed (1.6.4.3 (32))"
-                        AppLanguage.UK -> "У вас встановлена остання версія (1.6.4.3 (32))"
-                        else -> "У вас установлена последняя версия (1.6.4.3 (32))"
-                    }
+                    val currentStrings = resolveStrings(appLanguage.value)
+                    statusMessage.value = currentStrings.latestVersionInstalled
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message
                 }

@@ -76,6 +76,21 @@
             </intent-filter>
         </activity-alias>
 
+        <!-- 4) Halloween (Ивентовая хэллоуинская иконка) -->
+        <activity-alias
+            android:name=".MainActivityAliasHalloween"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_halloween"
+            android:roundIcon="@mipmap/ic_launcher_halloween_round"
+            android:label="LorMusic"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.provider"

@@ -8,6 +8,7 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -38,7 +39,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.lormusic.app.data.SoundCloudRepository
 import com.lormusic.app.data.YouTubeMusicRepository
+import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.LyricLine
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.RepeatMode
@@ -49,6 +52,8 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 
 private enum class LyricsDisplayMode {
     SYNCED,
@@ -97,12 +102,17 @@ fun NowPlayingScreen(
     onOpenTagEditor: () -> Unit,
     onOpenArtistProfile: ((String) -> Unit)? = null,
     onTranslateLyrics: (() -> Unit)? = null,
+    halloweenCandies: Boolean = false,
+    onEatCandies: () -> Unit = {},
     onClose: () -> Unit
 ) {
     val view = LocalView.current
     val context = LocalContext.current
     val strings = LocalStrings.current
+    val areCandiesActive = halloweenCandies && !AppIconOption.isHalloweenExpired()
     val ytShareUrl = remember(song) { YouTubeMusicRepository.getShareUrl(song) }
+    val scShareUrl = remember(song) { SoundCloudRepository.getShareUrl(song) }
+    val shareUrl = ytShareUrl ?: scShareUrl
     var showLyrics by remember { mutableStateOf(false) }
 
     BackHandler {
@@ -382,6 +392,14 @@ fun NowPlayingScreen(
                                 cornerRadius = 30.dp,
                                 modifier = Modifier.fillMaxSize()
                             )
+                            if (areCandiesActive) {
+                                HalloweenCoverCandies(
+                                    onEatAllCandies = onEatCandies,
+                                    modifier = Modifier
+                                        .align(Alignment.TopCenter)
+                                        .padding(top = 10.dp)
+                                )
+                            }
                             if (isPlaying) {
                                 Surface(
                                     color = Color.Black.copy(alpha = 0.55f),
@@ -603,7 +621,7 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        val isOnlineTrack = song.isRemoteYt || song.uri.startsWith("http") || song.uri.startsWith("yt://")
+                        val isOnlineTrack = song.isRemoteYt || song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("http") || song.uri.startsWith("yt://") || song.uri.startsWith("sc://")
                         if (isOnlineTrack) {
                             if (onDownloadTrack != null) {
                                 IconButton(
@@ -634,11 +652,15 @@ fun NowPlayingScreen(
                             }
                         }
 
-                        if (ytShareUrl != null) {
+                        if (shareUrl != null) {
                             IconButton(
                                 onClick = {
                                     view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    YouTubeMusicRepository.shareSongLink(context, song)
+                                    if (scShareUrl != null) {
+                                        SoundCloudRepository.shareSongLink(context, song)
+                                    } else {
+                                        YouTubeMusicRepository.shareSongLink(context, song)
+                                    }
                                 }
                             ) {
                                 Icon(
@@ -858,6 +880,53 @@ private fun AddToPlaylistOrFavoritesSheet(
                 },
                 modifier = Modifier.clickable {
                     onToggleFavorite()
+                }
+            )
+
+            val unifiedPl = playlists.find { it.id == "sys_unified_favorites" }
+            val isInUnified = unifiedPl?.songs?.any { it.id == song.id } == true
+            ListItem(
+                headlineContent = {
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Text(strings.unifiedFavorites)
+                        Surface(
+                            shape = RoundedCornerShape(8.dp),
+                            color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                        ) {
+                            Text(
+                                text = strings.unifiedPlaylist,
+                                style = MaterialTheme.typography.labelSmall,
+                                modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                color = MaterialTheme.colorScheme.onPrimaryContainer
+                            )
+                        }
+                    }
+                },
+                supportingContent = {
+                    Text(if (isInUnified) strings.inFavorites else strings.addToPlaylist)
+                },
+                leadingContent = {
+                    Icon(
+                        imageVector = Icons.Filled.AutoAwesome,
+                        contentDescription = null,
+                        tint = if (isInUnified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                    )
+                },
+                trailingContent = {
+                    if (isInUnified) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = null,
+                            tint = MaterialTheme.colorScheme.primary
+                        )
+                    }
+                },
+                modifier = Modifier.clickable {
+                    if (isInUnified) {
+                        onRemoveFromPlaylist("sys_unified_favorites", song.id)
+                    } else {
+                        onAddToPlaylist("sys_unified_favorites", song)
+                    }
                 }
             )
 
@@ -1688,4 +1757,78 @@ private fun extractSongGradientColors(
     coverGradientsCache.put(cacheKey, pair)
     coverAccentCache.put(song.id, c1.copy(alpha = 1.0f))
     return pair
+}
+
+@Composable
+fun HalloweenCoverCandies(
+    onEatAllCandies: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val view = LocalView.current
+    val eatenStates = remember { mutableStateListOf(false, false, false, false, false, false) }
+    val initialCandies = remember {
+        listOf(
+            Triple("🍬", -18f, 0.95f),
+            Triple("🍭", 12f, 1.05f),
+            Triple("🍫", -8f, 0.90f),
+            Triple("🎃", 16f, 1.10f),
+            Triple("🍬", -14f, 0.95f),
+            Triple("🍭", 8f, 1.0f)
+        )
+    }
+
+    val coroutineScope = rememberCoroutineScope()
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        initialCandies.forEachIndexed { index, (emoji, rot, sc) ->
+            val isEaten = eatenStates.getOrNull(index) == true
+            val animScale by animateFloatAsState(
+                targetValue = if (isEaten) 0f else sc,
+                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
+                label = "candyScale$index"
+            )
+            val animAlpha by animateFloatAsState(
+                targetValue = if (isEaten) 0f else 1f,
+                animationSpec = tween(200),
+                label = "candyAlpha$index"
+            )
+
+            if (!isEaten || animScale > 0.05f) {
+                Box(
+                    modifier = Modifier
+                        .clickable(
+                            interactionSource = remember { MutableInteractionSource() },
+                            indication = null
+                        ) {
+                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                            eatenStates[index] = true
+                            if (eatenStates.all { it }) {
+                                coroutineScope.launch {
+                                    delay(280)
+                                    onEatAllCandies()
+                                }
+                            }
+                        }
+                        .graphicsLayer {
+                            rotationZ = rot
+                            scaleX = animScale
+                            scaleY = animScale
+                            alpha = animAlpha
+                            shadowElevation = 8f
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Text(text = emoji, fontSize = 24.sp)
+                }
+            } else {
+                Spacer(modifier = Modifier.size(24.dp))
+            }
+        }
+    }
 }

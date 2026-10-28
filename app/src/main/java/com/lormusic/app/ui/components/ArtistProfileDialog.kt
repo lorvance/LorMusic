@@ -171,20 +171,16 @@ fun ArtistProfileDialog(
         }
     }
 
-    Dialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false
-        )
+    if (selectedAlbum == null) {
+        BackHandler { onDismiss() }
+    }
+
+    Surface(
+        modifier = Modifier
+            .fillMaxSize()
+            .statusBarsPadding(),
+        color = MaterialTheme.colorScheme.background
     ) {
-        Surface(
-            modifier = Modifier
-                .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding(),
-            color = MaterialTheme.colorScheme.background
-        ) {
             Box(modifier = Modifier.fillMaxSize()) {
                 AnimatedContent(
                     targetState = selectedAlbum,
@@ -931,7 +927,7 @@ fun ArtistProfileDialog(
                         .fillMaxWidth()
                         .navigationBarsPadding()
                         .padding(horizontal = 14.dp)
-                        .padding(bottom = 64.dp)
+                        .padding(bottom = 12.dp)
                 ) {
                     currentSong?.let { song ->
                         MiniPlayer(
@@ -953,5 +949,4 @@ fun ArtistProfileDialog(
                 }
             }
         }
-    }
 }

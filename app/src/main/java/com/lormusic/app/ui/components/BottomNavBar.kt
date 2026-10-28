@@ -74,6 +74,22 @@ enum class YtMusicTab(val label: String, val filled: ImageVector, val outline: I
     }
 }
 
+enum class ScTab(val label: String, val filled: ImageVector, val outline: ImageVector) {
+    HOME("Home", Icons.Filled.Home, Icons.Outlined.Home),
+    CHARTS("Charts", Icons.Filled.Leaderboard, Icons.Outlined.Leaderboard),
+    LIBRARIES("Libraries", Icons.Filled.LibraryMusic, Icons.Outlined.LibraryMusic),
+    SEARCH("", Icons.Filled.Search, Icons.Outlined.Search);
+
+    fun getDisplayName(strings: com.lormusic.app.model.AppStrings): String {
+        return when (this) {
+            HOME -> strings.ytHome
+            CHARTS -> strings.scTopCharts
+            LIBRARIES -> strings.ytLibraries
+            SEARCH -> strings.searchTitle
+        }
+    }
+}
+
 @Composable
 fun LorBottomNavBar(
     selected: LorTab,
@@ -630,6 +646,233 @@ fun YtMusicBottomNavBar(
                 Icon(
                     imageVector = Icons.Filled.Search,
                     contentDescription = strings.searchInYtMusic,
+                    tint = if (searchSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
+                    modifier = Modifier.size(26.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
+fun ScMusicBottomNavBar(
+    selected: ScTab,
+    onSelect: (ScTab) -> Unit,
+    hazeState: HazeState,
+    enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
+    showBottomSearchButton: Boolean = true,
+    showLabels: Boolean = false,
+    modifier: Modifier = Modifier
+) {
+    val view = LocalView.current
+    val strings = com.lormusic.app.model.LocalStrings.current
+    val density = LocalDensity.current
+    val navBarHeight = 58.dp
+    val innerInset = 4.dp
+    val capsuleShape = CircleShape
+    val baseSurface = MaterialTheme.colorScheme.surface
+    val isPureMy = LocalPureMaterialYou.current
+    val mainTabs = remember {
+        listOf(
+            ScTab.HOME,
+            ScTab.CHARTS,
+            ScTab.LIBRARIES
+        )
+    }
+
+    var innerWidthPx by remember { mutableIntStateOf(0) }
+    var isDraggingNav by remember { mutableStateOf(false) }
+    var dragFingerX by remember { mutableFloatStateOf(0f) }
+    var hoveredIndex by remember { mutableIntStateOf(-1) }
+
+    val selectedIndex = mainTabs.indexOf(selected)
+    val activeIndex = if (isDraggingNav && hoveredIndex in mainTabs.indices) hoveredIndex else selectedIndex
+
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .navigationBarsPadding()
+            .padding(horizontal = 14.dp, vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp)
+    ) {
+        Box(
+            modifier = Modifier
+                .weight(1f)
+                .height(navBarHeight)
+                .clip(capsuleShape)
+                .then(
+                    if (enableBlur) {
+                        Modifier
+                            .hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = baseSurface.copy(alpha = 0.55f)
+                                blurRadius = 24.dp
+                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.55f)))
+                            }
+                            .background(baseSurface.copy(alpha = 0.72f))
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), capsuleShape)
+                    } else {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), capsuleShape)
+                    }
+                )
+                .padding(innerInset)
+                .onSizeChanged { innerWidthPx = it.width }
+                .pointerInput(mainTabs, innerWidthPx) {
+                    if (innerWidthPx <= 0) return@pointerInput
+                    awaitEachGesture {
+                        val down = awaitFirstDown(requireUnconsumed = false)
+                        val slotWidth = (innerWidthPx.toFloat() / mainTabs.size).coerceAtLeast(1f)
+                        var currentIdx = (down.position.x / slotWidth).toInt().coerceIn(0, mainTabs.lastIndex)
+                        dragFingerX = down.position.x.coerceIn(0f, innerWidthPx.toFloat())
+                        hoveredIndex = currentIdx
+                        var movedSignificantly = false
+                        val startX = down.position.x
+
+                        while (true) {
+                            val event = awaitPointerEvent()
+                            val change = event.changes.firstOrNull { it.id == down.id } ?: event.changes.firstOrNull()
+                            if (change == null || !change.pressed) {
+                                val finalIdx = hoveredIndex.coerceIn(0, mainTabs.lastIndex)
+                                isDraggingNav = false
+                                hoveredIndex = -1
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onSelect(mainTabs[finalIdx])
+                                break
+                            }
+                            val x = change.position.x.coerceIn(0f, innerWidthPx.toFloat())
+                            dragFingerX = x
+                            if (kotlin.math.abs(x - startX) > 8f) {
+                                if (!movedSignificantly) {
+                                    movedSignificantly = true
+                                    isDraggingNav = true
+                                    view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                                }
+                                change.consume()
+                            } else if (!isDraggingNav && (change.uptimeMillis - down.uptimeMillis) > 160L) {
+                                isDraggingNav = true
+                                view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+                            }
+                            val newIdx = (x / slotWidth).toInt().coerceIn(0, mainTabs.lastIndex)
+                            if (newIdx != currentIdx) {
+                                currentIdx = newIdx
+                                hoveredIndex = newIdx
+                                isDraggingNav = true
+                                view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
+                            }
+                        }
+                    }
+                },
+            contentAlignment = Alignment.CenterStart
+        ) {
+            if (innerWidthPx > 0 && activeIndex in mainTabs.indices) {
+                val slotWidthPx = innerWidthPx.toFloat() / mainTabs.size
+                val targetLeftPx = if (isDraggingNav) {
+                    (dragFingerX - slotWidthPx * 0.5f).coerceIn(0f, innerWidthPx - slotWidthPx)
+                } else {
+                    activeIndex * slotWidthPx
+                }
+                val pillWidthDp = with(density) { slotWidthPx.toDp() }
+                val targetOffsetX = with(density) { targetLeftPx.toDp() }
+                val animatedOffsetX by animateDpAsState(
+                    targetValue = targetOffsetX,
+                    animationSpec = spring(
+                        dampingRatio = Spring.DampingRatioLowBouncy,
+                        stiffness = if (isDraggingNav) Spring.StiffnessHigh else Spring.StiffnessMediumLow
+                    ),
+                    label = "scSlidingPillOffset"
+                )
+                val pillScale by animateFloatAsState(
+                    targetValue = if (isDraggingNav) 1.03f else 1.0f,
+                    animationSpec = spring(stiffness = Spring.StiffnessMedium),
+                    label = "scSlidingPillScale"
+                )
+
+                Box(
+                    modifier = Modifier
+                        .offset(x = animatedOffsetX)
+                        .width(pillWidthDp)
+                        .fillMaxHeight()
+                        .scale(pillScale)
+                        .clip(CircleShape)
+                        .background(
+                            if (isDraggingNav) {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
+                            } else {
+                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                            }
+                        )
+                        .then(
+                            if (isDraggingNav) {
+                                Modifier.border(
+                                    width = 1.2.dp,
+                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
+                                    shape = CircleShape
+                                )
+                            } else Modifier
+                        )
+                )
+            }
+
+            Row(
+                modifier = Modifier.fillMaxSize(),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                mainTabs.forEachIndexed { index, tab ->
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight(),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        LorTabItem(
+                            label = tab.getDisplayName(strings),
+                            filledIcon = tab.filled,
+                            outlineIcon = tab.outline,
+                            isSelected = index == activeIndex,
+                            isHoveredByGesture = isDraggingNav && index == activeIndex,
+                            showLabels = showLabels
+                        )
+                    }
+                }
+            }
+        }
+
+        if (showBottomSearchButton) {
+            val searchSelected = selected == ScTab.SEARCH
+            Box(
+                modifier = Modifier
+                    .size(navBarHeight)
+                    .clip(CircleShape)
+                    .then(
+                        if (enableBlur) {
+                            Modifier
+                                .hazeEffect(state = hazeState) {
+                                    blurEnabled = true
+                                    backgroundColor = baseSurface.copy(alpha = 0.55f)
+                                    blurRadius = 24.dp
+                                    tints = listOf(HazeTint(baseSurface.copy(alpha = 0.55f)))
+                                }
+                                .background(if (searchSelected) MaterialTheme.colorScheme.primary else baseSurface.copy(alpha = 0.72f))
+                                .border(1.dp, Color.White.copy(alpha = 0.12f), CircleShape)
+                        } else {
+                            Modifier
+                                .background(if (searchSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainer)
+                                .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), CircleShape)
+                        }
+                    )
+                    .clickable {
+                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                        onSelect(ScTab.SEARCH)
+                    },
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(
+                    imageVector = Icons.Filled.Search,
+                    contentDescription = strings.searchTitle,
                     tint = if (searchSelected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface,
                     modifier = Modifier.size(26.dp)
                 )

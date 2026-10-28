@@ -315,6 +315,64 @@ val tagFixTitle: String,
     val classicRemovedMessage: String get() = extra.classicRemovedMessage
     val classicRemovedConfirm: String get() = extra.classicRemovedConfirm
     val tracksInAlbum: String get() = extra.tracksInAlbum
+    val navSoundCloud: String get() = extra.navSoundCloud
+    val soundCloudTitle: String get() = extra.soundCloudTitle
+    val soundCloudPlaceholder: String get() = extra.soundCloudPlaceholder
+    val signInSoundCloud: String get() = extra.signInSoundCloud
+    val unifiedPlaylistsTitle: String get() = extra.unifiedPlaylistsTitle
+    val unifiedPlaylist: String get() = extra.unifiedPlaylist
+    val createUnifiedPlaylist: String get() = extra.createUnifiedPlaylist
+    val unifiedPlaylistInfoTitle: String get() = extra.unifiedPlaylistInfoTitle
+    val unifiedPlaylistInfoDesc: String get() = extra.unifiedPlaylistInfoDesc
+    val unifiedFavorites: String get() = extra.unifiedFavorites
+    val addToUnifiedPlaylist: String get() = extra.addToUnifiedPlaylist
+    val scTrendingByGenre: String get() = extra.scTrendingByGenre
+    val scYourLikes: String get() = extra.scYourLikes
+    val scMadeForYou: String get() = extra.scMadeForYou
+    val scDailyDropsTitle: String get() = extra.scDailyDropsTitle
+    val scDailyDropsDesc: String get() = extra.scDailyDropsDesc
+    val scWeeklyWaveTitle: String get() = extra.scWeeklyWaveTitle
+    val scWeeklyWaveDesc: String get() = extra.scWeeklyWaveDesc
+    val scMoreOfWhatYouLike: String get() = extra.scMoreOfWhatYouLike
+    val scTrendingTracks: String get() = extra.scTrendingTracks
+    val scTopCharts: String get() = extra.scTopCharts
+    val scNoTracksAvailable: String get() = extra.scNoTracksAvailable
+    val scSavedTracks: String get() = extra.scSavedTracks
+    val scNoSavedTracks: String get() = extra.scNoSavedTracks
+    val scSignInSubtitle: String get() = extra.scSignInSubtitle
+    val scSignOutConfirmTitle: String get() = extra.scSignOutConfirmTitle
+    val scSignOutConfirmDesc: String get() = extra.scSignOutConfirmDesc
+    val scProfileTitle: String get() = extra.scProfileTitle
+    val scLikedTracksCount: String get() = extra.scLikedTracksCount
+    val scUploadedTracksCount: String get() = extra.scUploadedTracksCount
+    val scFollowersCount: String get() = extra.scFollowersCount
+    val scAddToUnifiedFavorites: String get() = extra.scAddToUnifiedFavorites
+    val scRemoveFromUnifiedFavorites: String get() = extra.scRemoveFromUnifiedFavorites
+    val scInUnifiedFavorites: String get() = extra.scInUnifiedFavorites
+    val scForceTokenLogin: String get() = extra.scForceTokenLogin
+    val scWebBrowserLogin: String get() = extra.scWebBrowserLogin
+    val scGenreAll: String get() = extra.scGenreAll
+    val scGenrePhonk: String get() = extra.scGenrePhonk
+    val scGenreElectronic: String get() = extra.scGenreElectronic
+    val scGenreHipHop: String get() = extra.scGenreHipHop
+    val scGenreRemix: String get() = extra.scGenreRemix
+    val scGenreRock: String get() = extra.scGenreRock
+    val scGenreTrance: String get() = extra.scGenreTrance
+    val scGenreDancehall: String get() = extra.scGenreDancehall
+    val pressBackAgainToExit: String get() = extra.pressBackAgainToExit
+    val halloweenEndedNotice: String get() = extra.halloweenEndedNotice
+    val halloweenIconTitle: String get() = extra.halloweenIconTitle
+    val halloweenIconDesc: String get() = extra.halloweenIconDesc
+    val halloweenModeTitle: String get() = extra.halloweenModeTitle
+    val halloweenModeDesc: String get() = extra.halloweenModeDesc
+    val halloweenTestButton: String get() = extra.halloweenTestButton
+    val halloweenTestDesc: String get() = extra.halloweenTestDesc
+    val halloweenGreetingTitle: String get() = extra.halloweenGreetingTitle
+    val halloweenGreetingMsg: String get() = extra.halloweenGreetingMsg
+    val halloweenTreatBtn: String get() = extra.halloweenTreatBtn
+    val halloweenTrickBtn: String get() = extra.halloweenTrickBtn
+    val halloweenTreatSelected: String get() = extra.halloweenTreatSelected
+    val halloweenCandiesEaten: String get() = extra.halloweenCandiesEaten
 }
 
 class ExtraStrings(
@@ -365,7 +423,65 @@ class ExtraStrings(
     val classicRemovedTitle: String,
     val classicRemovedMessage: String,
     val classicRemovedConfirm: String,
-    val tracksInAlbum: String
+    val tracksInAlbum: String,
+    val navSoundCloud: String,
+    val soundCloudTitle: String,
+    val soundCloudPlaceholder: String,
+    val signInSoundCloud: String,
+    val unifiedPlaylistsTitle: String,
+    val unifiedPlaylist: String,
+    val createUnifiedPlaylist: String,
+    val unifiedPlaylistInfoTitle: String,
+    val unifiedPlaylistInfoDesc: String,
+    val unifiedFavorites: String,
+    val addToUnifiedPlaylist: String,
+    val scTrendingByGenre: String,
+    val scYourLikes: String,
+    val scMadeForYou: String,
+    val scDailyDropsTitle: String,
+    val scDailyDropsDesc: String,
+    val scWeeklyWaveTitle: String,
+    val scWeeklyWaveDesc: String,
+    val scMoreOfWhatYouLike: String,
+    val scTrendingTracks: String,
+    val scTopCharts: String,
+    val scNoTracksAvailable: String,
+    val scSavedTracks: String,
+    val scNoSavedTracks: String,
+    val scSignInSubtitle: String,
+    val scSignOutConfirmTitle: String,
+    val scSignOutConfirmDesc: String,
+    val scProfileTitle: String,
+    val scLikedTracksCount: String,
+    val scUploadedTracksCount: String,
+    val scFollowersCount: String,
+    val scAddToUnifiedFavorites: String,
+    val scRemoveFromUnifiedFavorites: String,
+    val scInUnifiedFavorites: String,
+    val scForceTokenLogin: String,
+    val scWebBrowserLogin: String,
+    val scGenreAll: String,
+    val scGenrePhonk: String,
+    val scGenreElectronic: String,
+    val scGenreHipHop: String,
+    val scGenreRemix: String,
+    val scGenreRock: String,
+    val scGenreTrance: String,
+    val scGenreDancehall: String,
+    val pressBackAgainToExit: String,
+    val halloweenEndedNotice: String,
+    val halloweenIconTitle: String,
+    val halloweenIconDesc: String,
+    val halloweenModeTitle: String,
+    val halloweenModeDesc: String,
+    val halloweenTestButton: String,
+    val halloweenTestDesc: String,
+    val halloweenGreetingTitle: String,
+    val halloweenGreetingMsg: String,
+    val halloweenTreatBtn: String,
+    val halloweenTrickBtn: String,
+    val halloweenTreatSelected: String,
+    val halloweenCandiesEaten: String
 )
 
 
@@ -535,7 +651,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "Версия 1.6.4.3 (32)",
+    appVersion = "1.7.0 | 43",
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -568,7 +684,7 @@ val StringsRu = AppStrings(
     installUpdate = "Установить обновление",
     downloadUpdate = "Скачать обновление",
     remindLater = "Напомнить позже",
-    latestVersionInstalled = "У вас установлена последняя версия",
+    latestVersionInstalled = "У вас установлена последняя версия: 1.7.0 | 43",
     moodForYourTaste = "Под твой вкус",
     moodEnergetic = "Энергичное",
     moodCalm = "Спокойное",
@@ -668,7 +784,65 @@ val StringsRu = AppStrings(
         classicRemovedTitle = "Классический дизайн удален",
         classicRemovedMessage = "Классический дизайн медиатеки был удален из приложения из-за ограниченного функционала и в рамках подготовки к обновлению 1.7.0.",
         classicRemovedConfirm = "Понятно",
-        tracksInAlbum = "Треки в альбоме"
+        tracksInAlbum = "Треки в альбоме",
+        navSoundCloud = "SoundCloud",
+        soundCloudTitle = "SoundCloud",
+        soundCloudPlaceholder = "Поиск в SoundCloud…",
+        signInSoundCloud = "Войти в SoundCloud",
+        unifiedPlaylistsTitle = "Общие плейлисты",
+        unifiedPlaylist = "Общий плейлист",
+        createUnifiedPlaylist = "Создать общий плейлист",
+        unifiedPlaylistInfoTitle = "Общие плейлисты",
+        unifiedPlaylistInfoDesc = "Общие плейлисты позволяют объединять треки из YouTube Music, SoundCloud и устройства в единые списки с бесшовным воспроизведением.",
+        unifiedFavorites = "Общее избранное",
+        addToUnifiedPlaylist = "Добавить в общий плейлист",
+        scTrendingByGenre = "В тренде по жанрам",
+        scYourLikes = "Ваши лайки",
+        scMadeForYou = "Создано для вас",
+        scDailyDropsTitle = "DAILY DROPS",
+        scDailyDropsDesc = "Свежие релизы на ваш вкус. Обновляется каждый день",
+        scWeeklyWaveTitle = "WEEKLY WAVE",
+        scWeeklyWaveDesc = "Лучшее из SoundCloud специально для вас. Обновляется каждый понедельник",
+        scMoreOfWhatYouLike = "Больше из того, что вам нравится",
+        scTrendingTracks = "В тренде",
+        scTopCharts = "Топ чарты",
+        scNoTracksAvailable = "Треки не найдены",
+        scSavedTracks = "Сохранённые треки SoundCloud",
+        scNoSavedTracks = "Пока нет сохранённых треков SoundCloud",
+        scSignInSubtitle = "Войдите через аккаунт SoundCloud для синхронизации лайков и рекомендаций",
+        scSignOutConfirmTitle = "Выйти из SoundCloud?",
+        scSignOutConfirmDesc = "Вы будете отключены от учётной записи SoundCloud.",
+        scProfileTitle = "Профиль SoundCloud",
+        scLikedTracksCount = "Понравившихся треков",
+        scUploadedTracksCount = "Загруженных треков",
+        scFollowersCount = "Подписчиков",
+        scAddToUnifiedFavorites = "Добавить в общее избранное",
+        scRemoveFromUnifiedFavorites = "Удалить из общего избранного",
+        scInUnifiedFavorites = "В общем избранном",
+        scForceTokenLogin = "Принудительный вход (OAuth токен)",
+        scWebBrowserLogin = "Войти через браузер",
+        scGenreAll = "Все жанры",
+        scGenrePhonk = "Фонк",
+        scGenreElectronic = "Электроника",
+        scGenreHipHop = "Хип-хоп",
+        scGenreRemix = "Ремиксы",
+        scGenreRock = "Рок",
+        scGenreTrance = "Транс",
+        scGenreDancehall = "Дэнсхолл",
+        pressBackAgainToExit = "Нажмите ещё раз назад для выхода",
+        halloweenEndedNotice = "Хэллоуин закончился! Иконка приложения переключена на стандартную.",
+        halloweenIconTitle = "Хэллоуин",
+        halloweenIconDesc = "Ивентовая хэллоуинская иконка (до 1 ноября 13:00)",
+        halloweenModeTitle = "Хэллоуинский режим",
+        halloweenModeDesc = "Оранжевая тема, жуткие декорации и тыквы",
+        halloweenTestButton = "🎃 Тест: Сладость или гадость",
+        halloweenTestDesc = "Проверить диалог, конфеты на обложке или вылет от тыквы",
+        halloweenGreetingTitle = "🎃 Счастливого Хэллоуина!",
+        halloweenGreetingMsg = "Хэллоуин наступил! Сделайте ваш выбор — Сладость или Гадость?",
+        halloweenTreatBtn = "🍬 Сладость",
+        halloweenTrickBtn = "🎃 Гадость",
+        halloweenTreatSelected = "🍬 Сладость! Конфеты появились на обложке трека",
+        halloweenCandiesEaten = "😋 Конфеты съедены!"
     )
 )
 
@@ -838,7 +1012,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "Version 1.6.4.3 (32)",
+    appVersion = "1.7.0 | 43",
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -871,7 +1045,7 @@ val StringsEn = AppStrings(
     installUpdate = "Install update",
     downloadUpdate = "Download update",
     remindLater = "Remind later",
-    latestVersionInstalled = "You have the latest version installed",
+    latestVersionInstalled = "You have the latest version installed: 1.7.0 | 43",
     moodForYourTaste = "For your taste",
     moodEnergetic = "Energetic",
     moodCalm = "Calm",
@@ -971,7 +1145,65 @@ val StringsEn = AppStrings(
         classicRemovedTitle = "Classic Design Removed",
         classicRemovedMessage = "The classic library design has been removed from the app due to limited functionality and in preparation for update 1.7.0.",
         classicRemovedConfirm = "Got it",
-        tracksInAlbum = "Tracks in album"
+        tracksInAlbum = "Tracks in album",
+        navSoundCloud = "SoundCloud",
+        soundCloudTitle = "SoundCloud",
+        soundCloudPlaceholder = "Search SoundCloud…",
+        signInSoundCloud = "Sign in to SoundCloud",
+        unifiedPlaylistsTitle = "Unified Playlists",
+        unifiedPlaylist = "Unified Playlist",
+        createUnifiedPlaylist = "Create Unified Playlist",
+        unifiedPlaylistInfoTitle = "Unified Playlists",
+        unifiedPlaylistInfoDesc = "Unified playlists allow combining tracks from YouTube Music, SoundCloud, and your device into single playlists with seamless playback.",
+        unifiedFavorites = "Unified Favorites",
+        addToUnifiedPlaylist = "Add to unified playlist",
+        scTrendingByGenre = "Trending by genre",
+        scYourLikes = "Your likes",
+        scMadeForYou = "Made for you",
+        scDailyDropsTitle = "DAILY DROPS",
+        scDailyDropsDesc = "New releases based on your taste. Updated every day",
+        scWeeklyWaveTitle = "WEEKLY WAVE",
+        scWeeklyWaveDesc = "The best of SoundCloud just for you. Updated every Monday",
+        scMoreOfWhatYouLike = "More of what you like",
+        scTrendingTracks = "Trending tracks",
+        scTopCharts = "Top Charts",
+        scNoTracksAvailable = "No tracks available",
+        scSavedTracks = "Saved SoundCloud tracks",
+        scNoSavedTracks = "No saved SoundCloud tracks yet",
+        scSignInSubtitle = "Sign in to your SoundCloud account to sync likes and recommendations",
+        scSignOutConfirmTitle = "Sign out of SoundCloud?",
+        scSignOutConfirmDesc = "You will be disconnected from your SoundCloud account.",
+        scProfileTitle = "SoundCloud Profile",
+        scLikedTracksCount = "Liked tracks",
+        scUploadedTracksCount = "Uploaded tracks",
+        scFollowersCount = "Followers",
+        scAddToUnifiedFavorites = "Add to Unified Favorites",
+        scRemoveFromUnifiedFavorites = "Remove from Unified Favorites",
+        scInUnifiedFavorites = "In Unified Favorites",
+        scForceTokenLogin = "Force login (OAuth token)",
+        scWebBrowserLogin = "Sign in via browser",
+        scGenreAll = "All Genres",
+        scGenrePhonk = "Phonk",
+        scGenreElectronic = "Electronic",
+        scGenreHipHop = "Hip-Hop",
+        scGenreRemix = "Remix",
+        scGenreRock = "Rock",
+        scGenreTrance = "Trance",
+        scGenreDancehall = "Dancehall",
+        pressBackAgainToExit = "Press back again to exit",
+        halloweenEndedNotice = "Halloween has ended! App icon has been reset to default.",
+        halloweenIconTitle = "Halloween",
+        halloweenIconDesc = "Halloween event icon (until Nov 1, 13:00)",
+        halloweenModeTitle = "Halloween Mode",
+        halloweenModeDesc = "Orange theme, spooky decorations and pumpkins",
+        halloweenTestButton = "🎃 Test: Trick or Treat",
+        halloweenTestDesc = "Test dialog, candies on cover or pumpkin jumpscare",
+        halloweenGreetingTitle = "🎃 Happy Halloween!",
+        halloweenGreetingMsg = "Halloween is here! Make your choice — Treat or Trick?",
+        halloweenTreatBtn = "🍬 Treat",
+        halloweenTrickBtn = "🎃 Trick",
+        halloweenTreatSelected = "🍬 Treat! Candies appeared on the album cover",
+        halloweenCandiesEaten = "😋 Candies eaten! Delicious!"
     )
 )
 
@@ -1141,7 +1373,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "Версія 1.6.4.3 (32)",
+    appVersion = "1.7.0 | 43",
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1174,7 +1406,7 @@ val StringsUk = AppStrings(
     installUpdate = "Встановити оновлення",
     downloadUpdate = "Завантажити оновлення",
     remindLater = "Нагадати пізніше",
-    latestVersionInstalled = "У вас встановлена остання версія",
+    latestVersionInstalled = "У вас встановлена остання версія: 1.7.0 | 43",
     moodForYourTaste = "На твій смак",
     moodEnergetic = "Енергійне",
     moodCalm = "Спокійне",
@@ -1274,7 +1506,65 @@ val StringsUk = AppStrings(
         classicRemovedTitle = "Класичний дизайн видалено",
         classicRemovedMessage = "Класичний дизайн медіатеки було видалено з додатку через обмежений функціонал та в рамках підготовки до оновлення 1.7.0.",
         classicRemovedConfirm = "Зрозуміло",
-        tracksInAlbum = "Треки в альбомі"
+        tracksInAlbum = "Треки в альбомі",
+        navSoundCloud = "SoundCloud",
+        soundCloudTitle = "SoundCloud",
+        soundCloudPlaceholder = "Пошук у SoundCloud…",
+        signInSoundCloud = "Увійти в SoundCloud",
+        unifiedPlaylistsTitle = "Спільні плейлисти",
+        unifiedPlaylist = "Спільний плейлист",
+        createUnifiedPlaylist = "Створити спільний плейлист",
+        unifiedPlaylistInfoTitle = "Спільні плейлисти",
+        unifiedPlaylistInfoDesc = "Спільні плейлисти дозволяють об'єднувати треки з YouTube Music, SoundCloud та пристрою в єдині списки з безшовним відтворенням.",
+        unifiedFavorites = "Спільне обране",
+        addToUnifiedPlaylist = "Додати до спільного плейлиста",
+        scTrendingByGenre = "У тренді за жанрами",
+        scYourLikes = "Ваші вподобання",
+        scMadeForYou = "Створено для вас",
+        scDailyDropsTitle = "DAILY DROPS",
+        scDailyDropsDesc = "Свіжі релізи на ваш смак. Оновлюється щодня",
+        scWeeklyWaveTitle = "WEEKLY WAVE",
+        scWeeklyWaveDesc = "Найкраще з SoundCloud спеціально для вас. Оновлюється щопонеділка",
+        scMoreOfWhatYouLike = "Більше з того, що вам подобається",
+        scTrendingTracks = "У тренді",
+        scTopCharts = "Топ чарти",
+        scNoTracksAvailable = "Треки не знайдено",
+        scSavedTracks = "Збережені треки SoundCloud",
+        scNoSavedTracks = "Поки що немає збережених треків SoundCloud",
+        scSignInSubtitle = "Увійдіть через акаунт SoundCloud для синхронізації вподобань та рекомендацій",
+        scSignOutConfirmTitle = "Вийти з SoundCloud?",
+        scSignOutConfirmDesc = "Вас буде відключено від облікового запису SoundCloud.",
+        scProfileTitle = "Профіль SoundCloud",
+        scLikedTracksCount = "Уподобаних треків",
+        scUploadedTracksCount = "Завантажених треків",
+        scFollowersCount = "Підписників",
+        scAddToUnifiedFavorites = "Додати до спільного обраного",
+        scRemoveFromUnifiedFavorites = "Вилучити зі спільного обраного",
+        scInUnifiedFavorites = "У спільному обраному",
+        scForceTokenLogin = "Примусовий вхід (OAuth токен)",
+        scWebBrowserLogin = "Увійти через браузер",
+        scGenreAll = "Усі жанри",
+        scGenrePhonk = "Фонк",
+        scGenreElectronic = "Електроніка",
+        scGenreHipHop = "Хіп-хоп",
+        scGenreRemix = "Ремікси",
+        scGenreRock = "Рок",
+        scGenreTrance = "Транс",
+        scGenreDancehall = "Денсхол",
+        pressBackAgainToExit = "Натисніть ще раз назад для виходу",
+        halloweenEndedNotice = "Хелловін закінчився! Іконку додатку змінено на стандартну.",
+        halloweenIconTitle = "Хелловін",
+        halloweenIconDesc = "Святкова хелловінська іконка (до 1 листопада 13:00)",
+        halloweenModeTitle = "Хелловінський режим",
+        halloweenModeDesc = "Помаранчева тема, святкові декорації та гарбузи",
+        halloweenTestButton = "🎃 Тест: Солодощі або капості",
+        halloweenTestDesc = "Перевірити діалог, цукерки на обкладинці або виліт від гарбуза",
+        halloweenGreetingTitle = "🎃 Щасливого Хелловіну!",
+        halloweenGreetingMsg = "Хелловін настав! Зробіть свій вибір — Солодощі або Капості?",
+        halloweenTreatBtn = "🍬 Солодощі",
+        halloweenTrickBtn = "🎃 Капості",
+        halloweenTreatSelected = "🍬 Солодощі! Цукерки з'явилися на обкладинці треку",
+        halloweenCandiesEaten = "😋 Цукерки з'їдено!"
     )
 )
 

@@ -74,6 +74,7 @@ fun LibraryScreen(
     onExportBackup: () -> Unit = {},
     onOpenTagFix: () -> Unit,
     onOpenYtMusic: () -> Unit = {},
+    onOpenSoundCloud: () -> Unit = {},
     onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit
@@ -370,50 +371,44 @@ fun LibraryScreen(
                         .statusBarsPadding()
                         .padding(horizontal = 14.dp, vertical = 8.dp)
                 ) {
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (showTopSearchBar) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        isTopSearchExpanded = !isTopSearchExpanded
-                                        if (!isTopSearchExpanded) searchQuery = ""
-                                    }
-                                    .then(bubbleModifier(CircleShape)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
-                                    contentDescription = strings.searchTitle,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        } else {
-                            Spacer(Modifier.size(44.dp))
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                                .padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.Center
+                    @Composable
+                    fun MoreMenuDropdown() {
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false }
                         ) {
-                            Text(
-                                text = strings.navLibrary,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold
+                            DropdownMenuItem(
+                                text = { Text(strings.playAll) },
+                                leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onPlayQueue(filteredSongs, 0, false)
+                                },
+                                enabled = filteredSongs.isNotEmpty()
+                            )
+                            DropdownMenuItem(
+                                text = { Text(strings.shuffleAll) },
+                                leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onPlayQueue(filteredSongs, 0, true)
+                                },
+                                enabled = filteredSongs.isNotEmpty()
+                            )
+                            DropdownMenuItem(
+                                text = { Text(strings.rescan) },
+                                leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onRequestPermissionAndScan()
+                                },
+                                enabled = !isScanningLocal
                             )
                         }
+                    }
 
+                    @Composable
+                    fun MoreButtonBubble() {
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -431,122 +426,12 @@ fun LibraryScreen(
                                 tint = MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(20.dp)
                             )
-
-                            DropdownMenu(
-                                expanded = showMoreMenu,
-                                onDismissRequest = { showMoreMenu = false }
-                            ) {
-                                DropdownMenuItem(
-                                    text = { Text(strings.playAll) },
-                                    leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onPlayQueue(filteredSongs, 0, false)
-                                    },
-                                    enabled = filteredSongs.isNotEmpty()
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(strings.shuffleAll) },
-                                    leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onPlayQueue(filteredSongs, 0, true)
-                                    },
-                                    enabled = filteredSongs.isNotEmpty()
-                                )
-                                DropdownMenuItem(
-                                    text = { Text(strings.rescan) },
-                                    leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
-                                    onClick = {
-                                        showMoreMenu = false
-                                        onRequestPermissionAndScan()
-                                    },
-                                    enabled = !isScanningLocal
-                                )
-                            }
+                            MoreMenuDropdown()
                         }
                     }
 
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Row(
-                            horizontalArrangement = Arrangement.spacedBy(8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Box(
-                                modifier = Modifier
-                                    .height(40.dp)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        onOpenYtMusic()
-                                    }
-                                    .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                    .padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                                ) {
-                                    Surface(
-                                        shape = CircleShape,
-                                        color = Color.White,
-                                        modifier = Modifier.size(22.dp)
-                                    ) {
-                                        Box(contentAlignment = Alignment.Center) {
-                                            Icon(
-                                                imageVector = Icons.Filled.PlayArrow,
-                                                contentDescription = "YouTube Music",
-                                                tint = Color(0xFF111111),
-                                                modifier = Modifier.size(15.dp)
-                                            )
-                                        }
-                                    }
-                                    Text(
-                                        text = "YouTube Music",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-
-                            Box(
-                                modifier = Modifier
-                                    .height(40.dp)
-                                    .clip(RoundedCornerShape(20.dp))
-                                    .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        onOpenTagFix()
-                                    }
-                                    .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                    .padding(horizontal = 14.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.spacedBy(6.dp)
-                                ) {
-                                    Icon(
-                                        imageVector = Icons.Filled.AutoFixHigh,
-                                        contentDescription = "TagFix",
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
-                                    )
-                                    Text(
-                                        text = "TagFix",
-                                        style = MaterialTheme.typography.labelLarge,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                }
-                            }
-                        }
-
+                    @Composable
+                    fun SortButtonBubble() {
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
@@ -583,6 +468,171 @@ fun LibraryScreen(
                                         }
                                     )
                                 }
+                            }
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (showTopSearchBar) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        isTopSearchExpanded = !isTopSearchExpanded
+                                        if (!isTopSearchExpanded) searchQuery = ""
+                                    }
+                                    .then(bubbleModifier(CircleShape)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                    contentDescription = strings.searchTitle,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        } else {
+                            MoreButtonBubble()
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                                .padding(horizontal = 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = strings.navLibrary,
+                                style = MaterialTheme.typography.titleMedium,
+                                fontWeight = FontWeight.ExtraBold
+                            )
+                        }
+
+                        if (showTopSearchBar) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                MoreButtonBubble()
+                                SortButtonBubble()
+                            }
+                        } else {
+                            SortButtonBubble()
+                        }
+                    }
+
+                    Spacer(Modifier.height(8.dp))
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .horizontalScroll(rememberScrollState()),
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onOpenYtMusic()
+                                }
+                                .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White,
+                                    modifier = Modifier.size(22.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            imageVector = Icons.Filled.PlayArrow,
+                                            contentDescription = "YouTube Music",
+                                            tint = Color(0xFF111111),
+                                            modifier = Modifier.size(15.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "YouTube Music",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onOpenTagFix()
+                                }
+                                .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.AutoFixHigh,
+                                    contentDescription = "TagFix",
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Text(
+                                    text = "TagFix",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .height(40.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onOpenSoundCloud()
+                                }
+                                .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                            ) {
+                                Icon(
+                                    painter = androidx.compose.ui.res.painterResource(com.lormusic.app.R.drawable.ic_soundcloud),
+                                    contentDescription = "SoundCloud",
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                                Text(
+                                    text = "SoundCloud",
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold
+                                )
                             }
                         }
                     }

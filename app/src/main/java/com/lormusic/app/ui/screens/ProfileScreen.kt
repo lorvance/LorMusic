@@ -95,6 +95,8 @@ fun ProfileScreen(
     onOpenTagFix: () -> Unit,
     onExportBackup: () -> String = { "" },
     onImportBackup: (String) -> Boolean = { false },
+    isHalloweenMode: Boolean = false,
+    onToggleHalloweenMode: (Boolean) -> Unit = {},
     onCheckForUpdates: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
@@ -113,11 +115,17 @@ fun ProfileScreen(
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreText by remember { mutableStateOf("") }
 
-    val iconChoices = listOf(
-        AppIconOption.MINIMAL,
-        AppIconOption.REGULAR,
-        AppIconOption.OLD
-    )
+    val iconChoices = remember {
+        val base = mutableListOf(
+            AppIconOption.MINIMAL,
+            AppIconOption.REGULAR,
+            AppIconOption.OLD
+        )
+        if (!AppIconOption.isHalloweenExpired()) {
+            base.add(AppIconOption.HALLOWEEN)
+        }
+        base
+    }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -209,6 +217,34 @@ fun ProfileScreen(
                         )
                     }
                 }
+            }
+        }
+
+        Spacer(Modifier.height(20.dp))
+        Text(
+            text = "🎃 " + strings.halloweenModeTitle,
+            style = MaterialTheme.typography.titleMedium,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.primary
+        )
+        Spacer(Modifier.height(8.dp))
+
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+        ) {
+            Column {
+                ListItem(
+                    headlineContent = { Text(strings.halloweenModeTitle) },
+                    supportingContent = { Text(strings.halloweenModeDesc) },
+                    leadingContent = { Text("🎃", fontSize = 24.sp) },
+                    trailingContent = {
+                        Switch(
+                            checked = isHalloweenMode,
+                            onCheckedChange = onToggleHalloweenMode
+                        )
+                    }
+                )
             }
         }
 
@@ -343,42 +379,7 @@ fun ProfileScreen(
                 }
                 ListItem(
                     headlineContent = {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            Text(
-                                text = waveGradTitle,
-                                modifier = Modifier.weight(1f, fill = false)
-                            )
-                            Box(
-                                modifier = Modifier
-                                    .clip(RoundedCornerShape(50))
-                                    .background(
-                                        Brush.horizontalGradient(
-                                            colors = listOf(
-                                                MaterialTheme.colorScheme.primary,
-                                                MaterialTheme.colorScheme.tertiary
-                                            )
-                                        )
-                                    )
-                                    .border(
-                                        width = 0.8.dp,
-                                        color = Color.White.copy(alpha = 0.38f),
-                                        shape = RoundedCornerShape(50)
-                                    )
-                                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Text(
-                                    text = "NEW",
-                                    color = MaterialTheme.colorScheme.onPrimary,
-                                    fontSize = 10.sp,
-                                    fontWeight = FontWeight.ExtraBold,
-                                    letterSpacing = 0.8.sp
-                                )
-                            }
-                        }
+                        Text(text = waveGradTitle)
                     },
                     supportingContent = { Text(waveGradDesc) },
                     leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
@@ -556,10 +557,11 @@ fun ProfileScreen(
                     leadingContent = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
                     modifier = Modifier.clickable { onRescanLocalMusic() }
                 )
+                val currentAppVersion = "${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}"
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text(strings.checkForUpdatesTitle) },
-                    supportingContent = { Text(strings.appVersion) },
+                    supportingContent = { Text(currentAppVersion) },
                     leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
                     modifier = Modifier.clickable {
                         updateClickCount++
@@ -579,7 +581,7 @@ fun ProfileScreen(
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text(strings.aboutAppSection) },
-                    supportingContent = { Text(strings.appVersion) },
+                    supportingContent = { Text(currentAppVersion) },
                     leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
                     modifier = Modifier.clickable { showAboutDialog = true }
                 )
@@ -906,7 +908,7 @@ fun ProfileScreen(
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
-            title = { Text(strings.appVersion) },
+            title = { Text("${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}") },
             text = {
                 val aboutBody = when (strings) {
                     com.lormusic.app.model.StringsEn ->
@@ -929,6 +931,7 @@ fun ProfileScreen(
                             "• Динамічний градієнт обкладинки та завантаження треків"
                     else ->
                         "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                            "• Интеграция SoundCloud с чартами, поиском и общими плейлистами с YouTube Music\n" +
                             "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
                             "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
                             "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +

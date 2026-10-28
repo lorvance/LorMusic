@@ -18,6 +18,7 @@ import androidx.media3.session.MediaSession
 import androidx.media3.session.MediaSessionService
 import com.lormusic.app.MainActivity
 import com.lormusic.app.R
+import com.lormusic.app.data.SoundCloudRepository
 import com.lormusic.app.data.YouTubeMusicRepository
 
 class PlaybackService : MediaSessionService() {
@@ -91,7 +92,11 @@ object SharedPlayerHolder {
 
                 val baseDataSourceFactory = DefaultDataSource.Factory(appContext, httpFactory)
                 val resolvingDataSourceFactory = ResolvingDataSource.Factory(baseDataSourceFactory) { dataSpec ->
-                    val resolvedUri = YouTubeMusicRepository.resolveStreamUriForExoPlayer(dataSpec.uri)
+                    val resolvedUri = when {
+                        dataSpec.uri.scheme == "yt" -> YouTubeMusicRepository.resolveStreamUriForExoPlayer(dataSpec.uri)
+                        dataSpec.uri.scheme == "sc" -> SoundCloudRepository.resolveStreamUriForExoPlayer(dataSpec.uri)
+                        else -> YouTubeMusicRepository.resolveStreamUriForExoPlayer(dataSpec.uri)
+                    }
                     if (resolvedUri != dataSpec.uri) {
                         dataSpec.withUri(resolvedUri)
                     } else {

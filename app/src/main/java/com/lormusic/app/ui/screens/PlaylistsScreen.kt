@@ -62,6 +62,7 @@ fun PlaylistsScreen(
     favoriteIds: Set<String>,
     onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
     onCreatePlaylist: (String, List<Song>) -> Unit,
+    onCreateUnifiedPlaylist: ((String, List<Song>) -> Unit)? = null,
     onDeletePlaylist: (String) -> Unit,
     onAddSongToPlaylist: (String, Song) -> Unit,
     onAddSongsToPlaylist: (String, List<Song>) -> Unit = { id, list -> list.forEach { onAddSongToPlaylist(id, it) } },
@@ -77,6 +78,10 @@ fun PlaylistsScreen(
     val strings = LocalStrings.current
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
     var showCreateDialog by remember { mutableStateOf(false) }
+    var showUnifiedInfoDialog by remember { mutableStateOf(false) }
+
+    val normalPlaylists = remember(playlists) { playlists.filter { !it.isUnified && it.id != "sys_unified_favorites" } }
+    val unifiedPlaylists = remember(playlists) { playlists.filter { it.isUnified || it.id == "sys_unified_favorites" } }
 
     @Composable
     fun bubbleModifier(shape: CornerBasedShape): Modifier {
@@ -245,7 +250,70 @@ fun PlaylistsScreen(
                             }
                         }
 
-                        items(playlists, key = { it.id }) { playlist ->
+                        item(span = { GridItemSpan(2) }, key = "hdr_normal_playlists") {
+                            Text(
+                                text = strings.navPlaylists,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
+                            )
+                        }
+
+                        items(normalPlaylists, key = { it.id }) { playlist ->
+                            PlaylistCard(
+                                playlist = playlist,
+                                onClick = { selectedPlaylistId = playlist.id },
+                                onQuickPlay = {
+                                    if (playlist.songs.isNotEmpty()) {
+                                        onPlayQueue(playlist.songs, 0, false)
+                                    }
+                                },
+                                bubbleModifier = { contentBubbleModifier(it) }
+                            )
+                        }
+
+                        item(span = { GridItemSpan(2) }, key = "hdr_unified_playlists") {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(start = 4.dp, end = 4.dp, top = 16.dp, bottom = 6.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.SpaceBetween
+                            ) {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(
+                                        text = strings.unifiedPlaylistsTitle,
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Box(
+                                        modifier = Modifier
+                                            .size(30.dp)
+                                            .clip(CircleShape)
+                                            .clickable {
+                                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                                showUnifiedInfoDialog = true
+                                            }
+                                            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.8f)),
+                                        contentAlignment = Alignment.Center
+                                    ) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Info,
+                                            contentDescription = "Info",
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(17.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        items(unifiedPlaylists, key = { it.id }) { playlist ->
                             PlaylistCard(
                                 playlist = playlist,
                                 onClick = { selectedPlaylistId = playlist.id },
@@ -367,6 +435,7 @@ fun PlaylistsScreen(
 
     if (showCreateDialog) {
         var name by remember { mutableStateOf("") }
+        var isUnified by remember { mutableStateOf(false) }
         val selectedSongIds = remember { mutableStateListOf<String>() }
 
         AlertDialog(
@@ -382,7 +451,23 @@ fun PlaylistsScreen(
                         shape = RoundedCornerShape(16.dp),
                         modifier = Modifier.fillMaxWidth()
                     )
-                    Spacer(Modifier.height(12.dp))
+                    Spacer(Modifier.height(8.dp))
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { isUnified = !isUnified }
+                    ) {
+                        Checkbox(
+                            checked = isUnified,
+                            onCheckedChange = { isUnified = it }
+                        )
+                        Text(
+                            text = strings.createUnifiedPlaylist,
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                    }
+                    Spacer(Modifier.height(8.dp))
                     Text(
                         text = "${strings.addTracksButton} (${selectedSongIds.size}):",
                         style = MaterialTheme.typography.labelLarge
@@ -427,7 +512,11 @@ fun PlaylistsScreen(
                     enabled = name.isNotBlank(),
                     onClick = {
                         val initial = allSongs.filter { selectedSongIds.contains(it.id) }
-                        onCreatePlaylist(name, initial)
+                        if (isUnified && onCreateUnifiedPlaylist != null) {
+                            onCreateUnifiedPlaylist(name, initial)
+                        } else {
+                            onCreatePlaylist(name, initial)
+                        }
                         showCreateDialog = false
                     }
                 ) {
@@ -437,6 +526,38 @@ fun PlaylistsScreen(
             dismissButton = {
                 TextButton(onClick = { showCreateDialog = false }) {
                     Text(strings.cancel)
+                }
+            }
+        )
+    }
+
+    if (showUnifiedInfoDialog) {
+        AlertDialog(
+            onDismissRequest = { showUnifiedInfoDialog = false },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.Info,
+                    contentDescription = null,
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(36.dp)
+                )
+            },
+            title = {
+                Text(
+                    text = strings.unifiedPlaylistInfoTitle,
+                    fontWeight = FontWeight.Bold
+                )
+            },
+            text = {
+                Text(
+                    text = strings.unifiedPlaylistInfoDesc,
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            },
+            confirmButton = {
+                TextButton(onClick = { showUnifiedInfoDialog = false }) {
+                    Text(strings.understood)
                 }
             }
         )

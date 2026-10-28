@@ -332,6 +332,15 @@ fun AppIconVectorPreview(
                     )
                 }
             }
+
+            AppIconOption.HALLOWEEN -> {
+                Image(
+                    painter = painterResource(id = R.drawable.icon_preview_halloween),
+                    contentDescription = option.label,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
@@ -640,6 +649,15 @@ fun AnimatedSplashIcon(
                     )
                 }
             }
+
+            AppIconOption.HALLOWEEN -> {
+                Image(
+                    painter = painterResource(id = R.drawable.icon_preview_halloween),
+                    contentDescription = option.label,
+                    contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize()
+                )
+            }
         }
     }
 }
@@ -668,4 +686,31 @@ private fun DrawScope.buildSmoothCookiePath(
     }
     path.close()
     return path
+}
+
+class ExpressiveScallopShape(
+    val lobes: Int = 12,
+    val depth: Float = 0.12f
+) : androidx.compose.ui.graphics.Shape {
+    override fun createOutline(
+        size: androidx.compose.ui.geometry.Size,
+        layoutDirection: androidx.compose.ui.unit.LayoutDirection,
+        density: androidx.compose.ui.unit.Density
+    ): androidx.compose.ui.graphics.Outline {
+        val cx = size.width / 2f
+        val cy = size.height / 2f
+        val rBase = minOf(cx, cy) * 0.96f
+        val path = Path()
+        val steps = lobes * 16
+        for (i in 0..steps) {
+            val theta = (i.toFloat() / steps.toFloat()) * (2f * PI.toFloat())
+            val wave = 0.88f * cos(lobes * theta) - 0.12f * cos(2f * lobes * theta)
+            val r = rBase * (1.0f - depth + depth * wave)
+            val x = cx + r * cos(theta)
+            val y = cy + r * sin(theta)
+            if (i == 0) path.moveTo(x, y) else path.lineTo(x, y)
+        }
+        path.close()
+        return androidx.compose.ui.graphics.Outline.Generic(path)
+    }
 }

@@ -118,7 +118,6 @@ fun YouTubeMusicScreen(
 ) {
     val strings = LocalStrings.current
     var showWebLoginDialog by remember { mutableStateOf(false) }
-    var showLoginChoiceDialog by remember { mutableStateOf(false) }
     var showAccountMenuDialog by remember { mutableStateOf(false) }
     var pendingLoginEmail by remember { mutableStateOf<String?>(null) }
 
@@ -148,7 +147,7 @@ fun YouTubeMusicScreen(
                 hazeState = hazeState,
                 enableBlur = enableBlur,
                 useLiquidGlass = useLiquidGlass,
-                onSignInClick = { showLoginChoiceDialog = true },
+                onSignInClick = { showWebLoginDialog = true },
                 onBackToLocal = onSwitchToLocal
             )
         } else {
@@ -249,79 +248,6 @@ fun YouTubeMusicScreen(
     }
 
 
-
-    if (showLoginChoiceDialog) {
-        AlertDialog(
-            onDismissRequest = { showLoginChoiceDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.AccountCircle,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = strings.googleSignInTitle,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = strings.googleSignInSubtitle,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                    Spacer(Modifier.height(4.dp))
-                    Button(
-                        onClick = {
-                            showLoginChoiceDialog = false
-                            try {
-                                val intent = AccountManager.newChooseAccountIntent(
-                                    null,
-                                    null,
-                                    arrayOf("com.google"),
-                                    null,
-                                    null,
-                                    null,
-                                    null
-                                )
-                                accountPickerLauncher.launch(intent)
-                            } catch (_: Exception) {
-                                showWebLoginDialog = true
-                            }
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.Filled.AccountCircle, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(strings.nativeGoogleSignIn, fontWeight = FontWeight.Bold)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            showLoginChoiceDialog = false
-                            showWebLoginDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(16.dp)
-                    ) {
-                        Icon(Icons.Filled.Language, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(strings.webGoogleSignIn)
-                    }
-                }
-            },
-            confirmButton = {},
-            dismissButton = {
-                TextButton(onClick = { showLoginChoiceDialog = false }) {
-                    Text(strings.cancel)
-                }
-            }
-        )
-    }
 
     if (showWebLoginDialog) {
         YtMusicRealWebLoginDialog(
@@ -675,11 +601,8 @@ private fun YtSignInRequiredGate(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = strings.backToLocal,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(16.dp)
+                    IosBackChevron(
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Surface(
                         shape = CircleShape,
@@ -1069,11 +992,8 @@ private fun YtHomeTab(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.AutoMirrored.Filled.ArrowBackIos,
-                        contentDescription = strings.backToLocal,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(16.dp)
+                    IosBackChevron(
+                        color = MaterialTheme.colorScheme.onSurface
                     )
                     Surface(
                         shape = CircleShape,

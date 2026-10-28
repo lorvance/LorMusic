@@ -7,6 +7,7 @@ import android.app.Activity
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.view.HapticFeedbackConstants
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -18,7 +19,10 @@ import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -30,12 +34,17 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
 import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
@@ -68,6 +77,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val themeMode by playerViewModel.themeMode
             val useDynamicColor by playerViewModel.useDynamicColor
+            val isHalloweenMode by playerViewModel.isHalloweenMode
             val darkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.DARK -> true
@@ -76,7 +86,8 @@ class MainActivity : ComponentActivity() {
 
             LorMusicTheme(
                 darkTheme = darkTheme,
-                dynamicColor = useDynamicColor
+                dynamicColor = useDynamicColor && !isHalloweenMode,
+                isHalloweenMode = isHalloweenMode
             ) {
                 LorMusicMainContent(playerViewModel)
             }
@@ -173,7 +184,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         searchBarPlacement == SearchBarPlacement.ALWAYS_TOP
 
     val isYtMusicMode by playerViewModel.isYtMusicMode
+    val isSoundCloudMode by playerViewModel.isSoundCloudMode
     val activeYtTab by playerViewModel.activeYtTab
+    val activeScTab by playerViewModel.activeScTab
     val ytRecommendations by playerViewModel.ytRecommendations
     val ytRadioMixes by playerViewModel.ytRadioMixes
     val ytMyWaveSongs by playerViewModel.ytMyWaveSongs
@@ -186,11 +199,25 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     val playlists = playerViewModel.getAllPlaylistsWithFavorites()
 
-    BackHandler(enabled = isYtMusicMode && !showNowPlaying) {
-        if (activeYtTab != YtMusicTab.HOME) {
-            playerViewModel.selectYtTab(YtMusicTab.HOME)
-        } else {
-            playerViewModel.exitYtMusicMode()
+    var lastBackPressTime by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
+
+    LaunchedEffect(Unit) {
+        playerViewModel.checkAndEnforceHalloweenExpiry()
+    }
+
+    BackHandler(enabled = (isYtMusicMode || isSoundCloudMode) && !showNowPlaying) {
+        if (isSoundCloudMode) {
+            if (activeScTab != ScTab.HOME) {
+                playerViewModel.selectScTab(ScTab.HOME)
+            } else {
+                playerViewModel.exitSoundCloudMode()
+            }
+        } else if (isYtMusicMode) {
+            if (activeYtTab != YtMusicTab.HOME) {
+                playerViewModel.selectYtTab(YtMusicTab.HOME)
+            } else {
+                playerViewModel.exitYtMusicMode()
+            }
         }
     }
 
@@ -210,6 +237,18 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     val appLanguage by playerViewModel.appLanguage
     val currentStrings = remember(appLanguage) { resolveStrings(appLanguage) }
 
+    val activity = context as? android.app.Activity
+
+    BackHandler(enabled = !isYtMusicMode && !isSoundCloudMode && !showNowPlaying) {
+        val now = System.currentTimeMillis()
+        if (now - lastBackPressTime < 2000L) {
+            activity?.finish()
+        } else {
+            lastBackPressTime = now
+            android.widget.Toast.makeText(context, currentStrings.pressBackAgainToExit, android.widget.Toast.LENGTH_SHORT).show()
+        }
+    }
+
     val snackbarHostState = remember { SnackbarHostState() }
     LaunchedEffect(statusMessage) {
         statusMessage?.let { msg ->
@@ -225,7 +264,15 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         LocalStrings provides currentStrings
     ) {
         Surface(
-            modifier = Modifier.fillMaxSize(),
+            modifier = Modifier
+                .fillMaxSize()
+                .then(
+                    if (showUpdateDialog && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                        Modifier.blur(24.dp)
+                    } else {
+                        Modifier
+                    }
+                ),
             color = MaterialTheme.colorScheme.background
         ) {
             Box(modifier = Modifier.fillMaxSize()) {
@@ -234,17 +281,23 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
                 ) {
+                    val topLevelMode = when {
+                        isYtMusicMode -> 1
+                        isSoundCloudMode -> 2
+                        else -> 0
+                    }
                     AnimatedContent(
-                        targetState = isYtMusicMode,
+                        targetState = topLevelMode,
                         transitionSpec = {
                             (fadeIn(tween(260)) + scaleIn(initialScale = 0.97f, animationSpec = tween(260)))
                                 .togetherWith(fadeOut(tween(200)) + scaleOut(targetScale = 0.97f, animationSpec = tween(200)))
                         },
                         modifier = Modifier.fillMaxSize(),
                         label = "modeSwitchTransition"
-                    ) { ytMode ->
-                        if (ytMode) {
-                            YouTubeMusicScreen(
+                    ) { mode ->
+                        when (mode) {
+                            1 -> {
+                                YouTubeMusicScreen(
                                 activeTab = activeYtTab,
                                 recentlyPlayed = playerViewModel.getRecentlyPlayedSongs(),
                                 recommendations = ytRecommendations,
@@ -289,7 +342,44 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 selectedTab = LorTab.LIBRARY
                             }
                         )
-                    } else {
+                    }
+                    2 -> {
+                        SoundCloudScreen(
+                            activeTab = activeScTab,
+                            onSelectTab = { playerViewModel.selectScTab(it) },
+                            charts = playerViewModel.soundCloudCharts.value,
+                            likes = playerViewModel.soundCloudLikes.value,
+                            searchResults = playerViewModel.soundCloudSearchResults.value,
+                            savedSongs = playerViewModel.savedScSongs.value,
+                            currentSong = currentSong,
+                            isPlaying = isPlaying,
+                            isFavorite = playerViewModel::isFavorite,
+                            onToggleFavorite = playerViewModel::toggleFavorite,
+                            onPlayQueue = { list, idx, shuffle ->
+                                playerViewModel.setQueueAndPlay(list, idx, shuffle)
+                            },
+                            onSearch = playerViewModel::searchSoundCloud,
+                            onRefreshCharts = playerViewModel::loadSoundCloudCharts,
+                            profile = playerViewModel.soundCloudProfile.value,
+                            onSignInSuccess = playerViewModel::onSoundCloudAuthSuccess,
+                            onSignOut = playerViewModel::signOutSoundCloud,
+                            playlists = playlists,
+                            onAddToPlaylist = playerViewModel::addSongToPlaylist,
+                            onCreateNewPlaylistWithSong = { name, song, isUnified ->
+                                playerViewModel.createPlaylist(name, listOf(song), isUnified = isUnified)
+                            },
+                            onSwitchToLocal = {
+                                playerViewModel.isSoundCloudMode.value = false
+                                selectedTab = LorTab.LIBRARY
+                            },
+                            isLoadingCharts = playerViewModel.isLoadingSoundCloud.value,
+                            isSearching = playerViewModel.isSearchingSoundCloud.value,
+                            hazeState = hazeState,
+                            enableBlur = effectiveEnableBlur,
+                            useLiquidGlass = effectiveUseLiquidGlass
+                        )
+                    }
+                    else -> {
                         AnimatedContent(
                             targetState = selectedTab,
                             transitionSpec = {
@@ -339,7 +429,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     onToggleFavorite = playerViewModel::toggleFavorite,
                                     onSongMoreClick = { songForActionsSheet = it },
                                     onOpenTagFix = { showTagFixSheet = true },
-                                    onOpenYtMusic = { playerViewModel.enterYtMusicMode() }
+                                    onOpenYtMusic = { playerViewModel.enterYtMusicMode() },
+                                    onOpenSoundCloud = { playerViewModel.enterSoundCloudMode() }
                                 )
 
                                 LorTab.PLAYLISTS -> PlaylistsScreen(
@@ -355,6 +446,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         playerViewModel.setQueueAndPlay(list, idx, shuffle)
                                     },
                                     onCreatePlaylist = playerViewModel::createPlaylist,
+                                    onCreateUnifiedPlaylist = { name, songs ->
+                                        playerViewModel.createPlaylist(name, songs, isUnified = true)
+                                    },
                                     onDeletePlaylist = playerViewModel::deletePlaylist,
                                     onAddSongToPlaylist = playerViewModel::addSongToPlaylist,
                                     onAddSongsToPlaylist = playerViewModel::addSongsToPlaylist,
@@ -425,6 +519,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onOpenTagFix = { showTagFixSheet = true },
                                         onExportBackup = playerViewModel::exportBackup,
                                         onImportBackup = playerViewModel::importBackup,
+                                        isHalloweenMode = playerViewModel.isHalloweenMode.value,
+                                        onToggleHalloweenMode = playerViewModel::setHalloweenMode,
                                         onCheckForUpdates = { playerViewModel.checkForUpdates(silent = false) }
                                     )
                                 }
@@ -433,6 +529,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     }
                 }
             }
+        }
 
             Box(
                 modifier = Modifier
@@ -645,6 +742,18 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             showBottomSearchButton = !isYtSearchTop,
                             showLabels = playerViewModel.showNavBarLabels.value
                         )
+                    } else if (isSoundCloudMode) {
+                        ScMusicBottomNavBar(
+                            selected = activeScTab,
+                            onSelect = { tab: com.lormusic.app.ui.components.ScTab ->
+                                playerViewModel.selectScTab(tab)
+                            },
+                            hazeState = hazeState,
+                            enableBlur = effectiveEnableBlur,
+                            useLiquidGlass = effectiveUseLiquidGlass,
+                            showBottomSearchButton = true,
+                            showLabels = playerViewModel.showNavBarLabels.value
+                        )
                     } else {
                         LorBottomNavBar(
                             selected = selectedTab,
@@ -706,7 +815,13 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             onAddToPlaylist = { plId, targetSong -> playerViewModel.addSongToPlaylist(plId, targetSong) },
                             onRemoveFromPlaylist = { plId, songId -> playerViewModel.removeSongFromPlaylist(plId, songId) },
                             onCreatePlaylist = { name -> playerViewModel.createPlaylist(name, listOf(song)) },
-                            onDownloadTrack = { playerViewModel.downloadYtSongWithTags(song) },
+                            onDownloadTrack = {
+                                if (song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("sc://")) {
+                                    playerViewModel.downloadScSongWithTags(song)
+                                } else {
+                                    playerViewModel.downloadYtSongWithTags(song)
+                                }
+                            },
                             onTogglePlay = playerViewModel::togglePlayPause,
                             onNext = playerViewModel::skipNext,
                             onPrevious = playerViewModel::skipPrevious,
@@ -736,6 +851,11 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             onOpenSongActions = { songForActionsSheet = song },
                             onOpenTagEditor = { songForTagEditor = song },
                             onOpenArtistProfile = { artist -> showNowPlaying = false; playerViewModel.openArtistProfile(artist) },
+                            halloweenCandies = playerViewModel.halloweenCandies.value,
+                            onEatCandies = {
+                                playerViewModel.setHalloweenCandies(false)
+                                playerViewModel.statusMessage.value = currentStrings.halloweenCandiesEaten
+                            },
                             onClose = { showNowPlaying = false }
                         )
                     }
@@ -753,7 +873,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     songForActionsSheet?.let { targetSong ->
         SongActionsBottomSheet(
             song = targetSong,
-            isFavorite = favoriteIds.contains(targetSong.id),
+            isFavorite = playerViewModel.isFavorite(targetSong.id),
             isHidden = hiddenSongIds.contains(targetSong.id),
             playlists = playlists,
             onDismiss = { songForActionsSheet = null },
@@ -765,7 +885,13 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 songForActionsSheet = null
                 playerViewModel.openArtistProfile(artist)
             },
-            onDownloadSong = { playerViewModel.downloadYtSongWithTags(targetSong) },
+            onDownloadSong = {
+                if (targetSong.isRemoteSc || targetSong.id.startsWith("sc_") || targetSong.uri.startsWith("sc://")) {
+                    playerViewModel.downloadScSongWithTags(targetSong)
+                } else {
+                    playerViewModel.downloadYtSongWithTags(targetSong)
+                }
+            },
             onToggleHidden = { playerViewModel.toggleHiddenSong(targetSong) },
             onDeleteFromDevice = {
                 playerViewModel.deleteSongFromDevice(targetSong) { intentSender ->
@@ -777,6 +903,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             },
             onCreateNewPlaylistWithSong = { name ->
                 playerViewModel.createPlaylist(name, listOf(targetSong))
+            },
+            onCreateUnifiedPlaylistWithSong = { name ->
+                playerViewModel.createPlaylist(name, listOf(targetSong), isUnified = true)
             }
         )
     }
@@ -824,7 +953,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             onTogglePlay = playerViewModel::togglePlayPause,
             onPrevious = playerViewModel::skipPrevious,
             onNext = playerViewModel::skipNext,
-            onOpenPlayer = { showNowPlaying = true }
+            onOpenPlayer = {
+                showNowPlaying = true
+            }
         )
     }
 
@@ -921,8 +1052,106 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             onDismiss = {
                 playerViewModel.dismissUpdateDialog()
             },
-            appLanguage = appLanguage
+            appLanguage = appLanguage,
+            hazeState = hazeState,
+            enableBlur = enableBlur
         )
     }
+
+    val showHalloweenGreeting by playerViewModel.showHalloweenGreeting
+    if (showHalloweenGreeting) {
+        AlertDialog(
+            onDismissRequest = { playerViewModel.dismissHalloweenGreeting() },
+            icon = {
+                Text("🎃", fontSize = 42.sp)
+            },
+            title = {
+                Text(
+                    text = currentStrings.halloweenGreetingTitle,
+                    fontWeight = FontWeight.Bold,
+                    textAlign = TextAlign.Center
+                )
+            },
+            text = {
+                Text(
+                    text = currentStrings.halloweenGreetingMsg,
+                    style = MaterialTheme.typography.bodyMedium,
+                    textAlign = TextAlign.Center,
+                    modifier = Modifier.fillMaxWidth()
+                )
+            },
+            confirmButton = {
+                Button(
+                    onClick = { playerViewModel.selectHalloweenTreat() },
+                    shape = RoundedCornerShape(16.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = Color(0xFFFF9E40),
+                        contentColor = Color(0xFF2C1300)
+                    )
+                ) {
+                    Text(currentStrings.halloweenTreatBtn, fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                OutlinedButton(
+                    onClick = { playerViewModel.selectHalloweenTrick() },
+                    shape = RoundedCornerShape(16.dp),
+                    border = BorderStroke(1.5.dp, Color(0xFFFF7518)),
+                    colors = ButtonDefaults.outlinedButtonColors(
+                        contentColor = Color(0xFFFF7518)
+                    )
+                ) {
+                    Text(currentStrings.halloweenTrickBtn, fontWeight = FontWeight.Bold)
+                }
+            }
+        )
     }
+
+    val triggerTrick by playerViewModel.triggerHalloweenTrickJumpscare
+    if (triggerTrick) {
+        val view = LocalView.current
+        var pumpkinScale by remember { mutableFloatStateOf(0.2f) }
+        var shakeOffset by remember { mutableFloatStateOf(0f) }
+
+        LaunchedEffect(Unit) {
+            view.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS)
+            androidx.compose.animation.core.animate(
+                initialValue = 0.2f,
+                targetValue = 18f,
+                animationSpec = androidx.compose.animation.core.tween(
+                    durationMillis = 950,
+                    easing = androidx.compose.animation.core.FastOutSlowInEasing
+                )
+            ) { value, _ ->
+                pumpkinScale = value
+                shakeOffset = (kotlin.math.sin(value * 9f) * 28f).toFloat()
+            }
+            delay(150)
+            activity?.finishAffinity()
+            kotlin.system.exitProcess(0)
+        }
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(Color.Black)
+                .clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {},
+            contentAlignment = Alignment.Center
+        ) {
+            Text(
+                text = "🎃",
+                fontSize = 48.sp,
+                modifier = Modifier
+                    .graphicsLayer {
+                        scaleX = pumpkinScale
+                        scaleY = pumpkinScale
+                        translationX = shakeOffset
+                    }
+            )
+        }
+    }
+}
 }

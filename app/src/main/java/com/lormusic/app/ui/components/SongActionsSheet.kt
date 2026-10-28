@@ -21,6 +21,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.lormusic.app.data.SoundCloudRepository
 import com.lormusic.app.data.YouTubeMusicRepository
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Playlist
@@ -127,6 +128,7 @@ fun SongActionsBottomSheet(
     onToggleFavorite: () -> Unit,
     onAddToPlaylist: (String) -> Unit,
     onCreateNewPlaylistWithSong: (String) -> Unit,
+    onCreateUnifiedPlaylistWithSong: ((String) -> Unit)? = null,
     onOpenTagEditor: (() -> Unit)? = null,
     onDownloadSong: (() -> Unit)? = null,
     onToggleHidden: (() -> Unit)? = null,
@@ -140,6 +142,8 @@ fun SongActionsBottomSheet(
     val strings = LocalStrings.current
     val context = LocalContext.current
     val ytShareUrl = remember(song) { YouTubeMusicRepository.getShareUrl(song) }
+    val scShareUrl = remember(song) { SoundCloudRepository.getShareUrl(song) }
+    val shareUrl = ytShareUrl ?: scShareUrl
 
     ModalBottomSheet(
         onDismissRequest = onDismiss,
@@ -295,7 +299,7 @@ fun SongActionsBottomSheet(
                             }
                         )
                     }
-                    if (onDownloadSong != null && (song.isRemoteYt || song.uri.startsWith("http") || song.uri.startsWith("yt://"))) {
+                    if (onDownloadSong != null && (song.isRemoteYt || song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("http") || song.uri.startsWith("yt://") || song.uri.startsWith("sc://"))) {
                         ListItem(
                             headlineContent = { Text(strings.downloadToPhone) },
                             supportingContent = { Text(strings.downloadSubtitle) },
@@ -312,10 +316,10 @@ fun SongActionsBottomSheet(
                             }
                         )
                     }
-                    if (ytShareUrl != null) {
+                    if (shareUrl != null) {
                         ListItem(
                             headlineContent = { Text(strings.shareSong) },
-                            supportingContent = { Text("${strings.share}: $ytShareUrl") },
+                            supportingContent = { Text("${strings.share}: $shareUrl") },
                             leadingContent = {
                                 Icon(
                                     Icons.Filled.Share,
@@ -324,7 +328,11 @@ fun SongActionsBottomSheet(
                                 )
                             },
                             modifier = Modifier.clickable {
-                                YouTubeMusicRepository.shareSongLink(context, song)
+                                if (scShareUrl != null) {
+                                    SoundCloudRepository.shareSongLink(context, song)
+                                } else {
+                                    YouTubeMusicRepository.shareSongLink(context, song)
+                                }
                                 onDismiss()
                             }
                         )
@@ -342,6 +350,24 @@ fun SongActionsBottomSheet(
                         },
                         modifier = Modifier.clickable {
                             onToggleFavorite()
+                            onDismiss()
+                        }
+                    )
+                    val unifiedPl = playlists.find { it.id == "sys_unified_favorites" }
+                    val isInUnifiedFav = unifiedPl?.songs?.any { it.id == song.id } == true
+                    ListItem(
+                        headlineContent = {
+                            Text(if (isInUnifiedFav) strings.scRemoveFromUnifiedFavorites else strings.scAddToUnifiedFavorites)
+                        },
+                        leadingContent = {
+                            Icon(
+                                imageVector = Icons.Filled.AutoAwesome,
+                                contentDescription = null,
+                                tint = if (isInUnifiedFav) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                            )
+                        },
+                        modifier = Modifier.clickable {
+                            onAddToPlaylist("sys_unified_favorites")
                             onDismiss()
                         }
                     )
@@ -415,17 +441,58 @@ fun SongActionsBottomSheet(
                         fontWeight = FontWeight.Bold,
                         modifier = Modifier.padding(horizontal = 20.dp, vertical = 6.dp)
                     )
-                    LazyColumn(modifier = Modifier.heightIn(max = 220.dp)) {
-                        items(playlists.filter { !it.isSystem }) { pl ->
+                    var createAsUnified by remember { mutableStateOf(song.isRemoteYt || song.isRemoteSc) }
+                    val availablePlaylists = remember(playlists) {
+                        val unifiedFav = playlists.find { it.id == "sys_unified_favorites" }
+                        val others = playlists.filter { !it.isSystem }
+                        if (unifiedFav != null) listOf(unifiedFav) + others else others
+                    }
+                    LazyColumn(modifier = Modifier.heightIn(max = 240.dp)) {
+                        items(availablePlaylists) { pl ->
+                            val isUniFav = pl.id == "sys_unified_favorites"
                             ListItem(
-                                headlineContent = { Text(pl.name) },
+                                headlineContent = {
+                                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                                        Text(if (isUniFav) strings.unifiedFavorites else pl.name)
+                                        if (pl.isUnified) {
+                                            Surface(
+                                                shape = RoundedCornerShape(8.dp),
+                                                color = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.7f)
+                                            ) {
+                                                Text(
+                                                    text = strings.unifiedPlaylist,
+                                                    style = MaterialTheme.typography.labelSmall,
+                                                    modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp),
+                                                    color = MaterialTheme.colorScheme.onPrimaryContainer
+                                                )
+                                            }
+                                        }
+                                    }
+                                },
                                 supportingContent = { Text("${pl.songs.size} ${strings.tracksCount}") },
                                 leadingContent = {
-                                    SongArtwork(
-                                        seed = pl.coverColorSeed,
-                                        cornerRadius = 10.dp,
-                                        modifier = Modifier.size(40.dp)
-                                    )
+                                    if (isUniFav) {
+                                        Surface(
+                                            shape = RoundedCornerShape(10.dp),
+                                            color = MaterialTheme.colorScheme.primary.copy(alpha = 0.15f),
+                                            modifier = Modifier.size(40.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Icon(
+                                                    imageVector = Icons.Filled.AutoAwesome,
+                                                    contentDescription = null,
+                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+                                    } else {
+                                        SongArtwork(
+                                            seed = pl.coverColorSeed,
+                                            cornerRadius = 10.dp,
+                                            modifier = Modifier.size(40.dp)
+                                        )
+                                    }
                                 },
                                 modifier = Modifier.clickable {
                                     onAddToPlaylist(pl.id)
@@ -437,13 +504,29 @@ fun SongActionsBottomSheet(
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                            .padding(horizontal = 20.dp, vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Checkbox(
+                            checked = createAsUnified,
+                            onCheckedChange = { createAsUnified = it }
+                        )
+                        Text(
+                            text = strings.createUnifiedPlaylist,
+                            style = MaterialTheme.typography.bodyMedium,
+                            modifier = Modifier.clickable { createAsUnified = !createAsUnified }
+                        )
+                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 6.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         OutlinedTextField(
                             value = newPlaylistName,
                             onValueChange = { newPlaylistName = it },
-                            placeholder = { Text(strings.newPlaylistPlaceholder) },
+                            placeholder = { Text(if (createAsUnified) strings.unifiedPlaylist else strings.newPlaylistPlaceholder) },
                             singleLine = true,
                             shape = RoundedCornerShape(16.dp),
                             modifier = Modifier.weight(1f)
@@ -452,7 +535,11 @@ fun SongActionsBottomSheet(
                         FilledTonalButton(
                             enabled = newPlaylistName.isNotBlank(),
                             onClick = {
-                                onCreateNewPlaylistWithSong(newPlaylistName.trim())
+                                if (createAsUnified && onCreateUnifiedPlaylistWithSong != null) {
+                                    onCreateUnifiedPlaylistWithSong(newPlaylistName.trim())
+                                } else {
+                                    onCreateNewPlaylistWithSong(newPlaylistName.trim())
+                                }
                                 onDismiss()
                             }
                         ) {

@@ -1,9 +1,12 @@
 package com.lormusic.app.ui.components
 
+import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
@@ -19,6 +22,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.rotate
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
@@ -27,6 +31,9 @@ import com.lormusic.app.data.AppUpdateInfo
 import com.lormusic.app.data.UpdateState
 import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
+import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
@@ -90,20 +97,21 @@ fun UpdateDialog(
     onDownload: () -> Unit,
     onInstall: (File) -> Unit,
     onDismiss: () -> Unit,
-    appLanguage: AppLanguage = AppLanguage.RU
+    appLanguage: AppLanguage = AppLanguage.RU,
+    hazeState: HazeState? = null,
+    enableBlur: Boolean = true
 ) {
     val strings = LocalStrings.current
     val targetLang = when (appLanguage) {
         AppLanguage.UK -> "uk"
-        AppLanguage.RU -> "ru"
         else -> null
     }
     val displayedChangelog by produceState(initialValue = updateInfo.changelog, updateInfo.changelog, targetLang) {
         if (targetLang != null) {
-            value = translateChangelog(updateInfo.changelog, targetLang)
+            value = runCatching { translateChangelog(updateInfo.changelog, targetLang) }.getOrDefault(updateInfo.changelog)
         }
     }
-    var isChangelogExpanded by remember { mutableStateOf(false) }
+    var isChangelogExpanded by remember { mutableStateOf(true) }
     val arrowRotation by animateFloatAsState(
         targetValue = if (isChangelogExpanded) 180f else 0f,
         label = "arrowRotation"
@@ -116,23 +124,61 @@ fun UpdateDialog(
             }
         },
         properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
             dismissOnBackPress = updateState !is UpdateState.Downloading,
             dismissOnClickOutside = false
         )
     ) {
-        Surface(
-            shape = RoundedCornerShape(28.dp),
-            tonalElevation = 6.dp,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+        val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+        val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+
+        val backdropColor = if (enableBlur) {
+            Color.Black.copy(alpha = 0.35f)
+        } else {
+            Color.Black.copy(alpha = 0.75f)
+        }
+
+        Box(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 8.dp)
+                .fillMaxSize()
+                .background(backdropColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) {
+                    if (updateState !is UpdateState.Downloading) {
+                        onDismiss()
+                    }
+                },
+            contentAlignment = Alignment.BottomCenter
         ) {
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(24.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .navigationBarsPadding()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f)
+                        else surfaceContainerHigh
+                    )
+                    .border(
+                        1.dp,
+                        if (enableBlur) Color.White.copy(alpha = 0.18f)
+                        else outlineVariant.copy(alpha = 0.35f),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { /* absorb clicks */ }
             ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp)
+                ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(16.dp),
@@ -140,7 +186,7 @@ fun UpdateDialog(
                 ) {
                     Box(
                         modifier = Modifier
-                            .size(48.dp)
+                            .size(52.dp)
                             .clip(CircleShape)
                             .background(MaterialTheme.colorScheme.primaryContainer),
                         contentAlignment = Alignment.Center
@@ -160,7 +206,7 @@ fun UpdateDialog(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            text = "${strings.appVersion.substringBefore(" ")} ${updateInfo.versionName}",
+                            text = "v${updateInfo.versionName.removePrefix("v").removePrefix("V")}",
                             style = MaterialTheme.typography.headlineSmall,
                             fontWeight = FontWeight.Bold,
                             color = MaterialTheme.colorScheme.onSurface
@@ -192,12 +238,20 @@ fun UpdateDialog(
                                 verticalAlignment = Alignment.CenterVertically,
                                 horizontalArrangement = Arrangement.spacedBy(8.dp)
                             ) {
-                                Icon(
-                                    imageVector = Icons.Rounded.NewReleases,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
+                                Box(
+                                    modifier = Modifier
+                                        .size(28.dp)
+                                        .clip(CircleShape)
+                                        .background(MaterialTheme.colorScheme.primaryContainer),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Rounded.NewReleases,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
                                 Text(
                                     text = strings.changelogTitle,
                                     style = MaterialTheme.typography.titleSmall,
@@ -287,7 +341,7 @@ fun UpdateDialog(
                     is UpdateState.ReadyToInstall -> {
                         Button(
                             onClick = { onInstall(updateState.apkFile) },
-                            shape = RoundedCornerShape(16.dp),
+                            shape = RoundedCornerShape(20.dp),
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .height(52.dp)
@@ -303,7 +357,7 @@ fun UpdateDialog(
                         ) {
                             Button(
                                 onClick = onDownload,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(52.dp)
@@ -313,7 +367,7 @@ fun UpdateDialog(
 
                             OutlinedButton(
                                 onClick = onDismiss,
-                                shape = RoundedCornerShape(16.dp),
+                                shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
                                     .height(48.dp)
@@ -326,4 +380,5 @@ fun UpdateDialog(
             }
         }
     }
+}
 }

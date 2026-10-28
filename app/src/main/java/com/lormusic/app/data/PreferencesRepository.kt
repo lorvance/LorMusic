@@ -9,7 +9,8 @@ data class StoredPlaylistData(
     val id: String,
     val name: String,
     val songIds: List<String>,
-    val coverColorSeed: Int
+    val coverColorSeed: Int,
+    val isUnified: Boolean = false
 )
 
 class PreferencesRepository(context: Context) {
@@ -312,6 +313,121 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putString(KEY_SAVED_YT_SONGS, arr.toString()).apply()
     }
 
+    fun getScFavoriteIds(): Set<String> {
+        return prefs.getStringSet(KEY_SC_FAVORITES, emptySet())?.toSet() ?: emptySet()
+    }
+
+    fun saveScFavoriteIds(ids: Set<String>) {
+        val filtered = ids.filter { it.startsWith("sc_") }.toSet()
+        prefs.edit().putStringSet(KEY_SC_FAVORITES, filtered).apply()
+    }
+
+    fun getUnifiedFavoriteIds(): Set<String> {
+        return prefs.getStringSet(KEY_UNIFIED_FAVORITES, emptySet())?.toSet() ?: emptySet()
+    }
+
+    fun saveUnifiedFavoriteIds(ids: Set<String>) {
+        prefs.edit().putStringSet(KEY_UNIFIED_FAVORITES, ids).apply()
+    }
+
+    fun getSavedScSongs(): List<Song> {
+        val json = prefs.getString(KEY_SAVED_SC_SONGS, null) ?: return emptyList()
+        return try {
+            val arr = JSONArray(json)
+            buildList {
+                for (i in 0 until arr.length()) {
+                    val obj = arr.getJSONObject(i)
+                    add(
+                        Song(
+                            id = obj.getString("id"),
+                            title = obj.getString("title"),
+                            artist = obj.getString("artist"),
+                            album = obj.optString("album", "SoundCloud"),
+                            durationMs = obj.optLong("durationMs", 180_000L),
+                            uri = obj.getString("uri"),
+                            coverColorSeed = obj.optInt("coverColorSeed", i),
+                            albumArtUri = obj.optString("albumArtUri", "").takeIf { it.isNotBlank() },
+                            isLocal = false,
+                            folderName = "SoundCloud",
+                            dateAddedSec = obj.optLong("dateAddedSec", System.currentTimeMillis() / 1000L),
+                            genre = obj.optString("genre", ""),
+                            year = obj.optString("year", ""),
+                            isRemoteSc = true
+                        )
+                    )
+                }
+            }
+        } catch (_: Exception) {
+            emptyList()
+        }
+    }
+
+    fun saveScSongs(songs: List<Song>) {
+        val arr = JSONArray()
+        songs.take(120).forEach { s ->
+            val obj = JSONObject()
+            obj.put("id", s.id)
+            obj.put("title", s.title)
+            obj.put("artist", s.artist)
+            obj.put("album", s.album)
+            obj.put("durationMs", s.durationMs)
+            obj.put("uri", s.uri)
+            obj.put("coverColorSeed", s.coverColorSeed)
+            obj.put("albumArtUri", s.albumArtUri ?: "")
+            obj.put("dateAddedSec", s.dateAddedSec)
+            obj.put("genre", s.genre)
+            obj.put("year", s.year)
+            arr.put(obj)
+        }
+        prefs.edit().putString(KEY_SAVED_SC_SONGS, arr.toString()).apply()
+    }
+
+    fun getScProfile(): SoundCloudUserProfile? {
+        val json = prefs.getString(KEY_SC_USER_PROFILE, null) ?: return null
+        return try {
+            val obj = JSONObject(json)
+            SoundCloudUserProfile(
+                username = obj.getString("username"),
+                avatarUrl = obj.optString("avatarUrl", "").takeIf { it.isNotBlank() },
+                permalinkUrl = obj.optString("permalinkUrl", "").takeIf { it.isNotBlank() },
+                trackCount = obj.optInt("trackCount", 0),
+                likesCount = obj.optInt("likesCount", 0),
+                followersCount = obj.optInt("followersCount", 0),
+                followingsCount = obj.optInt("followingsCount", 0)
+            )
+        } catch (_: Exception) {
+            null
+        }
+    }
+
+    fun saveScProfile(profile: SoundCloudUserProfile?) {
+        if (profile == null) {
+            prefs.edit().remove(KEY_SC_USER_PROFILE).apply()
+        } else {
+            val obj = JSONObject()
+            obj.put("username", profile.username)
+            obj.put("avatarUrl", profile.avatarUrl ?: "")
+            obj.put("permalinkUrl", profile.permalinkUrl ?: "")
+            obj.put("trackCount", profile.trackCount)
+            obj.put("likesCount", profile.likesCount)
+            obj.put("followersCount", profile.followersCount)
+            obj.put("followingsCount", profile.followingsCount)
+            prefs.edit().putString(KEY_SC_USER_PROFILE, obj.toString()).apply()
+        }
+    }
+
+    fun getScAuthToken(): String? {
+        return prefs.getString(KEY_SC_AUTH_TOKEN, null)
+    }
+
+    fun saveScAuthToken(token: String?) {
+        if (token.isNullOrBlank()) {
+            prefs.edit().remove(KEY_SC_AUTH_TOKEN).apply()
+        } else {
+            prefs.edit().putString(KEY_SC_AUTH_TOKEN, token).apply()
+        }
+    }
+
     fun getCustomPlaylists(): List<StoredPlaylistData>? {
         val json = prefs.getString(KEY_CUSTOM_PLAYLISTS, null) ?: return null
         return try {
@@ -329,7 +445,8 @@ class PreferencesRepository(context: Context) {
                         id = obj.getString("id"),
                         name = obj.getString("name"),
                         songIds = songIds,
-                        coverColorSeed = obj.optInt("coverColorSeed", i + 10)
+                        coverColorSeed = obj.optInt("coverColorSeed", i + 10),
+                        isUnified = obj.optBoolean("isUnified", false)
                     )
                 )
             }
@@ -346,6 +463,7 @@ class PreferencesRepository(context: Context) {
             obj.put("id", pl.id)
             obj.put("name", pl.name)
             obj.put("coverColorSeed", pl.coverColorSeed)
+            obj.put("isUnified", pl.isUnified)
             val ids = JSONArray()
             pl.songIds.forEach { ids.put(it) }
             obj.put("songIds", ids)
@@ -379,11 +497,43 @@ class PreferencesRepository(context: Context) {
     }
 
     fun getUseMyWaveCoverGradient(): Boolean {
-        return prefs.getBoolean(KEY_MY_WAVE_COVER_GRADIENT, false)
+        return prefs.getBoolean(KEY_MY_WAVE_COVER_GRADIENT, true)
     }
 
     fun saveUseMyWaveCoverGradient(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_MY_WAVE_COVER_GRADIENT, enabled).apply()
+    }
+
+    fun getHalloweenExpiredNotified(): Boolean {
+        return prefs.getBoolean(KEY_HALLOWEEN_EXPIRED_NOTIFIED, false)
+    }
+
+    fun saveHalloweenExpiredNotified(notified: Boolean) {
+        prefs.edit().putBoolean(KEY_HALLOWEEN_EXPIRED_NOTIFIED, notified).apply()
+    }
+
+    fun getHalloweenMode(): Boolean {
+        return prefs.getBoolean(KEY_HALLOWEEN_MODE, false)
+    }
+
+    fun saveHalloweenMode(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_HALLOWEEN_MODE, enabled).apply()
+    }
+
+    fun getHalloweenCandies(): Boolean {
+        return prefs.getBoolean(KEY_HALLOWEEN_CANDIES, false)
+    }
+
+    fun saveHalloweenCandies(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_HALLOWEEN_CANDIES, enabled).apply()
+    }
+
+    fun hasSeenHalloweenGreeting(dateKey: String): Boolean {
+        return prefs.getString(KEY_HALLOWEEN_GREETING_DATE, "") == dateKey
+    }
+
+    fun saveSeenHalloweenGreeting(dateKey: String) {
+        prefs.edit().putString(KEY_HALLOWEEN_GREETING_DATE, dateKey).apply()
     }
 
     fun getAutoTagFixEnabled(): Boolean {
@@ -643,6 +793,10 @@ class PreferencesRepository(context: Context) {
         private const val KEY_BETA_UPDATES = "enable_beta_updates"
         private const val KEY_ALBUM_ART_GRADIENT = "use_album_art_gradient_v2"
         private const val KEY_MY_WAVE_COVER_GRADIENT = "use_my_wave_cover_gradient"
+        private const val KEY_HALLOWEEN_EXPIRED_NOTIFIED = "halloween_expired_notified"
+        private const val KEY_HALLOWEEN_MODE = "halloween_mode_active"
+        private const val KEY_HALLOWEEN_CANDIES = "halloween_candies_active"
+        private const val KEY_HALLOWEEN_GREETING_DATE = "halloween_greeting_date"
         private const val KEY_AUTO_TAGFIX = "auto_tagfix_enabled"
         private const val KEY_RECENTS_VIEW_MODE = "yt_recents_view_mode"
         private const val KEY_APP_LANGUAGE = "app_language"
@@ -657,5 +811,10 @@ class PreferencesRepository(context: Context) {
         private const val KEY_SONG_META_MAP = "song_meta_map_json"
         private const val KEY_ALBUM_PLAY_COUNTS = "album_play_counts_json"
         private const val KEY_TOTAL_LISTENING_MS = "total_listening_ms"
+        private const val KEY_SC_FAVORITES = "sc_favorites_song_ids"
+        private const val KEY_SAVED_SC_SONGS = "saved_sc_songs_json"
+        private const val KEY_SC_USER_PROFILE = "sc_user_profile_json"
+        private const val KEY_SC_AUTH_TOKEN = "sc_auth_token_raw"
+        private const val KEY_UNIFIED_FAVORITES = "unified_favorite_ids"
     }
 }

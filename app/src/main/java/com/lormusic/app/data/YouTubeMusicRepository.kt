@@ -338,6 +338,15 @@ object YouTubeMusicRepository {
         }
     }
 
+    fun isGenericTrackTypeLabel(text: String): Boolean {
+        val clean = text.trim().lowercase()
+        return clean in setOf(
+            "композиция", "песня", "трек", "сингл", "видео", "видеоклип", "клип", "аудио",
+            "song", "track", "single", "video", "music video", "audio"
+        ) || clean.contains("просмотр") || clean.contains("views") ||
+           clean.contains("подписчик") || clean.contains("subscribers")
+    }
+
     private fun parseResponsiveListItem(item: JSONObject): Song? {
         val videoId = item.optJSONObject("playlistItemData")?.optString("videoId", "")
             ?.ifBlank {
@@ -353,7 +362,7 @@ object YouTubeMusicRepository {
         if (videoId.isBlank()) return null
 
         val flexCols = item.optJSONArray("flexColumns") ?: return null
-        val title = flexCols.optJSONObject(0)
+        var title = flexCols.optJSONObject(0)
             ?.optJSONObject("musicResponsiveListItemFlexColumnRenderer")
             ?.optJSONObject("text")
             ?.let { extractRunsText(it) }
@@ -390,18 +399,24 @@ object YouTubeMusicRepository {
                     parsedDurationMs = maybeDur
                     continue
                 }
-                if (!t.equals("Песня", true) &&
-                    !t.equals("Song", true) &&
-                    !t.equals("Видео", true) &&
-                    !t.equals("Video", true) &&
-                    !t.contains("просмотр", true) &&
-                    !t.contains("views", true)
-                ) {
+                if (!isGenericTrackTypeLabel(t)) {
                     parts.add(t)
                 }
             }
-            if (parts.isNotEmpty()) artist = parts[0]
-            if (parts.size >= 2) album = parts[1]
+            val validArtistCandidate = parts.firstOrNull { !isGenericTrackTypeLabel(it) }
+            if (validArtistCandidate != null) {
+                artist = validArtistCandidate
+                val remainingParts = parts.filterNot { it == validArtistCandidate }
+                if (remainingParts.isNotEmpty()) album = remainingParts[0]
+            }
+        }
+
+        if (isGenericTrackTypeLabel(artist) || artist == "YouTube Music") {
+            val (cleanedTitle, cleanedArtist) = normalizeTrackTitleAndArtist(title, artist)
+            if (cleanedArtist != "Неизвестный исполнитель" && !isGenericTrackTypeLabel(cleanedArtist)) {
+                artist = cleanedArtist
+                title = cleanedTitle
+            }
         }
 
         val thumbUrl = item.optJSONObject("thumbnail")
@@ -443,15 +458,21 @@ object YouTubeMusicRepository {
         if (title.isBlank()) return null
 
         val subtitle = extractRunsText(item.optJSONObject("subtitle"))
-        val artist = subtitle.split("•")
+        var artist = subtitle.split("•")
             .map { it.trim() }
             .firstOrNull {
                 it.isNotEmpty() &&
-                    !it.equals("Песня", true) &&
-                    !it.equals("Song", true) &&
+                    !isGenericTrackTypeLabel(it) &&
                     parseDurationTextMs(it) == null
             }
             ?: "YouTube Music"
+
+        if (isGenericTrackTypeLabel(artist) || artist == "YouTube Music") {
+            val (cleanedTitle, cleanedArtist) = normalizeTrackTitleAndArtist(title, artist)
+            if (cleanedArtist != "Неизвестный исполнитель" && !isGenericTrackTypeLabel(cleanedArtist)) {
+                artist = cleanedArtist
+            }
+        }
 
         val thumbUrl = item.optJSONObject("thumbnailRenderer")
             ?.optJSONObject("musicThumbnailRenderer")
@@ -1073,7 +1094,7 @@ object YouTubeMusicRepository {
         }.getOrNull()
     }
 
-    private fun normalizeTrackTitleAndArtist(rawTitle: String, rawArtist: String): Pair<String, String> {
+    fun normalizeTrackTitleAndArtist(rawTitle: String, rawArtist: String): Pair<String, String> {
         var title = rawTitle
             .replace(Regex("""\s*\((?:Official\s*(?:Audio|Video|Music\s*Video|Lyric\s*Video)|Lyrics?|Visualizer|HD|4K)\)\s*""", RegexOption.IGNORE_CASE), " ")
             .replace(Regex("""\s*\[(?:Official\s*(?:Audio|Video|Music\s*Video|Lyric\s*Video)|Lyrics?|Visualizer|HD|4K)]\s*""", RegexOption.IGNORE_CASE), " ")
@@ -1091,9 +1112,11 @@ object YouTubeMusicRepository {
                 val right = parts[1].trim()
                 if (left.isNotEmpty() && right.isNotEmpty()) {
                     val artistIsGeneric = artist.isBlank() ||
+                        isGenericTrackTypeLabel(artist) ||
                         artist.equals("Неизвестный исполнитель", ignoreCase = true) ||
                         artist.equals("Композиция", ignoreCase = true) ||
-                        artist.equals("Видеоклип", ignoreCase = true)
+                        artist.equals("Видеоклип", ignoreCase = true) ||
+                        artist.equals("YouTube Music", ignoreCase = true)
                     if (artistIsGeneric || left.equals(artist, ignoreCase = true)) {
                         artist = left
                         title = right
@@ -1102,7 +1125,7 @@ object YouTubeMusicRepository {
                 }
             }
         }
-        if (artist.isBlank() || artist.equals("Композиция", ignoreCase = true)) {
+        if (artist.isBlank() || isGenericTrackTypeLabel(artist) || artist.equals("Композиция", ignoreCase = true)) {
             artist = "Неизвестный исполнитель"
         }
         if (title.isBlank()) {
@@ -1111,7 +1134,7 @@ object YouTubeMusicRepository {
         return title to artist
     }
 
-    private fun downloadBinaryBytes(url: String): ByteArray? {
+    fun downloadBinaryBytes(url: String): ByteArray? {
         return runCatching {
             val conn = (URL(url).openConnection() as HttpURLConnection).apply {
                 connectTimeout = 8000

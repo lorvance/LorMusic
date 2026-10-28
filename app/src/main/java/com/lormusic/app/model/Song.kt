@@ -17,7 +17,8 @@ data class Song(
     val year: String = "",
     val trackNumber: String = "",
     val customLyrics: String? = null,
-    val isRemoteYt: Boolean = false
+    val isRemoteYt: Boolean = false,
+    val isRemoteSc: Boolean = false
 ) {
     fun withOverride(ov: SongTagOverride?): Song {
         if (ov == null) return this
@@ -71,7 +72,18 @@ data class Playlist(
     val name: String,
     val songs: List<Song>,
     val coverColorSeed: Int = name.hashCode(),
-    val isSystem: Boolean = false
+    val isSystem: Boolean = false,
+    val isUnified: Boolean = false
+)
+
+data class SoundCloudUserProfile(
+    val username: String,
+    val avatarUrl: String? = null,
+    val permalinkUrl: String? = null,
+    val trackCount: Int = 0,
+    val likesCount: Int = 0,
+    val followersCount: Int = 0,
+    val followingsCount: Int = 0
 )
 
 data class GoogleAccountProfile(
@@ -103,13 +115,15 @@ enum class ThemeMode(val label: String) {
 enum class AppIconOption(val label: String, val subtitle: String, val aliasClassName: String) {
     MINIMAL("Минимализм", "Лавандовый цветок с нотой", "com.lormusic.app.MainActivityAliasMinimal"),
     REGULAR("Стандартная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),
-    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld");
+    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld"),
+    HALLOWEEN("Хэллоуин", "Ивентовая хэллоуинская иконка", "com.lormusic.app.MainActivityAliasHalloween");
 
     fun getDisplayName(strings: AppStrings): String {
         return when (this) {
             MINIMAL -> strings.iconStyleMinimal
             REGULAR -> strings.iconStyleDefault
             OLD -> strings.iconStyleClassic
+            HALLOWEEN -> strings.halloweenIconTitle
         }
     }
 
@@ -129,6 +143,19 @@ enum class AppIconOption(val label: String, val subtitle: String, val aliasClass
                 StringsEn -> "Classic original icon"
                 StringsUk -> "Класична стара іконка"
                 else -> subtitle
+            }
+            HALLOWEEN -> strings.halloweenIconDesc
+        }
+    }
+
+    companion object {
+        fun isHalloweenExpired(): Boolean {
+            return try {
+                val now = java.time.LocalDateTime.now()
+                val deadline = java.time.LocalDateTime.of(now.year, java.time.Month.NOVEMBER, 1, 13, 0)
+                now.isAfter(deadline)
+            } catch (_: Exception) {
+                false
             }
         }
     }
