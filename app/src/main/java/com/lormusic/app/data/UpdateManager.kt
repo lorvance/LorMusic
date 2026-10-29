@@ -3,6 +3,7 @@ package com.lormusic.app.data
 import android.content.Context
 import android.content.Intent
 import androidx.core.content.FileProvider
+import com.lormusic.app.BuildConfig
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import org.json.JSONObject
@@ -30,9 +31,10 @@ sealed interface UpdateState {
 class UpdateManager(private val context: Context) {
 
     suspend fun checkForUpdates(
-        currentVersion: String = "1.6.4.2",
+        currentVersion: String = BuildConfig.VERSION_NAME,
         includeBeta: Boolean = false
     ): UpdateState = withContext(Dispatchers.IO) {
+        val effectiveCurrentVersion = currentVersion.ifBlank { BuildConfig.VERSION_NAME }
         val baseRepos = listOf(
             "https://api.github.com/repos/Lorvance/LorMusic",
             "https://api.github.com/repos/Lorvance/LorMuisc"
@@ -47,7 +49,7 @@ class UpdateManager(private val context: Context) {
                 val conn = (url.openConnection() as HttpURLConnection).apply {
                     requestMethod = "GET"
                     setRequestProperty("Accept", "application/vnd.github.v3+json")
-                    setRequestProperty("User-Agent", "LorMusic-Android/1.6.4.2")
+                    setRequestProperty("User-Agent", "LorMusic-Android/$effectiveCurrentVersion")
                     connectTimeout = 8000
                     readTimeout = 8000
                 }
@@ -104,7 +106,7 @@ class UpdateManager(private val context: Context) {
                         apkDownloadUrl = bestRelease.optString("html_url", "")
                     }
 
-                    if (isNewerVersion(bestVersion, currentVersion)) {
+                    if (isNewerVersion(bestVersion, effectiveCurrentVersion)) {
                         return@withContext UpdateState.Available(
                             AppUpdateInfo(
                                 versionName = bestVersion,
@@ -221,10 +223,10 @@ class UpdateManager(private val context: Context) {
     )
 
     private fun parseVersion(raw: String): ParsedVersion {
-        val clean = raw.trim().removePrefix("v").removePrefix("V")
-        val sepIndex = clean.indexOfFirst { it == '-' || it == '_' }
-        val basePart = if (sepIndex >= 0) clean.substring(0, sepIndex) else clean
-        val prePart = if (sepIndex >= 0) clean.substring(sepIndex + 1) else ""
+        val clean = raw.trim().removePrefix("v").removePrefix("V").trim()
+        val sepIndex = clean.indexOfFirst { it == '-' || it == '_' || it == '|' }
+        val basePart = (if (sepIndex >= 0) clean.substring(0, sepIndex) else clean).trim()
+        val prePart = (if (sepIndex >= 0) clean.substring(sepIndex + 1) else "").trim()
 
         val parts = basePart.split(".").mapNotNull { segment ->
             segment.filter { it.isDigit() }.toIntOrNull()
