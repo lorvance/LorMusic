@@ -51,19 +51,22 @@ class LayerBackdrop internal constructor(
     ) {
         if (isRecording) return
         val coordinates = coordinates ?: return
-        val layerCoordinates = layerCoordinates ?: return
-        if (!coordinates.isAttached || !layerCoordinates.isAttached) return
+        if (!coordinates.isAttached) return
         try {
             withTransform({
                 if (layerBlock != null) {
                     with(obtainInverseLayerScope()) { inverseTransform(density, layerBlock) }
                 }
-                val offset =
+                val currentLayerCoordinates = layerCoordinates
+                val offset = if (currentLayerCoordinates != null && currentLayerCoordinates.isAttached) {
                     try {
-                        layerCoordinates.localPositionOf(coordinates)
+                        currentLayerCoordinates.localPositionOf(coordinates)
                     } catch (_: Throwable) {
-                        coordinates.positionInWindow() - layerCoordinates.positionInWindow()
+                        coordinates.positionInWindow() - currentLayerCoordinates.positionInWindow()
                     }
+                } else {
+                    coordinates.positionInWindow()
+                }
                 translate(-offset.x, -offset.y)
             }) {
                 drawLayer(graphicsLayer)

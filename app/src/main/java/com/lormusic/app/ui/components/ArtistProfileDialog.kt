@@ -1,5 +1,4 @@
 package com.lormusic.app.ui.components
-
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -43,7 +42,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-
 @Composable
 fun IosBackChevron(
     modifier: Modifier = Modifier,
@@ -67,7 +65,6 @@ fun IosBackChevron(
         )
     }
 }
-
 @Composable
 fun MiniEqualizer(
     isPlaying: Boolean,
@@ -111,9 +108,7 @@ fun MiniEqualizer(
         ),
         label = "eq4"
     )
-
     val heights = if (isPlaying) listOf(h1, h2, h3, h4) else listOf(0.35f, 0.60f, 0.40f, 0.55f)
-
     Row(
         modifier = modifier.size(width = 20.dp, height = 18.dp),
         horizontalArrangement = Arrangement.spacedBy(2.5.dp),
@@ -130,7 +125,6 @@ fun MiniEqualizer(
         }
     }
 }
-
 @Composable
 fun ArtistProfileDialog(
     artistName: String,
@@ -159,7 +153,6 @@ fun ArtistProfileDialog(
     var avatarUrl by remember(artistName, initialAvatarUrl) { mutableStateOf(initialAvatarUrl) }
     var selectedAlbum by remember { mutableStateOf<Pair<String, List<Song>>?>(null) }
     val albumHazeState = remember { HazeState() }
-
     LaunchedEffect(artistName) {
         if (avatarUrl.isNullOrBlank()) {
             val remoteAvatar = TagFixEngine.fetchArtistAvatar(artistName)
@@ -170,11 +163,9 @@ fun ArtistProfileDialog(
             }
         }
     }
-
     if (selectedAlbum == null) {
         BackHandler { onDismiss() }
     }
-
     Surface(
         modifier = Modifier
             .fillMaxSize()
@@ -200,7 +191,6 @@ fun ArtistProfileDialog(
                         BackHandler { selectedAlbum = null }
                         val (albumName, albumSongs) = targetAlbum
                         var albumTrackList by remember(albumName, albumSongs) { mutableStateOf(albumSongs) }
-
                         LaunchedEffect(albumName) {
                             if (albumTrackList.size < 5) {
                                 val extra = YouTubeMusicRepository.fetchAlbumTracks(artistName, albumName)
@@ -212,9 +202,7 @@ fun ArtistProfileDialog(
                                 }
                             }
                         }
-
                         val isTrackFromThisAlbumPlaying = isPlaying && albumTrackList.any { it.id == currentSong?.id }
-
                         Box(modifier = Modifier.fillMaxSize()) {
                             Box(
                                 modifier = Modifier
@@ -260,7 +248,6 @@ fun ArtistProfileDialog(
                                             }
                                         }
                                     }
-
                                     item(key = "album_action_buttons") {
                                         Row(
                                             modifier = Modifier
@@ -297,7 +284,6 @@ fun ArtistProfileDialog(
                                                     fontSize = 15.sp
                                                 )
                                             }
-
                                             // Shuffle button
                                             OutlinedButton(
                                                 onClick = {
@@ -333,11 +319,9 @@ fun ArtistProfileDialog(
                                             }
                                         }
                                     }
-
                                     itemsIndexed(albumTrackList, key = { idx, s -> "${s.id}_$idx" }) { index, song ->
                                         val isCurrent = currentSong?.id == song.id
                                         val isFav = isFavorite(song.id)
-
                                         val cardBackground = if (isCurrent) {
                                             Brush.horizontalGradient(
                                                 listOf(
@@ -353,13 +337,11 @@ fun ArtistProfileDialog(
                                                 )
                                             )
                                         }
-
                                         val cardBorderColor = if (isCurrent) {
                                             MaterialTheme.colorScheme.primary.copy(alpha = 0.50f)
                                         } else {
                                             MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.20f)
                                         }
-
                                         Box(
                                             modifier = Modifier
                                                 .fillMaxWidth()
@@ -401,9 +383,7 @@ fun ArtistProfileDialog(
                                                         )
                                                     }
                                                 }
-
                                                 Spacer(Modifier.width(10.dp))
-
                                                 // Title & Artist
                                                 Column(modifier = Modifier.weight(1f)) {
                                                     Text(
@@ -423,7 +403,6 @@ fun ArtistProfileDialog(
                                                         overflow = TextOverflow.Ellipsis
                                                     )
                                                 }
-
                                                 // Duration
                                                 if (song.durationMs > 0) {
                                                     val min = song.durationMs / 1000 / 60
@@ -436,7 +415,6 @@ fun ArtistProfileDialog(
                                                         modifier = Modifier.padding(horizontal = 6.dp)
                                                     )
                                                 }
-
                                                 // Favorite button
                                                 IconButton(
                                                     onClick = { onToggleFavorite(song) },
@@ -449,7 +427,6 @@ fun ArtistProfileDialog(
                                                         modifier = Modifier.size(19.dp)
                                                     )
                                                 }
-
                                                 // More options button
                                                 IconButton(
                                                     onClick = { onSongMoreClick(song) },
@@ -467,7 +444,6 @@ fun ArtistProfileDialog(
                                     }
                                 }
                             }
-
                             // Top header bar with 3 bubbles & blur / vertical dimming
                             Box(
                                 modifier = Modifier
@@ -511,7 +487,6 @@ fun ArtistProfileDialog(
                                             )
                                     )
                                 }
-
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
@@ -532,7 +507,6 @@ fun ArtistProfileDialog(
                                             color = MaterialTheme.colorScheme.onSurface
                                         )
                                     }
-
                                     // 2. Bubble Center: Adaptive width Album title
                                     Box(
                                         modifier = Modifier
@@ -553,7 +527,6 @@ fun ArtistProfileDialog(
                                             textAlign = TextAlign.Center
                                         )
                                     }
-
                                     // 3. Bubble Right: Album cover avatar
                                     val firstTrack = albumTrackList.firstOrNull()
                                     Box(
@@ -603,7 +576,6 @@ fun ArtistProfileDialog(
                                         cornerRadius = 0.dp,
                                         modifier = Modifier.fillMaxSize()
                                     )
-
                                     Box(
                                         modifier = Modifier
                                             .fillMaxSize()
@@ -617,23 +589,21 @@ fun ArtistProfileDialog(
                                                 )
                                             )
                                     )
-
-                                    IconButton(
-                                        onClick = onDismiss,
+                                    Box(
                                         modifier = Modifier
                                             .padding(16.dp)
                                             .align(Alignment.TopStart)
                                             .size(40.dp)
                                             .clip(CircleShape)
                                             .background(Color.Black.copy(alpha = 0.45f))
+                                            .clickable(onClick = onDismiss),
+                                        contentAlignment = Alignment.Center
                                     ) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Close,
-                                            contentDescription = null,
-                                            tint = Color.White
+                                        IosBackChevron(
+                                            modifier = Modifier.padding(end = 2.dp),
+                                            color = Color.White
                                         )
                                     }
-
                                     Column(
                                         modifier = Modifier
                                             .align(Alignment.BottomStart)
@@ -663,7 +633,6 @@ fun ArtistProfileDialog(
                                     }
                                 }
                             }
-
                             item(key = "action_buttons") {
                                 Row(
                                     modifier = Modifier
@@ -686,7 +655,6 @@ fun ArtistProfileDialog(
                                         Spacer(Modifier.width(8.dp))
                                         Text(strings.artistPlayAll, fontWeight = FontWeight.Bold)
                                     }
-
                                     OutlinedButton(
                                         onClick = {
                                             onPlayAll(allArtistSongs, true)
@@ -704,7 +672,6 @@ fun ArtistProfileDialog(
                                     }
                                 }
                             }
-
                             if (topTracks.isNotEmpty()) {
                                 item(key = "section_top_tracks_title") {
                                     Text(
@@ -714,7 +681,6 @@ fun ArtistProfileDialog(
                                         modifier = Modifier.padding(start = 20.dp, top = 16.dp, bottom = 8.dp)
                                     )
                                 }
-
                                 item(key = "top_tracks_carousel") {
                                     val chunkedTracks = topTracks.take(20).chunked(5)
                                     LazyRow(
@@ -806,7 +772,6 @@ fun ArtistProfileDialog(
                                     }
                                 }
                             }
-
                             if (albums.isNotEmpty()) {
                                 item(key = "section_albums_title") {
                                     Text(
@@ -816,7 +781,6 @@ fun ArtistProfileDialog(
                                         modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 12.dp)
                                     )
                                 }
-
                                 item(key = "albums_carousel") {
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -856,7 +820,6 @@ fun ArtistProfileDialog(
                                     }
                                 }
                             }
-
                             if (singlesAndEPs.isNotEmpty()) {
                                 item(key = "section_singles_title") {
                                     Text(
@@ -866,7 +829,6 @@ fun ArtistProfileDialog(
                                         modifier = Modifier.padding(start = 20.dp, top = 20.dp, bottom = 12.dp)
                                     )
                                 }
-
                                 item(key = "singles_carousel") {
                                     LazyRow(
                                         contentPadding = PaddingValues(horizontal = 20.dp),
@@ -914,37 +876,6 @@ fun ArtistProfileDialog(
                                 }
                             }
                         }
-                    }
-                }
-
-                // MiniPlayer fixed at the bottom with safe navigation insets and lifted margin
-                AnimatedVisibility(
-                    visible = currentSong != null,
-                    enter = fadeIn(tween(220)) + slideInVertically { it / 2 },
-                    exit = fadeOut(tween(180)) + slideOutVertically { it / 2 },
-                    modifier = Modifier
-                        .align(Alignment.BottomCenter)
-                        .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(horizontal = 14.dp)
-                        .padding(bottom = 12.dp)
-                ) {
-                    currentSong?.let { song ->
-                        MiniPlayer(
-                            song = song,
-                            isPlaying = isPlaying,
-                            isFavorite = isFavorite(song.id),
-                            progress = progress,
-                            hazeState = albumHazeState,
-                            enableBlur = enableBlur,
-                            useLiquidGlass = useLiquidGlass,
-                            enableSwipe = true,
-                            onTogglePlay = onTogglePlay,
-                            onPrevious = onPrevious,
-                            onNext = onNext,
-                            onToggleFavorite = { onToggleFavorite(song) },
-                            onOpen = onOpenPlayer
-                        )
                     }
                 }
             }

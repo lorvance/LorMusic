@@ -205,8 +205,12 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         playerViewModel.checkAndEnforceHalloweenExpiry()
     }
 
-    BackHandler(enabled = (isYtMusicMode || isSoundCloudMode) && !showNowPlaying) {
-        if (isSoundCloudMode) {
+    val selectedArtist = playerViewModel.selectedArtistProfile.value
+
+    BackHandler(enabled = (selectedArtist != null || isYtMusicMode || isSoundCloudMode) && !showNowPlaying) {
+        if (selectedArtist != null) {
+            playerViewModel.closeArtistProfile()
+        } else if (isSoundCloudMode) {
             if (activeScTab != ScTab.HOME) {
                 playerViewModel.selectScTab(ScTab.HOME)
             } else {
@@ -239,7 +243,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     val activity = context as? android.app.Activity
 
-    BackHandler(enabled = !isYtMusicMode && !isSoundCloudMode && !showNowPlaying) {
+    BackHandler(enabled = selectedArtist == null && !isYtMusicMode && !isSoundCloudMode && !showNowPlaying) {
         val now = System.currentTimeMillis()
         if (now - lastBackPressTime < 2000L) {
             activity?.finish()
@@ -280,8 +284,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     modifier = Modifier
                         .fillMaxSize()
                         .background(MaterialTheme.colorScheme.background)
+                        
                 ) {
                     val topLevelMode = when {
+                        selectedArtist != null -> 3
                         isYtMusicMode -> 1
                         isSoundCloudMode -> 2
                         else -> 0
@@ -378,6 +384,45 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             enableBlur = effectiveEnableBlur,
                             useLiquidGlass = effectiveUseLiquidGlass
                         )
+                    }
+                    3 -> {
+                        val currentArtist = selectedArtist
+                        if (currentArtist != null) {
+                            val artistData = playerViewModel.currentArtistProfileData.value
+                            val artistSongs = playerViewModel.getArtistSongs(currentArtist)
+                            val topTracks = playerViewModel.getArtistTopTracks(currentArtist)
+                            val albums = playerViewModel.getArtistAlbums(currentArtist)
+                            val singles = playerViewModel.getArtistSingles(currentArtist)
+
+                            val effectiveDur = (if (durationMs > 0) durationMs else currentSong?.durationMs ?: 1L).coerceAtLeast(1L)
+                            val playerProgress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f)
+
+                            ArtistProfileDialog(
+                                artistName = currentArtist,
+                                allArtistSongs = artistSongs,
+                                topTracks = topTracks,
+                                albums = albums,
+                                singlesAndEPs = singles,
+                                currentSong = currentSong,
+                                isPlaying = isPlaying,
+                                isFavorite = playerViewModel::isFavorite,
+                                progress = playerProgress,
+                                initialAvatarUrl = artistData?.avatarUrl,
+                                enableBlur = effectiveEnableBlur,
+                                useLiquidGlass = effectiveUseLiquidGlass,
+                                onDismiss = playerViewModel::closeArtistProfile,
+                                onPlaySongAt = { list, idx -> playerViewModel.setQueueAndPlay(list, idx, false) },
+                                onPlayAll = { list, shuffle -> playerViewModel.setQueueAndPlay(list, 0, shuffle) },
+                                onToggleFavorite = playerViewModel::toggleFavorite,
+                                onSongMoreClick = { songForActionsSheet = it },
+                                onTogglePlay = playerViewModel::togglePlayPause,
+                                onPrevious = playerViewModel::skipPrevious,
+                                onNext = playerViewModel::skipNext,
+                                onOpenPlayer = {
+                                    showNowPlaying = true
+                                }
+                            )
+                        }
                     }
                     else -> {
                         AnimatedContent(
@@ -633,7 +678,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 }
 
                 Column(
-                    modifier = Modifier.fillMaxWidth()
+                    modifier = Modifier.fillMaxWidth().then(if (selectedArtist != null) Modifier.navigationBarsPadding().padding(bottom = 16.dp) else Modifier)
                 ) {
                     AnimatedVisibility(
                         visible = downloadingSongIds.isNotEmpty(),
@@ -754,7 +799,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             showBottomSearchButton = true,
                             showLabels = playerViewModel.showNavBarLabels.value
                         )
-                    } else {
+                    } else if (selectedArtist == null) {
                         LorBottomNavBar(
                             selected = selectedTab,
                             onSelect = { tab ->
@@ -921,43 +966,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         )
     }
 
-    val selectedArtist = playerViewModel.selectedArtistProfile.value
-    if (selectedArtist != null) {
-        val artistData = playerViewModel.currentArtistProfileData.value
-        val artistSongs = playerViewModel.getArtistSongs(selectedArtist)
-        val topTracks = playerViewModel.getArtistTopTracks(selectedArtist)
-        val albums = playerViewModel.getArtistAlbums(selectedArtist)
-        val singles = playerViewModel.getArtistSingles(selectedArtist)
 
-        val effectiveDur = (if (durationMs > 0) durationMs else currentSong?.durationMs ?: 1L).coerceAtLeast(1L)
-        val playerProgress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f)
-
-        ArtistProfileDialog(
-            artistName = selectedArtist,
-            allArtistSongs = artistSongs,
-            topTracks = topTracks,
-            albums = albums,
-            singlesAndEPs = singles,
-            currentSong = currentSong,
-            isPlaying = isPlaying,
-            isFavorite = playerViewModel::isFavorite,
-            progress = playerProgress,
-            initialAvatarUrl = artistData?.avatarUrl,
-            enableBlur = effectiveEnableBlur,
-            useLiquidGlass = effectiveUseLiquidGlass,
-            onDismiss = playerViewModel::closeArtistProfile,
-            onPlaySongAt = { list, idx -> playerViewModel.setQueueAndPlay(list, idx, false) },
-            onPlayAll = { list, shuffle -> playerViewModel.setQueueAndPlay(list, 0, shuffle) },
-            onToggleFavorite = playerViewModel::toggleFavorite,
-            onSongMoreClick = { songForActionsSheet = it },
-            onTogglePlay = playerViewModel::togglePlayPause,
-            onPrevious = playerViewModel::skipPrevious,
-            onNext = playerViewModel::skipNext,
-            onOpenPlayer = {
-                showNowPlaying = true
-            }
-        )
-    }
 
     if (showTagFixSheet) {
         TagFixModalSheet(

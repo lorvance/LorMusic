@@ -95,7 +95,7 @@ fun LibraryScreen(
     }
 
     val density = LocalDensity.current
-    var headerHeightDp by remember { mutableStateOf(144.dp) }
+    var headerHeightDp by remember { mutableStateOf(175.dp) }
 
     val baseSongsPool = remember(songs, hideDemoTracks) {
         if (hideDemoTracks) songs.filter { it.isLocal } else songs
@@ -253,7 +253,7 @@ fun LibraryScreen(
                     contentPadding = PaddingValues(
                         start = 12.dp,
                         end = 12.dp,
-                        top = headerHeightDp + 8.dp,
+                        top = headerHeightDp + 12.dp,
                         bottom = 185.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),

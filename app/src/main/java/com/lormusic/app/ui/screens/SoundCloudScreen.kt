@@ -1497,14 +1497,16 @@ private fun ScRealWebLoginDialog(
 
                                 webViewClient = object : WebViewClient() {
                                     override fun shouldInterceptRequest(view: WebView, request: WebResourceRequest): WebResourceResponse? {
-                                        val headers = request.requestHeaders
-                                        val authHeader = headers?.get("Authorization") ?: headers?.get("authorization")
-                                        if (!authHeader.isNullOrBlank()) {
-                                            val token = SoundCloudRepository.cleanToken(authHeader)
-                                            if (token.length > 8 && token != "guest" && !hasCompletedAuth) {
-                                                hasCompletedAuth = true
-                                                view.post {
-                                                    onAuthSuccess(token)
+                                        runCatching {
+                                            val headers = request.requestHeaders
+                                            val authHeader = headers?.get("Authorization") ?: headers?.get("authorization")
+                                            if (!authHeader.isNullOrBlank()) {
+                                                val token = SoundCloudRepository.cleanToken(authHeader)
+                                                if (token.length > 8 && token != "guest" && !hasCompletedAuth) {
+                                                    hasCompletedAuth = true
+                                                    view.post {
+                                                        runCatching { onAuthSuccess(token) }
+                                                    }
                                                 }
                                             }
                                         }
@@ -1612,13 +1614,19 @@ private fun ScRealWebLoginDialog(
                                         isUserGesture: Boolean,
                                         resultMsg: android.os.Message?
                                     ): Boolean {
-                                        val transport = resultMsg?.obj as? WebView.WebViewTransport
-                                        transport?.webView = view
-                                        resultMsg?.sendToTarget()
-                                        return true
+                                        return try {
+                                            val href = view?.handler?.obtainMessage()
+                                            view?.requestFocusNodeHref(href)
+                                            val popupUrl = href?.data?.getString("url")
+                                            if (!popupUrl.isNullOrBlank()) {
+                                                view.loadUrl(popupUrl)
+                                            }
+                                            false
+                                        } catch (_: Exception) {
+                                            false
+                                        }
                                     }
                                 }
-                                settings.setSupportMultipleWindows(true)
                                 loadUrl(currentUrl)
                             }
                         }

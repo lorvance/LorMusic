@@ -1,3 +1,6 @@
+import java.util.Properties
+import java.io.FileInputStream
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -12,16 +15,23 @@ android {
         applicationId = "com.lorvance.lormusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 43
-        versionName = "1.7.0"
+        versionCode = 45
+        versionName = "1.7.0.1"
+    }
+
+    val keystorePropsFile = rootProject.file("keystore.properties")
+    val keystoreProps = Properties().apply {
+        if (keystorePropsFile.exists()) {
+            load(FileInputStream(keystorePropsFile))
+        }
     }
 
     signingConfigs {
         create("release") {
             storeFile = file("lormusic.keystore")
-            storePassword = "lormusic123"
-            keyAlias = "lormusic"
-            keyPassword = "lormusic123"
+            storePassword = keystoreProps.getProperty("STORE_PASSWORD", System.getenv("STORE_PASSWORD") ?: "")
+            keyAlias = keystoreProps.getProperty("KEY_ALIAS", System.getenv("KEY_ALIAS") ?: "")
+            keyPassword = keystoreProps.getProperty("KEY_PASSWORD", System.getenv("KEY_PASSWORD") ?: "")
         }
     }
 

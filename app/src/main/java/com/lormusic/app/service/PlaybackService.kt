@@ -87,8 +87,8 @@ object SharedPlayerHolder {
                 val httpFactory = DefaultHttpDataSource.Factory()
                     .setUserAgent(YouTubeMusicRepository.ANDROID_USER_AGENT)
                     .setAllowCrossProtocolRedirects(true)
-                    .setConnectTimeoutMs(10_000)
-                    .setReadTimeoutMs(15_000)
+                    .setConnectTimeoutMs(20_000)
+                    .setReadTimeoutMs(30_000)
 
                 val baseDataSourceFactory = DefaultDataSource.Factory(appContext, httpFactory)
                 val resolvingDataSourceFactory = ResolvingDataSource.Factory(baseDataSourceFactory) { dataSpec ->

@@ -1,5 +1,4 @@
 package com.lormusic.app.ui.screens
-
 import android.os.Build
 import android.content.Context
 import android.content.Intent
@@ -24,6 +23,7 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -31,6 +31,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.window.Dialog
+import androidx.compose.ui.window.DialogProperties
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
@@ -43,7 +46,6 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-
 @Composable
 fun ProfileScreen(
     totalSongsCount: Int,
@@ -114,7 +116,6 @@ fun ProfileScreen(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreText by remember { mutableStateOf("") }
-
     val iconChoices = remember {
         val base = mutableListOf(
             AppIconOption.MINIMAL,
@@ -126,13 +127,13 @@ fun ProfileScreen(
         }
         base
     }
-
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
+                .then(if ((showLanguageDialog || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
         ) {
             Column(
@@ -155,7 +156,6 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
         )
         Spacer(Modifier.height(10.dp))
-
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
@@ -179,7 +179,6 @@ fun ProfileScreen(
                     } else {
                         MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
                     }
-
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
                         modifier = Modifier
@@ -219,7 +218,6 @@ fun ProfileScreen(
                 }
             }
         }
-
         Spacer(Modifier.height(20.dp))
         Text(
             text = "🎃 " + strings.halloweenModeTitle,
@@ -228,7 +226,6 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(8.dp))
-
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -247,7 +244,6 @@ fun ProfileScreen(
                 )
             }
         }
-
         Spacer(Modifier.height(20.dp))
         Text(
             text = strings.appearanceAndPlayerSection,
@@ -256,7 +252,6 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(8.dp))
-
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -428,7 +423,6 @@ fun ProfileScreen(
                     leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
                     modifier = Modifier.clickable { showLanguageDialog = true }
                 )
-
                 HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                 ListItem(
                     headlineContent = { Text(strings.hideDemoTracksTitle) },
@@ -443,7 +437,6 @@ fun ProfileScreen(
                 )
             }
         }
-
         Spacer(Modifier.height(20.dp))
         Text(
             text = strings.librarySection,
@@ -452,7 +445,6 @@ fun ProfileScreen(
             color = MaterialTheme.colorScheme.primary
         )
         Spacer(Modifier.height(8.dp))
-
         Surface(
             shape = RoundedCornerShape(24.dp),
             color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -587,11 +579,9 @@ fun ProfileScreen(
                 )
             }
         }
-
                 Spacer(Modifier.height(210.dp))
             }
         }
-
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -636,7 +626,6 @@ fun ProfileScreen(
                         )
                 )
             }
-
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -693,7 +682,6 @@ fun ProfileScreen(
             }
         }
     }
-
     if (showThemeDialog) {
         AlertDialog(
             onDismissRequest = { showThemeDialog = false },
@@ -729,7 +717,6 @@ fun ProfileScreen(
             }
         )
     }
-
     if (showSearchPlacementDialog) {
         AlertDialog(
             onDismissRequest = { showSearchPlacementDialog = false },
@@ -777,7 +764,6 @@ fun ProfileScreen(
             }
         )
     }
-
     if (showSpeedDialog) {
         val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
         AlertDialog(
@@ -814,7 +800,6 @@ fun ProfileScreen(
             }
         )
     }
-
     if (showSleepDialog) {
         AlertDialog(
             onDismissRequest = { showSleepDialog = false },
@@ -845,7 +830,6 @@ fun ProfileScreen(
             }
         )
     }
-
     if (showLiquidGlassWarning != null) {
         AlertDialog(
             onDismissRequest = { showLiquidGlassWarning = null },
@@ -866,45 +850,103 @@ fun ProfileScreen(
             }
         )
     }
-
     if (showLanguageDialog) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = { showLanguageDialog = false },
-            title = { Text(strings.languageTitle, fontWeight = FontWeight.Bold) },
-            text = {
-                Column {
-                    com.lormusic.app.model.AppLanguage.entries.forEach { lang ->
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+            val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.75f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backdropColor)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { showLanguageDialog = false },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                        .navigationBarsPadding()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f) else surfaceContainerHigh)
+                        .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                        .padding(20.dp)
+                ) {
+                    Column(modifier = Modifier.fillMaxWidth()) {
                         Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onSelectLanguage(lang)
-                                    showLanguageDialog = false
-                                }
-                                .padding(vertical = 10.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
+                            verticalAlignment = Alignment.CenterVertically,
+                            modifier = Modifier.fillMaxWidth().padding(bottom = 12.dp)
                         ) {
-                            RadioButton(
-                                selected = (appLanguage == lang),
-                                onClick = {
-                                    onSelectLanguage(lang)
-                                    showLanguageDialog = false
-                                }
+                            Icon(
+                                imageVector = Icons.Filled.Language,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(24.dp)
                             )
-                            Spacer(Modifier.width(12.dp))
-                            Text(lang.getLabel(strings), style = MaterialTheme.typography.bodyLarge)
+                            Spacer(Modifier.width(10.dp))
+                            Text(
+                                text = strings.languageTitle,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                        com.lormusic.app.model.AppLanguage.entries.forEach { lang ->
+                            val isSelected = appLanguage == lang
+                            val itemBg = if (isSelected) MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.5f) else Color.Transparent
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(16.dp))
+                                    .background(itemBg)
+                                    .clickable {
+                                        onSelectLanguage(lang)
+                                        showLanguageDialog = false
+                                    }
+                                    .padding(horizontal = 12.dp, vertical = 12.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = {
+                                        onSelectLanguage(lang)
+                                        showLanguageDialog = false
+                                    }
+                                )
+                                Spacer(Modifier.width(10.dp))
+                                Text(
+                                    text = lang.getLabel(strings),
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
+                                    color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+                        Spacer(Modifier.height(8.dp))
+                        FilledTonalButton(
+                            onClick = { showLanguageDialog = false },
+                            modifier = Modifier.fillMaxWidth(),
+                            shape = RoundedCornerShape(16.dp)
+                        ) {
+                            Text(strings.close)
                         }
                     }
                 }
-            },
-            confirmButton = {
-                TextButton(onClick = { showLanguageDialog = false }) {
-                    Text(strings.close)
-                }
             }
-        )
+        }
     }
-
     if (showAboutDialog) {
         AlertDialog(
             onDismissRequest = { showAboutDialog = false },
@@ -947,97 +989,153 @@ fun ProfileScreen(
             }
         )
     }
-
     if (easterEggStage == 1) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = { easterEggStage = 0 },
-            confirmButton = {
-                Button(
-                    onClick = { easterEggStage = 0 },
-                    shape = RoundedCornerShape(16.dp)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+            val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.75f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backdropColor)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { easterEggStage = 0 },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                        .navigationBarsPadding()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f) else surfaceContainerHigh)
+                        .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                        .padding(20.dp)
                 ) {
-                    Text(strings.easterEgg1Button)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = strings.easterEgg1Title,
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.error
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.easter_cat_1),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Text(
+                            text = strings.easterEgg1Text,
+                            style = MaterialTheme.typography.bodyMedium,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Button(
+                            onClick = { easterEggStage = 0 },
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(strings.easterEgg1Button)
+                        }
+                    }
                 }
-            },
-            title = {
-                Text(
-                    text = strings.easterEgg1Title,
-                    style = MaterialTheme.typography.titleLarge,
-                    fontWeight = FontWeight.ExtraBold,
-                    color = MaterialTheme.colorScheme.error
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.easter_cat_1),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(240.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                    )
-                    Spacer(Modifier.height(12.dp))
-                    Text(
-                        text = strings.easterEgg1Text,
-                        style = MaterialTheme.typography.bodyMedium,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            },
-            shape = RoundedCornerShape(28.dp)
-        )
+            }
+        }
     } else if (easterEggStage == 2) {
-        AlertDialog(
+        Dialog(
             onDismissRequest = { easterEggStage = 0 },
-            confirmButton = {
-                Button(
-                    onClick = { easterEggStage = 0 },
-                    shape = RoundedCornerShape(16.dp)
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false,
+                dismissOnBackPress = true,
+                dismissOnClickOutside = true
+            )
+        ) {
+            val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+            val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.75f)
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backdropColor)
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) { easterEggStage = 0 },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                        .navigationBarsPadding()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f) else surfaceContainerHigh)
+                        .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
+                        .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
+                        .padding(20.dp)
                 ) {
-                    Text(strings.easterEgg2Button)
+                    Column(
+                        horizontalAlignment = Alignment.CenterHorizontally,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Text(
+                            text = strings.easterEgg2Title,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.Bold,
+                            color = MaterialTheme.colorScheme.primary
+                        )
+                        Spacer(Modifier.height(12.dp))
+                        Image(
+                            painter = painterResource(id = R.drawable.easter_cat_2),
+                            contentDescription = null,
+                            contentScale = ContentScale.Crop,
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(220.dp)
+                                .clip(RoundedCornerShape(20.dp))
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Text(
+                            text = strings.easterEgg2Text,
+                            style = MaterialTheme.typography.headlineSmall,
+                            fontWeight = FontWeight.Black,
+                            color = MaterialTheme.colorScheme.error,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(Modifier.height(14.dp))
+                        Button(
+                            onClick = { easterEggStage = 0 },
+                            shape = RoundedCornerShape(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Text(strings.easterEgg2Button)
+                        }
+                    }
                 }
-            },
-            title = {
-                Text(
-                    text = strings.easterEgg2Title,
-                    style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.Bold,
-                    color = MaterialTheme.colorScheme.primary
-                )
-            },
-            text = {
-                Column(
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Image(
-                        painter = painterResource(id = R.drawable.easter_cat_2),
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(240.dp)
-                            .clip(RoundedCornerShape(20.dp))
-                    )
-                    Spacer(Modifier.height(14.dp))
-                    Text(
-                        text = strings.easterEgg2Text,
-                        style = MaterialTheme.typography.headlineSmall,
-                        fontWeight = FontWeight.Black,
-                        color = MaterialTheme.colorScheme.error,
-                        textAlign = TextAlign.Center
-                    )
-                }
-            },
-            shape = RoundedCornerShape(28.dp)
-        )
+            }
+        }
     }
-
     if (showBackupDialog) {
         AlertDialog(
             onDismissRequest = { showBackupDialog = false },
@@ -1098,7 +1196,6 @@ fun ProfileScreen(
             }
         )
     }
-
     if (showRestoreDialog) {
         AlertDialog(
             onDismissRequest = { showRestoreDialog = false },
@@ -1154,7 +1251,6 @@ fun ProfileScreen(
         )
     }
 }
-
 private fun playScreamSound() {
     try {
         val sampleRate = 44100
@@ -1192,7 +1288,6 @@ private fun playScreamSound() {
     } catch (_: Exception) {
     }
 }
-
 @Composable
 private fun StatCard(
     title: String,

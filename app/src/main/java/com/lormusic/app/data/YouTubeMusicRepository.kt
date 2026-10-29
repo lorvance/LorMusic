@@ -569,6 +569,11 @@ object YouTubeMusicRepository {
             return result
         }
 
+        requestIosProgressiveStream(videoId)?.let { result ->
+            streamCache[videoId] = CachedAudioStream(result.first, result.second)
+            return result
+        }
+
         if (!currentAuthCookie.isNullOrBlank()) {
             requestAndroidProgressiveStream(videoId, visitorData, includeAuthCookie = true)?.let { result ->
                 streamCache[videoId] = CachedAudioStream(result.first, result.second)
@@ -576,15 +581,183 @@ object YouTubeMusicRepository {
             }
         }
 
-        cachedVisitorData = null
-        val freshVisitor = getOrFetchVisitorData()
-        if (!freshVisitor.isNullOrBlank()) {
-            requestAndroidProgressiveStream(videoId, freshVisitor, includeAuthCookie = false)?.let { result ->
-                streamCache[videoId] = CachedAudioStream(result.first, result.second)
-                return result
+        requestWebRemixStream(videoId)?.let { result ->
+            streamCache[videoId] = CachedAudioStream(result.first, result.second)
+            return result
+        }
+
+        requestMirrorAudioStream(videoId)?.let { result ->
+            streamCache[videoId] = CachedAudioStream(result.first, result.second)
+            return result
+        }
+
+        return null
+    }
+
+    private fun requestIosProgressiveStream(videoId: String): Pair<String, Long>? {
+        return runCatching {
+            val clientJson = JSONObject().apply {
+                put("clientName", "IOS")
+                put("clientVersion", "19.45.4")
+                put("deviceMake", "Apple")
+                put("deviceModel", "iPhone16,2")
+                put("osName", "iOS")
+                put("osVersion", "18.1.0.22B83")
+                put("hl", "en")
+                put("gl", "US")
+            }
+            val body = JSONObject().apply {
+                put("videoId", videoId)
+                put("contentCheckOk", true)
+                put("racyCheckOk", true)
+                put("context", JSONObject().apply { put("client", clientJson) })
+            }
+            val conn = (URL(YT_PLAYER_URL).openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 12000
+                readTimeout = 12000
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("User-Agent", "com.google.ios.youtube/19.45.4 (iPhone16,2; U; CPU iOS 18_1 like Mac OS X; en_US)")
+                setRequestProperty("X-YouTube-Client-Name", "5")
+                setRequestProperty("X-YouTube-Client-Version", "19.45.4")
+            }
+            conn.outputStream.use { it.write(body.toString().toByteArray(StandardCharsets.UTF_8)) }
+            if (conn.responseCode != 200) return null
+
+            val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+            extractAudioStreamFromJson(json)
+        }.getOrNull()
+    }
+
+    private fun requestWebRemixStream(videoId: String): Pair<String, Long>? {
+        return runCatching {
+            val body = buildWebRemixContextJson().apply {
+                put("videoId", videoId)
+                put("contentCheckOk", true)
+                put("racyCheckOk", true)
+            }
+            val conn = (URL("https://music.youtube.com/youtubei/v1/player?prettyPrint=false").openConnection() as HttpURLConnection).apply {
+                requestMethod = "POST"
+                doOutput = true
+                connectTimeout = 12000
+                readTimeout = 12000
+                setRequestProperty("Content-Type", "application/json")
+                setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36")
+                setRequestProperty("Referer", "https://music.youtube.com/")
+            }
+            conn.outputStream.use { it.write(body.toString().toByteArray(StandardCharsets.UTF_8)) }
+            if (conn.responseCode != 200) return null
+
+            val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
+            extractAudioStreamFromJson(json)
+        }.getOrNull()
+    }
+
+    private fun requestMirrorAudioStream(videoId: String): Pair<String, Long>? {
+        val mirrors = listOf(
+            "https://pipedapi.kavin.rocks/streams/$videoId",
+            "https://api.piped.privacydev.net/streams/$videoId",
+            "https://invidious.nerdvpn.de/api/v1/videos/$videoId"
+        )
+        for (mUrl in mirrors) {
+            val res = runCatching {
+                val conn = (URL(mUrl).openConnection() as HttpURLConnection).apply {
+                    connectTimeout = 7000
+                    readTimeout = 7000
+                    setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) LorMusic/1.7.0")
+                }
+                if (conn.responseCode == 200) {
+                    val body = conn.inputStream.bufferedReader().use { it.readText() }
+                    val json = JSONObject(body)
+                    var audioUrl: String? = null
+                    var durMs: Long = 0L
+
+                    val audioStreams = json.optJSONArray("audioStreams")
+                    if (audioStreams != null && audioStreams.length() > 0) {
+                        for (i in 0 until audioStreams.length()) {
+                            val st = audioStreams.getJSONObject(i)
+                            val u = st.optString("url")
+                            if (u.isNotBlank()) {
+                                audioUrl = u
+                                val bit = st.optInt("bitrate", 0)
+                                if (bit >= 128000) break
+                            }
+                        }
+                    } else {
+                        val adaptive = json.optJSONArray("adaptiveFormats")
+                        if (adaptive != null) {
+                            for (i in 0 until adaptive.length()) {
+                                val fmt = adaptive.getJSONObject(i)
+                                val mime = fmt.optString("type", "")
+                                val u = fmt.optString("url", "")
+                                if (u.isNotBlank() && mime.startsWith("audio/")) {
+                                    audioUrl = u
+                                    durMs = fmt.optString("approxDurationMs", "0").toLongOrNull() ?: 0L
+                                    break
+                                }
+                            }
+                        }
+                    }
+                    if (!audioUrl.isNullOrBlank()) {
+                        audioUrl to durMs
+                    } else null
+                } else null
+            }.getOrNull()
+            if (res != null) return res
+        }
+        return null
+    }
+
+    private fun extractAudioStreamFromJson(json: JSONObject): Pair<String, Long>? {
+        val streamingData = json.optJSONObject("streamingData") ?: return null
+        val videoLengthSec = json.optJSONObject("videoDetails")
+            ?.optString("lengthSeconds", "0")
+            ?.toLongOrNull() ?: 0L
+
+        val formats = streamingData.optJSONArray("formats")
+        if (formats != null) {
+            for (i in 0 until formats.length()) {
+                val fmt = formats.getJSONObject(i)
+                val url = fmt.optString("url", "")
+                if (url.isNotBlank()) {
+                    val durMs = fmt.optString("approxDurationMs", "0").toLongOrNull()
+                        ?.takeIf { it > 0L }
+                        ?: (videoLengthSec * 1000L)
+                    return url to durMs
+                }
             }
         }
 
+        val adaptive = streamingData.optJSONArray("adaptiveFormats")
+        if (adaptive != null) {
+            var bestMp4: Pair<String, Long>? = null
+            var bestWebm: Pair<String, Long>? = null
+
+            for (i in 0 until adaptive.length()) {
+                val fmt = adaptive.getJSONObject(i)
+                val mime = fmt.optString("mimeType", "")
+                val url = fmt.optString("url", "")
+                val contentLen = fmt.optString("contentLength", "").toLongOrNull()
+                if (url.isNotBlank() && mime.startsWith("audio/")) {
+                    val durMs = fmt.optString("approxDurationMs", "0").toLongOrNull()
+                        ?.takeIf { it > 0L }
+                        ?: (videoLengthSec * 1000L)
+                    val rangedUrl = if (contentLen != null && contentLen > 0L && !url.contains("range=")) {
+                        "$url&range=0-${contentLen - 1}"
+                    } else {
+                        url
+                    }
+                    if (mime.startsWith("audio/mp4") && bestMp4 == null) {
+                        bestMp4 = rangedUrl to durMs
+                    } else if (bestWebm == null) {
+                        bestWebm = rangedUrl to durMs
+                    }
+                }
+            }
+            if (bestMp4 != null) return bestMp4
+            if (bestWebm != null) return bestWebm
+        }
         return null
     }
 
@@ -615,8 +788,8 @@ object YouTubeMusicRepository {
             val conn = (URL(YT_PLAYER_URL).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 doOutput = true
-                connectTimeout = 7000
-                readTimeout = 8000
+                connectTimeout = 12000
+                readTimeout = 12000
                 setRequestProperty("Content-Type", "application/json")
                 setRequestProperty("User-Agent", ANDROID_USER_AGENT)
                 if (!visitorData.isNullOrBlank()) {
@@ -634,47 +807,7 @@ object YouTubeMusicRepository {
             if (conn.responseCode != 200) return null
 
             val json = JSONObject(conn.inputStream.bufferedReader().use { it.readText() })
-            val streamingData = json.optJSONObject("streamingData") ?: return null
-            val videoLengthSec = json.optJSONObject("videoDetails")
-                ?.optString("lengthSeconds", "0")
-                ?.toLongOrNull() ?: 0L
-
-            val formats = streamingData.optJSONArray("formats")
-            if (formats != null) {
-                for (i in 0 until formats.length()) {
-                    val fmt = formats.getJSONObject(i)
-                    val url = fmt.optString("url", "")
-                    if (url.isNotBlank()) {
-                        val durMs = fmt.optString("approxDurationMs", "0").toLongOrNull()
-                            ?.takeIf { it > 0L }
-                            ?: (videoLengthSec * 1000L)
-                        return url to durMs
-                    }
-                }
-            }
-
-            val adaptive = streamingData.optJSONArray("adaptiveFormats")
-            if (adaptive != null) {
-                for (i in 0 until adaptive.length()) {
-                    val fmt = adaptive.getJSONObject(i)
-                    val mime = fmt.optString("mimeType", "")
-                    val url = fmt.optString("url", "")
-                    val contentLen = fmt.optString("contentLength", "").toLongOrNull()
-                    if (url.isNotBlank() && mime.startsWith("audio/mp4")) {
-                        val durMs = fmt.optString("approxDurationMs", "0").toLongOrNull()
-                            ?.takeIf { it > 0L }
-                            ?: (videoLengthSec * 1000L)
-                        val rangedUrl = if (contentLen != null && contentLen > 0L && !url.contains("range=")) {
-                            "$url&range=0-${contentLen - 1}"
-                        } else {
-                            url
-                        }
-                        return rangedUrl to durMs
-                    }
-                }
-            }
-
-            null
+            extractAudioStreamFromJson(json)
         }.getOrNull()
     }
 
