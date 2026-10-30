@@ -175,15 +175,15 @@ fun SoundCloudScreen(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color(0xFFFF5500),
-                                    modifier = Modifier.size(26.dp)
+                                    color = Color.White,
+                                    modifier = Modifier.size(28.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_soundcloud),
                                             contentDescription = "SoundCloud",
-                                            tint = Color.White,
-                                            modifier = Modifier.size(16.dp)
+                                            tint = Color(0xFF111111),
+                                            modifier = Modifier.size(18.dp)
                                         )
                                     }
                                 }
@@ -261,14 +261,14 @@ fun SoundCloudScreen(
                             )
                             Surface(
                                 shape = CircleShape,
-                                color = Color(0xFFFF5500),
+                                color = Color.White,
                                 modifier = Modifier.size(28.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_soundcloud),
                                         contentDescription = "SoundCloud",
-                                        tint = Color.White,
+                                        tint = Color(0xFF111111),
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -639,14 +639,14 @@ private fun ScSignInRequiredGate(
                     IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
                     Surface(
                         shape = CircleShape,
-                        color = Color(0xFFFF5500),
+                        color = Color.White,
                         modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_soundcloud),
                                 contentDescription = "SoundCloud",
-                                tint = Color.White,
+                                tint = Color(0xFF111111),
                                 modifier = Modifier.size(18.dp)
                             )
                         }
