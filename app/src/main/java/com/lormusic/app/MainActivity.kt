@@ -50,6 +50,7 @@ import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.Song
+import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.model.resolveStrings
 import com.lormusic.app.ui.components.LocalPureMaterialYou
@@ -78,6 +79,7 @@ class MainActivity : ComponentActivity() {
             val themeMode by playerViewModel.themeMode
             val useDynamicColor by playerViewModel.useDynamicColor
             val isHalloweenMode by playerViewModel.isHalloweenMode
+            val effectiveHalloweenMode = isHalloweenMode && !AppIconOption.isHalloweenExpired()
             val darkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
                 ThemeMode.DARK -> true
@@ -86,8 +88,8 @@ class MainActivity : ComponentActivity() {
 
             LorMusicTheme(
                 darkTheme = darkTheme,
-                dynamicColor = useDynamicColor && !isHalloweenMode,
-                isHalloweenMode = isHalloweenMode
+                dynamicColor = useDynamicColor && !effectiveHalloweenMode,
+                isHalloweenMode = effectiveHalloweenMode
             ) {
                 LorMusicMainContent(playerViewModel)
             }
@@ -328,8 +330,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 recentsViewMode = playerViewModel.recentsViewMode.value,
                                 onToggleRecentsViewMode = playerViewModel::setRecentsViewMode,
                             onSelectTab = playerViewModel::selectYtTab,
-                            onPlayQueue = { list, idx, shuffle ->
-                                playerViewModel.setQueueAndPlay(list, idx, shuffle)
+                            onPlayQueue = { list, idx, shuffle, ctx ->
+                                playerViewModel.setQueueAndPlay(list, idx, shuffle, ctx)
                             },
                             onTogglePlay = playerViewModel::togglePlayPause,
                             onToggleFavorite = playerViewModel::toggleFavorite,
@@ -362,8 +364,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             isPlaying = isPlaying,
                             isFavorite = playerViewModel::isFavorite,
                             onToggleFavorite = playerViewModel::toggleFavorite,
-                            onPlayQueue = { list, idx, shuffle ->
-                                playerViewModel.setQueueAndPlay(list, idx, shuffle)
+                            onPlayQueue = { list, idx, shuffle, ctx ->
+                                playerViewModel.setQueueAndPlay(list, idx, shuffle, ctx)
                             },
                             onSearch = playerViewModel::searchSoundCloud,
                             onRefreshCharts = playerViewModel::loadSoundCloudCharts,
@@ -470,8 +472,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                             permissionLauncher.launch(requiredPermission)
                                         }
                                     },
-                                    onPlayQueue = { list, idx, shuffle ->
-                                        playerViewModel.setQueueAndPlay(list, idx, shuffle)
+                                    isHalloweenMode = playerViewModel.isHalloweenMode.value && !AppIconOption.isHalloweenExpired(),
+                                    onPlayQueue = { list, idx, shuffle, ctx ->
+                                        playerViewModel.setQueueAndPlay(list, idx, shuffle, ctx)
                                     },
                                     onToggleFavorite = playerViewModel::toggleFavorite,
                                     onSongMoreClick = { songForActionsSheet = it },
@@ -489,8 +492,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     topPlayedSong = playerViewModel.topPlayedSong.value,
                                     totalListeningTimeMs = playerViewModel.totalListeningTimeMs.value,
                                     topAlbum = playerViewModel.topAlbum.value,
-                                    onPlayQueue = { list, idx, shuffle ->
-                                        playerViewModel.setQueueAndPlay(list, idx, shuffle)
+                                    onPlayQueue = { list, idx, shuffle, ctx ->
+                                        playerViewModel.setQueueAndPlay(list, idx, shuffle, ctx)
                                     },
                                     onCreatePlaylist = playerViewModel::createPlaylist,
                                     onCreateUnifiedPlaylist = { name, songs ->
@@ -772,6 +775,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 enableBlur = effectiveEnableBlur,
                                 useLiquidGlass = effectiveUseLiquidGlass,
                                 enableSwipe = enablePlayerSwipe,
+                                isHalloweenMode = playerViewModel.isHalloweenMode.value && !AppIconOption.isHalloweenExpired(),
                                 onTogglePlay = playerViewModel::togglePlayPause,
                                 onPrevious = playerViewModel::skipPrevious,
                                 onNext = playerViewModel::skipNext,
@@ -904,7 +908,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             onOpenSongActions = { songForActionsSheet = song },
                             onOpenTagEditor = { songForTagEditor = song },
                             onOpenArtistProfile = { artist -> showNowPlaying = false; playerViewModel.openArtistProfile(artist) },
-                            halloweenCandies = playerViewModel.halloweenCandies.value,
+                            halloweenCandies = playerViewModel.halloweenCandies.value && !AppIconOption.isHalloweenExpired(),
+                            isHalloweenMode = playerViewModel.isHalloweenMode.value && !AppIconOption.isHalloweenExpired(),
                             onEatCandies = {
                                 playerViewModel.setHalloweenCandies(false)
                                 playerViewModel.statusMessage.value = currentStrings.halloweenCandiesEaten
@@ -1076,7 +1081,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     }
 
     val showHalloweenGreeting by playerViewModel.showHalloweenGreeting
-    if (showHalloweenGreeting) {
+    if (showHalloweenGreeting && !AppIconOption.isHalloweenExpired()) {
         AlertDialog(
             onDismissRequest = { playerViewModel.dismissHalloweenGreeting() },
             icon = {

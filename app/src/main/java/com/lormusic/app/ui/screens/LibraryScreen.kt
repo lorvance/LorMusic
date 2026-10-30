@@ -33,6 +33,9 @@ import com.lormusic.app.data.AlphaNumericComparator
 import com.lormusic.app.model.LibraryFilter
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Song
+import com.lormusic.app.model.PlaybackContext
+import com.lormusic.app.model.PlaybackContextType
+import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.SortOption
 import com.lormusic.app.ui.components.ExpressiveLoadingIndicator
 import com.lormusic.app.ui.components.SongRow
@@ -75,7 +78,8 @@ fun LibraryScreen(
     onOpenTagFix: () -> Unit,
     onOpenYtMusic: () -> Unit = {},
     onOpenSoundCloud: () -> Unit = {},
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    isHalloweenMode: Boolean = false,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit
 ) {
@@ -309,7 +313,7 @@ fun LibraryScreen(
                             isCurrentSong = currentSong?.id == song.id,
                             isPlaying = isPlaying,
                             isFavorite = favoriteIds.contains(song.id),
-                            onClick = { onPlayQueue(filteredSongs, index, false) },
+                            onClick = { val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null; onPlayQueue(filteredSongs, index, false, ctx) },
                             onToggleFavorite = { onToggleFavorite(song) },
                             onMoreClick = { onSongMoreClick(song) }
                         )
@@ -382,7 +386,8 @@ fun LibraryScreen(
                                 leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
                                 onClick = {
                                     showMoreMenu = false
-                                    onPlayQueue(filteredSongs, 0, false)
+                                    val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
+                                    onPlayQueue(filteredSongs, 0, false, ctx)
                                 },
                                 enabled = filteredSongs.isNotEmpty()
                             )
@@ -391,7 +396,8 @@ fun LibraryScreen(
                                 leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
                                 onClick = {
                                     showMoreMenu = false
-                                    onPlayQueue(filteredSongs, 0, true)
+                                    val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
+                                    onPlayQueue(filteredSongs, 0, true, ctx)
                                 },
                                 enabled = filteredSongs.isNotEmpty()
                             )
@@ -510,7 +516,7 @@ fun LibraryScreen(
                             contentAlignment = Alignment.Center
                         ) {
                             Text(
-                                text = strings.navLibrary,
+                                text = if (isHalloweenMode && !AppIconOption.isHalloweenExpired()) "🎃 ${strings.navLibrary} 👻" else strings.navLibrary,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold
                             )

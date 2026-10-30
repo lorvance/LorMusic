@@ -69,6 +69,8 @@ import com.lormusic.app.data.YouTubeMusicRepository
 import com.lormusic.app.model.GoogleAccountProfile
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
+import com.lormusic.app.model.PlaybackContext
+import com.lormusic.app.model.PlaybackContextType
 import com.lormusic.app.ui.components.*
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
@@ -101,7 +103,7 @@ fun YouTubeMusicScreen(
     recentsViewMode: String = "grid",
     onToggleRecentsViewMode: (String) -> Unit = {},
     onSelectTab: (YtMusicTab) -> Unit = {},
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onTogglePlay: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onDownloadSongWithTags: (Song) -> Unit,
@@ -706,7 +708,7 @@ private fun YtHomeTab(
     recentsViewMode: String = "grid",
     onToggleRecentsViewMode: (String) -> Unit = {},
     onOpenTopSearch: () -> Unit = {},
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onDownloadSong: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit,
@@ -781,7 +783,7 @@ private fun YtHomeTab(
                             }
                             Row(verticalAlignment = Alignment.CenterVertically) {
                                 if (recentlyPlayed.isNotEmpty()) {
-                                    TextButton(onClick = { onPlayQueue(recentlyPlayed.take(22), 0, false) }) {
+                                    TextButton(onClick = { onPlayQueue(recentlyPlayed.take(22), 0, false, null) }) {
                                         Icon(Icons.Filled.PlayArrow, contentDescription = null, modifier = Modifier.size(18.dp))
                                         Spacer(Modifier.width(4.dp))
                                         Text(strings.playAll, maxLines = 1)
@@ -822,7 +824,7 @@ private fun YtHomeTab(
                                                 isPlaying = isPlaying,
                                                 onClick = {
                                                     val flatIndex = recents22.indexOfFirst { it.id == song.id }
-                                                    onPlayQueue(recents22, flatIndex.coerceAtLeast(0), false)
+                                                    onPlayQueue(recents22, flatIndex.coerceAtLeast(0), false, null)
                                                 },
                                                 onMoreClick = { onSongMoreClick(song) }
                                             )
@@ -839,7 +841,7 @@ private fun YtHomeTab(
                                         song = song,
                                         isCurrent = currentSong?.id == song.id,
                                         isPlaying = isPlaying,
-                                        onClick = { onPlayQueue(recents22, index, false) },
+                                        onClick = { onPlayQueue(recents22, index, false, null) },
                                         onDownload = { onDownloadSong(song) },
                                         isDownloading = downloadingSongIds.contains(song.id)
                                     )
@@ -873,7 +875,7 @@ private fun YtHomeTab(
                                             .width(210.dp)
                                             .clickable {
                                                 if (tracks.isNotEmpty()) {
-                                                    onPlayQueue(tracks, 0, false)
+                                                    onPlayQueue(tracks, 0, false, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
                                                 }
                                             }
                                     ) {
@@ -892,7 +894,7 @@ private fun YtHomeTab(
                                                 Spacer(Modifier.weight(1f))
                                                 FilledIconButton(
                                                     onClick = {
-                                                        if (tracks.isNotEmpty()) onPlayQueue(tracks, 0, true)
+                                                        if (tracks.isNotEmpty()) onPlayQueue(tracks, 0, true, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
                                                     },
                                                     modifier = Modifier.size(40.dp)
                                                 ) {
@@ -981,7 +983,7 @@ private fun YtHomeTab(
                         isPlaying = isPlaying,
                         isFavorite = favoriteIds.contains(song.id),
                         isDownloading = downloadingSongIds.contains(song.id),
-                        onClick = { onPlayQueue(recommendations, index, false) },
+                        onClick = { onPlayQueue(recommendations, index, false, null) },
                         onToggleFavorite = { onToggleFavorite(song) },
                         onDownload = { onDownloadSong(song) },
                         onMoreClick = { onSongMoreClick(song) }
@@ -1451,7 +1453,7 @@ private fun YtLibrariesTab(
     hazeState: HazeState,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onDownloadSong: (Song) -> Unit,
     onCreatePlaylist: (String, List<Song>) -> Unit,
@@ -1515,7 +1517,7 @@ private fun YtLibrariesTab(
                             isPlaying = isPlaying,
                             isFavorite = favoriteIds.contains(s.id),
                             isDownloading = downloadingSongIds.contains(s.id),
-                            onClick = { onPlayQueue(activePl.songs, idx, false) },
+                            onClick = { onPlayQueue(activePl.songs, idx, false, PlaybackContext(PlaybackContextType.PLAYLIST, activePl.name)) },
                             onToggleFavorite = { onToggleFavorite(s) },
                             onDownload = { onDownloadSong(s) },
                             onMoreClick = { onSongMoreClick(s) }
@@ -1584,7 +1586,7 @@ private fun YtLibrariesTab(
                                 }
                                 if (pl.songs.isNotEmpty()) {
                                     FilledTonalIconButton(
-                                        onClick = { onPlayQueue(pl.songs, 0, false) },
+                                        onClick = { onPlayQueue(pl.songs, 0, false, PlaybackContext(PlaybackContextType.PLAYLIST, pl.name)) },
                                         modifier = Modifier.size(38.dp)
                                     ) {
                                         Icon(Icons.Filled.PlayArrow, contentDescription = strings.playAction)
@@ -1624,7 +1626,7 @@ private fun YtLibrariesTab(
                                 isPlaying = isPlaying,
                                 isFavorite = favoriteIds.contains(song.id),
                                 isDownloading = downloadingSongIds.contains(song.id),
-                                onClick = { onPlayQueue(combinedFavs, idx, false) },
+                                onClick = { onPlayQueue(combinedFavs, idx, false, PlaybackContext(PlaybackContextType.FAVORITES)) },
                                 onToggleFavorite = { onToggleFavorite(song) },
                                 onDownload = { onDownloadSong(song) },
                                 onMoreClick = { onSongMoreClick(song) }
@@ -1728,7 +1730,7 @@ private fun YtLibrariesTab(
                             modifier = Modifier
                                 .height(46.dp)
                                 .clip(RoundedCornerShape(23.dp))
-                                .clickable { onPlayQueue(activePl.songs, 0, false) }
+                                .clickable { onPlayQueue(activePl.songs, 0, false, PlaybackContext(PlaybackContextType.PLAYLIST, activePl.name)) }
                                 .then(bubbleModifier(RoundedCornerShape(23.dp)))
                                 .padding(horizontal = 14.dp),
                             contentAlignment = Alignment.Center
@@ -2002,7 +2004,7 @@ private fun YtMyWaveTab(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     useMyWaveCoverGradient: Boolean = false,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onTogglePlay: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
     onDownloadSong: (Song) -> Unit,
@@ -2210,7 +2212,7 @@ private fun YtMyWaveTab(
                                     if (isPlaying) {
                                         onTogglePlay()
                                     } else if (waveSongs.isNotEmpty()) {
-                                        onPlayQueue(waveSongs, 0, true)
+                                        onPlayQueue(waveSongs, 0, true, PlaybackContext(PlaybackContextType.MY_WAVE))
                                     }
                                 },
                                 size = 114.dp,
@@ -2297,7 +2299,7 @@ private fun YtMyWaveTab(
                                     .height(44.dp)
                                     .clip(RoundedCornerShape(22.dp))
                                     .clickable(enabled = waveSongs.isNotEmpty()) {
-                                        onPlayQueue(waveSongs, 0, false)
+                                        onPlayQueue(waveSongs, 0, false, PlaybackContext(PlaybackContextType.MY_WAVE))
                                     }
                                     .then(contentBubbleModifier(RoundedCornerShape(22.dp))),
                                 contentAlignment = Alignment.Center
@@ -2317,7 +2319,7 @@ private fun YtMyWaveTab(
                                     .height(44.dp)
                                     .clip(RoundedCornerShape(22.dp))
                                     .clickable(enabled = waveSongs.isNotEmpty()) {
-                                        onPlayQueue(waveSongs, 0, true)
+                                        onPlayQueue(waveSongs, 0, true, PlaybackContext(PlaybackContextType.MY_WAVE))
                                     }
                                     .then(contentBubbleModifier(RoundedCornerShape(22.dp))),
                                 contentAlignment = Alignment.Center
@@ -2360,7 +2362,7 @@ private fun YtMyWaveTab(
                         isPlaying = isPlaying,
                         isFavorite = favoriteIds.contains(song.id),
                         isDownloading = downloadingSongIds.contains(song.id),
-                        onClick = { onPlayQueue(waveSongs, index, false) },
+                        onClick = { onPlayQueue(waveSongs, index, false, PlaybackContext(PlaybackContextType.MY_WAVE)) },
                         onToggleFavorite = { onToggleFavorite(song) },
                         onDownload = { onDownloadSong(song) },
                         onMoreClick = { onSongMoreClick(song) }
@@ -2384,7 +2386,7 @@ private fun YtSearchTab(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     onSearch: (String) -> Unit,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onDownloadSong: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit
@@ -2458,7 +2460,7 @@ private fun YtSearchTab(
                     isPlaying = isPlaying,
                     isFavorite = favoriteIds.contains(song.id),
                     isDownloading = downloadingSongIds.contains(song.id),
-                    onClick = { onPlayQueue(displayed, index, false) },
+                    onClick = { onPlayQueue(displayed, index, false, null) },
                     onToggleFavorite = { onToggleFavorite(song) },
                     onDownload = { onDownloadSong(song) },
                     onMoreClick = { onSongMoreClick(song) }

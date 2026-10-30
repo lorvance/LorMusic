@@ -44,6 +44,8 @@ import androidx.compose.foundation.lazy.items
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
+import com.lormusic.app.model.PlaybackContext
+import com.lormusic.app.model.PlaybackContextType
 import com.lormusic.app.ui.components.SongArtwork
 import com.lormusic.app.ui.components.SongRow
 import com.lormusic.app.ui.components.appBackdropSource
@@ -60,7 +62,7 @@ fun PlaylistsScreen(
     currentSong: Song?,
     isPlaying: Boolean,
     favoriteIds: Set<String>,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onCreatePlaylist: (String, List<Song>) -> Unit,
     onCreateUnifiedPlaylist: ((String, List<Song>) -> Unit)? = null,
     onDeletePlaylist: (String) -> Unit,
@@ -131,11 +133,11 @@ fun PlaylistsScreen(
                 onBack = { selectedPlaylistId = null },
                 onPlayAll = { shuffle ->
                     if (detailPlaylist.songs.isNotEmpty()) {
-                        onPlayQueue(detailPlaylist.songs, 0, shuffle)
+                        onPlayQueue(detailPlaylist.songs, 0, shuffle, PlaybackContext(PlaybackContextType.PLAYLIST, detailPlaylist.name))
                     }
                 },
                 onPlaySongAt = { idx ->
-                    onPlayQueue(detailPlaylist.songs, idx, false)
+                    onPlayQueue(detailPlaylist.songs, idx, false, PlaybackContext(PlaybackContextType.PLAYLIST, detailPlaylist.name))
                 },
                 onAddSongs = { songs ->
                     onAddSongsToPlaylist(detailPlaylist.id, songs)
@@ -266,7 +268,7 @@ fun PlaylistsScreen(
                                 onClick = { selectedPlaylistId = playlist.id },
                                 onQuickPlay = {
                                     if (playlist.songs.isNotEmpty()) {
-                                        onPlayQueue(playlist.songs, 0, false)
+                                        onPlayQueue(playlist.songs, 0, false, PlaybackContext(PlaybackContextType.PLAYLIST, playlist.name))
                                     }
                                 },
                                 bubbleModifier = { contentBubbleModifier(it) }
@@ -319,7 +321,7 @@ fun PlaylistsScreen(
                                 onClick = { selectedPlaylistId = playlist.id },
                                 onQuickPlay = {
                                     if (playlist.songs.isNotEmpty()) {
-                                        onPlayQueue(playlist.songs, 0, false)
+                                        onPlayQueue(playlist.songs, 0, false, PlaybackContext(PlaybackContextType.PLAYLIST, playlist.name))
                                     }
                                 },
                                 bubbleModifier = { contentBubbleModifier(it) }

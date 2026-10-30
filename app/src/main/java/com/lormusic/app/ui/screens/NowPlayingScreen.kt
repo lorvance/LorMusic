@@ -108,6 +108,7 @@ fun NowPlayingScreen(
     onOpenArtistProfile: ((String) -> Unit)? = null,
     onTranslateLyrics: (() -> Unit)? = null,
     halloweenCandies: Boolean = false,
+    isHalloweenMode: Boolean = false,
     onEatCandies: () -> Unit = {},
     onClose: () -> Unit
 ) {
@@ -360,7 +361,11 @@ fun NowPlayingScreen(
                         }
                     }
 
-                    Spacer(Modifier.height(6.dp))
+                    if (isHalloweenMode && !AppIconOption.isHalloweenExpired()) {
+                        SpookyAtmosphereDecor()
+                    } else {
+                        Spacer(Modifier.height(6.dp))
+                    }
 
                     var coverDragX by remember { mutableFloatStateOf(0f) }
                     val animatedCoverDragX by animateFloatAsState(
@@ -1901,20 +1906,92 @@ private fun getDynamicPlaybackContextLabels(
         }
         else -> {
             val album = song.album.trim()
+            val songTitle = song.title.trim()
             val isKnownAlbum = album.isNotBlank() &&
                 !album.equals("LorMusic", ignoreCase = true) &&
                 !album.equals("SoundCloud", ignoreCase = true) &&
+                !album.equals("YouTube Music", ignoreCase = true) &&
                 !album.equals("Unknown Album", ignoreCase = true) &&
-                !album.equals("<unknown>", ignoreCase = true)
+                !album.equals("<unknown>", ignoreCase = true) &&
+                !album.equals(songTitle, ignoreCase = true) &&
+                !album.contains("Single", ignoreCase = true) &&
+                !album.contains("EP", ignoreCase = true) &&
+                !songTitle.contains(" - Single", ignoreCase = true) &&
+                !songTitle.contains(" (Single)", ignoreCase = true) &&
+                !song.isRemoteSc
+
             if (isKnownAlbum) {
-                if (album.contains("Single", ignoreCase = true) || song.title.contains(" - Single", ignoreCase = true)) {
-                    strings.singleTrack to song.title
-                } else {
-                    strings.fromAlbum to album
-                }
+                strings.fromAlbum to album
             } else {
-                strings.singleTrack to song.title
+                strings.singleTrack to songTitle
             }
         }
+    }
+}
+
+
+@Composable
+private fun SpookyAtmosphereDecor() {
+    val infiniteTransition = rememberInfiniteTransition(label = "spookyFloat")
+    val offsetY by infiniteTransition.animateFloat(
+        initialValue = -4f,
+        targetValue = 4f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2000, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "spookyY"
+    )
+    val rotation by infiniteTransition.animateFloat(
+        initialValue = -6f,
+        targetValue = 6f,
+        animationSpec = infiniteRepeatable(
+            animation = tween(2400, easing = FastOutSlowInEasing),
+            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
+        ),
+        label = "spookyRot"
+    )
+
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(horizontal = 24.dp, vertical = 2.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = "👻",
+            fontSize = 20.sp,
+            modifier = Modifier
+                .offset(y = offsetY.dp)
+                .graphicsLayer(rotationZ = rotation)
+        )
+        Text(
+            text = "🦇",
+            fontSize = 17.sp,
+            modifier = Modifier
+                .offset(y = (-offsetY).dp)
+                .graphicsLayer(rotationZ = -rotation)
+        )
+        Text(
+            text = "🎃",
+            fontSize = 22.sp,
+            modifier = Modifier
+                .offset(y = (offsetY * 0.8f).dp)
+                .graphicsLayer(rotationZ = rotation * 0.7f)
+        )
+        Text(
+            text = "🕷️",
+            fontSize = 17.sp,
+            modifier = Modifier
+                .offset(y = (-offsetY * 0.8f).dp)
+        )
+        Text(
+            text = "👻",
+            fontSize = 20.sp,
+            modifier = Modifier
+                .offset(y = offsetY.dp)
+                .graphicsLayer(rotationZ = -rotation)
+        )
     }
 }

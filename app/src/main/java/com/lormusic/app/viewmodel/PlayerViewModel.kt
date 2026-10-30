@@ -459,6 +459,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (isHalloweenMode.value) {
                 setHalloweenMode(false)
             }
+            showHalloweenGreeting.value = false
         }
     }
 
@@ -504,6 +505,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (month == java.util.Calendar.OCTOBER && day == 31) {
             if (!isHalloweenMode.value) {
                 setHalloweenMode(true)
+            }
+            if (selectedAppIcon.value != AppIconOption.HALLOWEEN) {
+                setAppIconOption(AppIconOption.HALLOWEEN)
             }
             val year = cal.get(java.util.Calendar.YEAR)
             val todayKey = "$year-10-31"
@@ -1414,9 +1418,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setQueueAndPlay(songs: List<Song>, startIndex: Int, shuffle: Boolean = false, context: PlaybackContext? = null) {
         if (songs.isEmpty()) return
-        if (context != null) {
-            currentPlaybackContext.value = context
-        }
+        currentPlaybackContext.value = context
         shuffleOn.value = shuffle
         exoPlayer.shuffleModeEnabled = false
 
@@ -1446,14 +1448,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         isPlaying.value = true
     }
 
-    fun playSong(song: Song) {
+    fun playSong(song: Song, context: PlaybackContext? = null) {
         val currentQueue = queue.value.ifEmpty { allSongs.value }
         val idx = currentQueue.indexOfFirst { it.id == song.id }
         if (idx >= 0) {
-            setQueueAndPlay(currentQueue, idx)
+            setQueueAndPlay(currentQueue, idx, context = context ?: currentPlaybackContext.value)
         } else {
             val newQueue = listOf(song) + currentQueue
-            setQueueAndPlay(newQueue, 0)
+            setQueueAndPlay(newQueue, 0, context = context)
         }
     }
 
@@ -1519,7 +1521,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 exoPlayer.seekToDefaultPosition(nextIdx)
                 exoPlayer.play()
             } else {
-                setQueueAndPlay(q, nextIdx, shuffle = shuffleOn.value)
+                setQueueAndPlay(q, nextIdx, shuffle = shuffleOn.value, context = currentPlaybackContext.value)
             }
         }
     }
@@ -1538,7 +1540,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             exoPlayer.seekToDefaultPosition(prevIdx)
             exoPlayer.play()
         } else {
-            setQueueAndPlay(q, prevIdx, shuffle = shuffleOn.value)
+            setQueueAndPlay(q, prevIdx, shuffle = shuffleOn.value, context = currentPlaybackContext.value)
         }
     }
 

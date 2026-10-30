@@ -31,6 +31,7 @@ import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.lormusic.app.model.Song
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
@@ -46,6 +47,7 @@ fun MiniPlayer(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     enableSwipe: Boolean = true,
+    isHalloweenMode: Boolean = false,
     onTogglePlay: () -> Unit,
     onPrevious: () -> Unit = {},
     onNext: () -> Unit,
@@ -156,15 +158,26 @@ fun MiniPlayer(
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SongArtwork(
-                    seed = song.coverColorSeed,
-                    albumArtUri = song.albumArtUri,
-                    songUri = song.uri,
-                    cornerRadius = 14.dp,
-                    showEqualizerOverlay = true,
-                    isPlaying = isPlaying,
-                    modifier = Modifier.size(44.dp)
-                )
+                Box {
+                    SongArtwork(
+                        seed = song.coverColorSeed,
+                        albumArtUri = song.albumArtUri,
+                        songUri = song.uri,
+                        cornerRadius = 14.dp,
+                        showEqualizerOverlay = true,
+                        isPlaying = isPlaying,
+                        modifier = Modifier.size(44.dp)
+                    )
+                    if (isHalloweenMode && !com.lormusic.app.model.AppIconOption.isHalloweenExpired()) {
+                        Text(
+                            text = "🎃",
+                            fontSize = 13.sp,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .offset(x = 4.dp, y = (-4).dp)
+                        )
+                    }
+                }
                 Spacer(Modifier.width(10.dp))
                 Crossfade(
                     targetState = song,

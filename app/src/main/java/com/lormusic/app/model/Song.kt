@@ -152,8 +152,16 @@ enum class AppIconOption(val label: String, val subtitle: String, val aliasClass
         fun isHalloweenExpired(): Boolean {
             return try {
                 val now = java.time.LocalDateTime.now()
-                val deadline = java.time.LocalDateTime.of(now.year, java.time.Month.NOVEMBER, 1, 13, 0)
-                now.isAfter(deadline)
+                val month = now.monthValue
+                val day = now.dayOfMonth
+                val hour = now.hour
+                if (month == 10) {
+                    false
+                } else if (month == 11) {
+                    day > 1 || (day == 1 && hour >= 13)
+                } else {
+                    true
+                }
             } catch (_: Exception) {
                 false
             }

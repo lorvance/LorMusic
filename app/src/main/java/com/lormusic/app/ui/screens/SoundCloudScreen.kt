@@ -43,6 +43,8 @@ import com.lormusic.app.data.SoundCloudRepository
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.Song
+import com.lormusic.app.model.PlaybackContext
+import com.lormusic.app.model.PlaybackContextType
 import com.lormusic.app.model.SoundCloudUserProfile
 import com.lormusic.app.ui.components.IosBackChevron
 import com.lormusic.app.ui.components.ScTab
@@ -69,7 +71,7 @@ fun SoundCloudScreen(
     isPlaying: Boolean,
     isFavorite: (String) -> Boolean,
     onToggleFavorite: (Song) -> Unit,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onSearch: (String) -> Unit,
     onRefreshCharts: () -> Unit,
     profile: SoundCloudUserProfile?,
@@ -173,14 +175,14 @@ fun SoundCloudScreen(
                             ) {
                                 Surface(
                                     shape = CircleShape,
-                                    color = Color.White,
+                                    color = Color(0xFFFF5500),
                                     modifier = Modifier.size(26.dp)
                                 ) {
                                     Box(contentAlignment = Alignment.Center) {
                                         Icon(
                                             painter = painterResource(R.drawable.ic_soundcloud),
                                             contentDescription = "SoundCloud",
-                                            tint = Color(0xFF111111),
+                                            tint = Color.White,
                                             modifier = Modifier.size(16.dp)
                                         )
                                     }
@@ -259,14 +261,14 @@ fun SoundCloudScreen(
                             )
                             Surface(
                                 shape = CircleShape,
-                                color = Color.White,
+                                color = Color(0xFFFF5500),
                                 modifier = Modifier.size(28.dp)
                             ) {
                                 Box(contentAlignment = Alignment.Center) {
                                     Icon(
                                         painter = painterResource(R.drawable.ic_soundcloud),
                                         contentDescription = "SoundCloud",
-                                        tint = Color(0xFF111111),
+                                        tint = Color.White,
                                         modifier = Modifier.size(18.dp)
                                     )
                                 }
@@ -406,7 +408,7 @@ fun SoundCloudScreen(
                 },
                 onPlaySong = { s ->
                     val idx = likes.indexOf(s).coerceAtLeast(0)
-                    onPlayQueue(likes, idx, false)
+                    onPlayQueue(likes, idx, false, PlaybackContext(PlaybackContextType.FAVORITES))
                 }
             )
         } else {
@@ -579,8 +581,8 @@ fun SoundCloudScreen(
             isFavorite = isFavorite(s.id),
             playlists = playlists,
             onDismiss = { selectedActionSong = null },
-            onPlayNow = { onPlayQueue(listOf(s), 0, false) },
-            onPlayNext = { onPlayQueue(listOf(s), 0, false) },
+            onPlayNow = { onPlayQueue(listOf(s), 0, false, PlaybackContext(PlaybackContextType.SINGLE, s.title)) },
+            onPlayNext = { onPlayQueue(listOf(s), 0, false, PlaybackContext(PlaybackContextType.SINGLE, s.title)) },
             onToggleFavorite = { onToggleFavorite(s) },
             onAddToPlaylist = { plId -> onAddToPlaylist(plId, s) },
             onCreateNewPlaylistWithSong = { name -> onCreateNewPlaylistWithSong(name, s, false) },
@@ -637,14 +639,14 @@ private fun ScSignInRequiredGate(
                     IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
                     Surface(
                         shape = CircleShape,
-                        color = Color.White,
+                        color = Color(0xFFFF5500),
                         modifier = Modifier.size(28.dp)
                     ) {
                         Box(contentAlignment = Alignment.Center) {
                             Icon(
                                 painter = painterResource(R.drawable.ic_soundcloud),
                                 contentDescription = "SoundCloud",
-                                tint = Color(0xFF111111),
+                                tint = Color.White,
                                 modifier = Modifier.size(18.dp)
                             )
                         }
@@ -734,7 +736,7 @@ private fun ScHomeTab(
     currentSong: Song?,
     isPlaying: Boolean,
     isFavorite: (String) -> Boolean,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit,
     onRefresh: () -> Unit,
@@ -789,7 +791,7 @@ private fun ScHomeTab(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    IconButton(onClick = { onPlayQueue(likes, 0, true) }) {
+                    IconButton(onClick = { onPlayQueue(likes, 0, true, PlaybackContext(PlaybackContextType.FAVORITES)) }) {
                         Icon(Icons.Filled.Shuffle, contentDescription = strings.shuffle)
                     }
                 }
@@ -816,7 +818,7 @@ private fun ScHomeTab(
                                         .weight(1f)
                                         .height(64.dp)
                                         .clip(RoundedCornerShape(16.dp))
-                                        .clickable { onPlayQueue(likes, likes.indexOf(song), false) }
+                                        .clickable { onPlayQueue(likes, likes.indexOf(song), false, PlaybackContext(PlaybackContextType.FAVORITES)) }
                                 ) {
                                     Row(
                                         modifier = Modifier.fillMaxSize(),
@@ -913,7 +915,7 @@ private fun ScHomeTab(
                     isPlaying = isPlaying && currentSong?.id == song.id,
                     isCurrentSong = currentSong?.id == song.id,
                     isFavorite = isFavorite(song.id),
-                    onClick = { onPlayQueue(charts, idx, false) },
+                    onClick = { onPlayQueue(charts, idx, false, PlaybackContext(PlaybackContextType.SINGLE, charts.getOrNull(idx)?.title)) },
                     onToggleFavorite = { onToggleFavorite(song) },
                     onMoreClick = { onSongMoreClick(song) }
                 )
@@ -939,7 +941,7 @@ private fun ScHomeTab(
                         title = strings.scDailyDropsTitle,
                         subtitle = strings.scDailyDropsDesc,
                         badge = "DAILY",
-                        onClick = { onPlayQueue(charts.shuffled(), 0, true) }
+                        onClick = { onPlayQueue(charts.shuffled(), 0, true, PlaybackContext(PlaybackContextType.SINGLE, charts.firstOrNull()?.title)) }
                     )
                 }
                 item {
@@ -947,7 +949,7 @@ private fun ScHomeTab(
                         title = strings.scWeeklyWaveTitle,
                         subtitle = strings.scWeeklyWaveDesc,
                         badge = "WEEKLY",
-                        onClick = { onPlayQueue(charts.reversed(), 0, true) }
+                        onClick = { onPlayQueue(charts.reversed(), 0, true, PlaybackContext(PlaybackContextType.SINGLE, charts.lastOrNull()?.title)) }
                     )
                 }
             }
@@ -980,7 +982,7 @@ private fun ScHomeTab(
                     isPlaying = isPlaying && currentSong?.id == song.id,
                     isCurrentSong = currentSong?.id == song.id,
                     isFavorite = isFavorite(song.id),
-                    onClick = { onPlayQueue(charts, idx + 6, false) },
+                    onClick = { onPlayQueue(charts, idx + 6, false, PlaybackContext(PlaybackContextType.SINGLE, charts.getOrNull(idx + 6)?.title)) },
                     onToggleFavorite = { onToggleFavorite(song) },
                     onMoreClick = { onSongMoreClick(song) }
                 )
@@ -1061,7 +1063,7 @@ private fun ScChartsTab(
     currentSong: Song?,
     isPlaying: Boolean,
     isFavorite: (String) -> Boolean,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit,
     onRefresh: () -> Unit,
@@ -1103,7 +1105,7 @@ private fun ScChartsTab(
                     }
                     if (charts.isNotEmpty()) {
                         Button(
-                            onClick = { onPlayQueue(charts, 0, true) },
+                            onClick = { onPlayQueue(charts, 0, true, PlaybackContext(PlaybackContextType.SINGLE, charts.firstOrNull()?.title)) },
                             shape = RoundedCornerShape(16.dp)
                         ) {
                             Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
@@ -1134,7 +1136,7 @@ private fun ScChartsTab(
                     isPlaying = isPlaying && currentSong?.id == song.id,
                     isCurrentSong = currentSong?.id == song.id,
                     isFavorite = isFavorite(song.id),
-                    onClick = { onPlayQueue(charts, idx, false) },
+                    onClick = { onPlayQueue(charts, idx, false, PlaybackContext(PlaybackContextType.SINGLE, charts.getOrNull(idx)?.title)) },
                     onToggleFavorite = { onToggleFavorite(song) },
                     onMoreClick = { onSongMoreClick(song) }
                 )
@@ -1150,7 +1152,7 @@ private fun ScLibrariesTab(
     currentSong: Song?,
     isPlaying: Boolean,
     isFavorite: (String) -> Boolean,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit,
     onCreatePlaylist: (String, Boolean) -> Unit,
@@ -1210,7 +1212,7 @@ private fun ScLibrariesTab(
                         .fillMaxWidth()
                         .padding(horizontal = 14.dp, vertical = 4.dp)
                         .clip(RoundedCornerShape(16.dp))
-                        .clickable { onPlayQueue(pl.songs, 0, false) }
+                        .clickable { onPlayQueue(pl.songs, 0, false, PlaybackContext(PlaybackContextType.PLAYLIST, pl.name)) }
                 ) {
                     Row(
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 12.dp),
@@ -1275,7 +1277,7 @@ private fun ScLibrariesTab(
                     isPlaying = isPlaying && currentSong?.id == song.id,
                     isCurrentSong = currentSong?.id == song.id,
                     isFavorite = isFavorite(song.id),
-                    onClick = { onPlayQueue(savedSongs, idx, false) },
+                    onClick = { onPlayQueue(savedSongs, idx, false, PlaybackContext(PlaybackContextType.SINGLE, savedSongs.getOrNull(idx)?.title)) },
                     onToggleFavorite = { onToggleFavorite(song) },
                     onMoreClick = { onSongMoreClick(song) }
                 )
@@ -1338,7 +1340,7 @@ private fun ScSearchTab(
     currentSong: Song?,
     isPlaying: Boolean,
     isFavorite: (String) -> Boolean,
-    onPlayQueue: (List<Song>, Int, Boolean) -> Unit,
+    onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit,
     onSearch: (String) -> Unit,
@@ -1412,7 +1414,7 @@ private fun ScSearchTab(
                         isPlaying = isPlaying && currentSong?.id == song.id,
                         isCurrentSong = currentSong?.id == song.id,
                         isFavorite = isFavorite(song.id),
-                        onClick = { onPlayQueue(searchResults, idx, false) },
+                        onClick = { onPlayQueue(searchResults, idx, false, PlaybackContext(PlaybackContextType.SINGLE, searchResults.getOrNull(idx)?.title)) },
                         onToggleFavorite = { onToggleFavorite(song) },
                         onMoreClick = { onSongMoreClick(song) }
                     )

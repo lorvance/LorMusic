@@ -120,13 +120,14 @@ fun ProfileScreen(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreText by remember { mutableStateOf("") }
-    val iconChoices = remember {
+    val isHalloweenExpired = AppIconOption.isHalloweenExpired()
+    val iconChoices = remember(isHalloweenExpired) {
         val base = mutableListOf(
             AppIconOption.MINIMAL,
             AppIconOption.REGULAR,
             AppIconOption.OLD
         )
-        if (!AppIconOption.isHalloweenExpired()) {
+        if (!isHalloweenExpired) {
             base.add(AppIconOption.HALLOWEEN)
         }
         base
@@ -222,30 +223,32 @@ fun ProfileScreen(
                 }
             }
         }
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = "🎃 " + strings.halloweenModeTitle,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        ) {
-            Column {
-                ListItem(
-                    headlineContent = { Text(strings.halloweenModeTitle) },
-                    supportingContent = { Text(strings.halloweenModeDesc) },
-                    leadingContent = { Text("🎃", fontSize = 24.sp) },
-                    trailingContent = {
-                        Switch(
-                            checked = isHalloweenMode,
-                            onCheckedChange = onToggleHalloweenMode
-                        )
-                    }
-                )
+        if (!isHalloweenExpired) {
+            Spacer(Modifier.height(20.dp))
+            Text(
+                text = "🎃 " + strings.halloweenModeTitle,
+                style = MaterialTheme.typography.titleMedium,
+                fontWeight = FontWeight.Bold,
+                color = MaterialTheme.colorScheme.primary
+            )
+            Spacer(Modifier.height(8.dp))
+            Surface(
+                shape = RoundedCornerShape(24.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+            ) {
+                Column {
+                    ListItem(
+                        headlineContent = { Text(strings.halloweenModeTitle) },
+                        supportingContent = { Text(strings.halloweenModeDesc) },
+                        leadingContent = { Text("🎃", fontSize = 24.sp) },
+                        trailingContent = {
+                            Switch(
+                                checked = isHalloweenMode,
+                                onCheckedChange = onToggleHalloweenMode
+                            )
+                        }
+                    )
+                }
             }
         }
         Spacer(Modifier.height(20.dp))
