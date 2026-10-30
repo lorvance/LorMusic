@@ -322,6 +322,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 hazeState = hazeState,
                                 enableBlur = effectiveEnableBlur,
                                 useLiquidGlass = effectiveUseLiquidGlass,
+                                betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value,
                                 useMyWaveCoverGradient = playerViewModel.useMyWaveCoverGradient.value,
                                 showTopSearchBar = isYtSearchTop,
                                 recentsViewMode = playerViewModel.recentsViewMode.value,
@@ -382,7 +383,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             isSearching = playerViewModel.isSearchingSoundCloud.value,
                             hazeState = hazeState,
                             enableBlur = effectiveEnableBlur,
-                            useLiquidGlass = effectiveUseLiquidGlass
+                            useLiquidGlass = effectiveUseLiquidGlass,
+                            betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value
                         )
                     }
                     3 -> {
@@ -525,6 +527,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         hazeState = hazeState,
                                         useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
                                         enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
+                                        betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value,
+                                        betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
                                         useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                         useMyWaveCoverGradient = playerViewModel.useMyWaveCoverGradient.value,
                                         autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
@@ -544,6 +548,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
                                         onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
                                         onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
+                                        onToggleBetaSeparateHeaderBubbles = playerViewModel::setBetaSeparateHeaderBubbles,
+                                        onToggleBetaDynamicPlaybackContext = playerViewModel::setBetaDynamicPlaybackContext,
                                         onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                         onToggleMyWaveCoverGradient = playerViewModel::setUseMyWaveCoverGradient,
                                         onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
@@ -853,6 +859,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             useSquigglySlider = useSquigglySlider,
                             useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                             enableSwipe = enablePlayerSwipe,
+                            betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
+                            playbackContext = playerViewModel.currentPlaybackContext.value,
                             useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
                             playlists = playlists,
                             isDownloading = downloadingSongIds.contains(song.id),

@@ -96,6 +96,7 @@ fun YouTubeMusicScreen(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     useMyWaveCoverGradient: Boolean = false,
+    betaSeparateHeaderBubbles: Boolean = false,
     showTopSearchBar: Boolean = false,
     recentsViewMode: String = "grid",
     onToggleRecentsViewMode: (String) -> Unit = {},
@@ -147,6 +148,7 @@ fun YouTubeMusicScreen(
                 hazeState = hazeState,
                 enableBlur = enableBlur,
                 useLiquidGlass = useLiquidGlass,
+                betaSeparateHeaderBubbles = betaSeparateHeaderBubbles,
                 onSignInClick = { showWebLoginDialog = true },
                 onBackToLocal = onSwitchToLocal
             )
@@ -172,6 +174,7 @@ fun YouTubeMusicScreen(
                         hazeState = hazeState,
                         enableBlur = enableBlur,
                         useLiquidGlass = useLiquidGlass,
+                        betaSeparateHeaderBubbles = betaSeparateHeaderBubbles,
                         showTopSearchBar = showTopSearchBar,
                         recentsViewMode = recentsViewMode,
                         onToggleRecentsViewMode = onToggleRecentsViewMode,
@@ -485,6 +488,7 @@ private fun YtSignInRequiredGate(
     hazeState: HazeState,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
+    betaSeparateHeaderBubbles: Boolean = false,
     onSignInClick: () -> Unit,
     onBackToLocal: () -> Unit
 ) {
@@ -579,43 +583,101 @@ private fun YtSignInRequiredGate(
             }
         }
 
-        Row(
-            modifier = Modifier
-                .align(Alignment.TopCenter)
-                .fillMaxWidth()
-                .statusBarsPadding()
-                .padding(horizontal = 16.dp, vertical = 10.dp),
-            horizontalArrangement = Arrangement.Start,
-            verticalAlignment = Alignment.CenterVertically
-        ) {
+        if (betaSeparateHeaderBubbles) {
             Box(
                 modifier = Modifier
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(23.dp))
-                    .clickable { onBackToLocal() }
-                    .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .clickable { onBackToLocal() }
+                        .then(bubbleModifier(CircleShape)),
+                    contentAlignment = Alignment.Center
                 ) {
-                    IosBackChevron(
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier.size(28.dp)
+                    IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(23.dp))
+                        .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = "YouTube Music",
-                                tint = Color(0xFF111111),
-                                modifier = Modifier.size(18.dp)
-                            )
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "YouTube Music",
+                                    tint = Color(0xFF111111),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "YouTube Music",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+            }
+        } else {
+            Row(
+                modifier = Modifier
+                    .align(Alignment.TopCenter)
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp),
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Box(
+                    modifier = Modifier
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(23.dp))
+                        .clickable { onBackToLocal() }
+                        .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                        .padding(horizontal = 10.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        IosBackChevron(
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White,
+                            modifier = Modifier.size(28.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "YouTube Music",
+                                    tint = Color(0xFF111111),
+                                    modifier = Modifier.size(18.dp)
+                                )
+                            }
                         }
                     }
                 }
@@ -639,6 +701,7 @@ private fun YtHomeTab(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     useMyWaveCoverGradient: Boolean = false,
+    betaSeparateHeaderBubbles: Boolean = false,
     showTopSearchBar: Boolean = false,
     recentsViewMode: String = "grid",
     onToggleRecentsViewMode: (String) -> Unit = {},
@@ -971,6 +1034,136 @@ private fun YtHomeTab(
                 )
             }
 
+        if (betaSeparateHeaderBubbles) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 16.dp, vertical = 10.dp)
+            ) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.CenterStart)
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .clickable { onBackToLocal() }
+                        .then(bubbleModifier(CircleShape)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
+                }
+
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.Center)
+                        .height(46.dp)
+                        .clip(RoundedCornerShape(23.dp))
+                        .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                        .padding(horizontal = 14.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        Surface(
+                            shape = CircleShape,
+                            color = Color.White,
+                            modifier = Modifier.size(26.dp)
+                        ) {
+                            Box(contentAlignment = Alignment.Center) {
+                                Icon(
+                                    imageVector = Icons.Filled.PlayArrow,
+                                    contentDescription = "YouTube Music",
+                                    tint = Color(0xFF111111),
+                                    modifier = Modifier.size(16.dp)
+                                )
+                            }
+                        }
+                        Text(
+                            text = "YouTube Music",
+                            style = MaterialTheme.typography.titleSmall,
+                            fontWeight = FontWeight.SemiBold,
+                            color = MaterialTheme.colorScheme.onSurface
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier.align(Alignment.CenterEnd)
+                ) {
+                    Row(
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                if (showTopSearchBar) {
+                    Box(
+                        modifier = Modifier
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .clickable { onOpenTopSearch() }
+                            .then(bubbleModifier(CircleShape)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Search,
+                            contentDescription = strings.searchTitle,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(22.dp)
+                        )
+                    }
+                }
+
+                Box(
+                    modifier = Modifier
+                        .size(46.dp)
+                        .clip(CircleShape)
+                        .clickable { onOpenGoogleAuth() }
+                        .then(bubbleModifier(CircleShape)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    if (googleAccount != null) {
+                        val avatar = avatarBitmap
+                        if (avatar != null) {
+                            Image(
+                                bitmap = avatar,
+                                contentDescription = googleAccount.displayName,
+                                contentScale = ContentScale.Crop,
+                                modifier = Modifier
+                                    .size(34.dp)
+                                    .clip(CircleShape)
+                            )
+                        } else {
+                            val initial = (googleAccount.displayName.ifBlank { googleAccount.email })
+                                .firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+                            Surface(
+                                shape = CircleShape,
+                                color = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(34.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Text(
+                                        text = initial,
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onPrimary
+                                    )
+                                }
+                            }
+                        }
+                    } else {
+                        Icon(
+                            imageVector = Icons.Filled.AccountCircle,
+                            contentDescription = strings.signInGoogle,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(32.dp)
+                        )
+                    }
+                }
+            }
+                }
+            }
+        } else {
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -1081,6 +1274,7 @@ private fun YtHomeTab(
                     }
                 }
             }
+        }
         }
         }
     }

@@ -104,7 +104,16 @@ fun UpdateDialog(
     val strings = LocalStrings.current
     val targetLang = when (appLanguage) {
         AppLanguage.UK -> "uk"
-        else -> null
+        AppLanguage.RU -> "ru"
+        AppLanguage.EN -> null
+        AppLanguage.SYSTEM -> {
+            val loc = java.util.Locale.getDefault().language.lowercase()
+            when {
+                loc.startsWith("uk") -> "uk"
+                loc.startsWith("ru") || loc.startsWith("be") || loc.startsWith("kk") -> "ru"
+                else -> null
+            }
+        }
     }
     val displayedChangelog by produceState(initialValue = updateInfo.changelog, updateInfo.changelog, targetLang) {
         if (targetLang != null) {

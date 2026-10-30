@@ -373,6 +373,16 @@ val tagFixTitle: String,
     val halloweenTrickBtn: String get() = extra.halloweenTrickBtn
     val halloweenTreatSelected: String get() = extra.halloweenTreatSelected
     val halloweenCandiesEaten: String get() = extra.halloweenCandiesEaten
+    val betaSeparateHeaderBubblesTitle: String get() = extra.betaSeparateHeaderBubblesTitle
+    val betaSeparateHeaderBubblesDesc: String get() = extra.betaSeparateHeaderBubblesDesc
+    val betaDynamicPlaybackContextTitle: String get() = extra.betaDynamicPlaybackContextTitle
+    val betaDynamicPlaybackContextDesc: String get() = extra.betaDynamicPlaybackContextDesc
+    val fromAlbum: String get() = extra.fromAlbum
+    val fromMyWave: String get() = extra.fromMyWave
+    val fromRadio: String get() = extra.fromRadio
+    val singleTrack: String get() = extra.singleTrack
+    val fromPlaylist: String get() = extra.fromPlaylist
+    val fromFavorites: String get() = extra.fromFavorites
 }
 
 class ExtraStrings(
@@ -481,7 +491,17 @@ class ExtraStrings(
     val halloweenTreatBtn: String,
     val halloweenTrickBtn: String,
     val halloweenTreatSelected: String,
-    val halloweenCandiesEaten: String
+    val halloweenCandiesEaten: String,
+    val betaSeparateHeaderBubblesTitle: String,
+    val betaSeparateHeaderBubblesDesc: String,
+    val betaDynamicPlaybackContextTitle: String,
+    val betaDynamicPlaybackContextDesc: String,
+    val fromAlbum: String,
+    val fromMyWave: String,
+    val fromRadio: String,
+    val singleTrack: String,
+    val fromPlaylist: String,
+    val fromFavorites: String
 )
 
 
@@ -651,7 +671,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "1.7.0.2 | 46",
+    appVersion = "1.7.0.3 | 47",
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -684,7 +704,7 @@ val StringsRu = AppStrings(
     installUpdate = "Установить обновление",
     downloadUpdate = "Скачать обновление",
     remindLater = "Напомнить позже",
-    latestVersionInstalled = "У вас установлена последняя версия: 1.7.0.2 | 46",
+    latestVersionInstalled = "У вас установлена последняя версия: 1.7.0.3 | 47",
     moodForYourTaste = "Под твой вкус",
     moodEnergetic = "Энергичное",
     moodCalm = "Спокойное",
@@ -842,7 +862,17 @@ val StringsRu = AppStrings(
         halloweenTreatBtn = "🍬 Сладость",
         halloweenTrickBtn = "🎃 Гадость",
         halloweenTreatSelected = "🍬 Сладость! Конфеты появились на обложке трека",
-        halloweenCandiesEaten = "😋 Конфеты съедены!"
+        halloweenCandiesEaten = "😋 Конфеты съедены!",
+        betaSeparateHeaderBubblesTitle = "Раздельные пузыри в шапке",
+        betaSeparateHeaderBubblesDesc = "Стрелка назад в отдельном пузыре слева, логотип и название сервиса по центру",
+        betaDynamicPlaybackContextTitle = "Контекст воспроизведения",
+        betaDynamicPlaybackContextDesc = "Отображать происхождение трека («Из альбома», «Из радио», «Сингл») вместо «Сейчас играет»",
+        fromAlbum = "Из альбома",
+        fromMyWave = "Из Моей волны",
+        fromRadio = "Из радио",
+        singleTrack = "Сингл",
+        fromPlaylist = "Из плейлиста",
+        fromFavorites = "Из избранного"
     )
 )
 
@@ -1012,7 +1042,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "1.7.0.2 | 46",
+    appVersion = "1.7.0.3 | 47",
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -1045,7 +1075,7 @@ val StringsEn = AppStrings(
     installUpdate = "Install update",
     downloadUpdate = "Download update",
     remindLater = "Remind later",
-    latestVersionInstalled = "You have the latest version installed: 1.7.0.2 | 46",
+    latestVersionInstalled = "You have the latest version installed: 1.7.0.3 | 47",
     moodForYourTaste = "For your taste",
     moodEnergetic = "Energetic",
     moodCalm = "Calm",
@@ -1203,7 +1233,17 @@ val StringsEn = AppStrings(
         halloweenTreatBtn = "🍬 Treat",
         halloweenTrickBtn = "🎃 Trick",
         halloweenTreatSelected = "🍬 Treat! Candies appeared on the album cover",
-        halloweenCandiesEaten = "😋 Candies eaten! Delicious!"
+        halloweenCandiesEaten = "😋 Candies eaten! Delicious!",
+        betaSeparateHeaderBubblesTitle = "Separate header bubbles",
+        betaSeparateHeaderBubblesDesc = "Back arrow in a separate left bubble, service logo and name centered",
+        betaDynamicPlaybackContextTitle = "Playback context",
+        betaDynamicPlaybackContextDesc = "Display track origin (\"From album\", \"From radio\", \"Single\") instead of \"Now playing\"",
+        fromAlbum = "From album",
+        fromMyWave = "From My Wave",
+        fromRadio = "From radio",
+        singleTrack = "Single",
+        fromPlaylist = "From playlist",
+        fromFavorites = "From favorites"
     )
 )
 
@@ -1373,7 +1413,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "1.7.0.2 | 46",
+    appVersion = "1.7.0.3 | 47",
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1406,7 +1446,7 @@ val StringsUk = AppStrings(
     installUpdate = "Встановити оновлення",
     downloadUpdate = "Завантажити оновлення",
     remindLater = "Нагадати пізніше",
-    latestVersionInstalled = "У вас встановлена остання версія: 1.7.0.2 | 46",
+    latestVersionInstalled = "У вас встановлена остання версія: 1.7.0.3 | 47",
     moodForYourTaste = "На твій смак",
     moodEnergetic = "Енергійне",
     moodCalm = "Спокійне",
@@ -1564,7 +1604,17 @@ val StringsUk = AppStrings(
         halloweenTreatBtn = "🍬 Солодощі",
         halloweenTrickBtn = "🎃 Капості",
         halloweenTreatSelected = "🍬 Солодощі! Цукерки з'явилися на обкладинці треку",
-        halloweenCandiesEaten = "😋 Цукерки з'їдено!"
+        halloweenCandiesEaten = "😋 Цукерки з'їдено!",
+        betaSeparateHeaderBubblesTitle = "Окремі бульбашки в шапці",
+        betaSeparateHeaderBubblesDesc = "Стрілка назад в окремій бульбашці зліва, логотип та назва сервісу по центру",
+        betaDynamicPlaybackContextTitle = "Контекст відтворення",
+        betaDynamicPlaybackContextDesc = "Відображати походження треку («З альбому», «З радіо», «Сингл») замість «Зараз грає»",
+        fromAlbum = "З альбому",
+        fromMyWave = "З Моєї хвилі",
+        fromRadio = "З радіо",
+        singleTrack = "Сингл",
+        fromPlaylist = "З плейлиста",
+        fromFavorites = "З улюбленого"
     )
 )
 

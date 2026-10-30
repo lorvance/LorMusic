@@ -42,7 +42,10 @@ import androidx.compose.ui.unit.sp
 import com.lormusic.app.data.SoundCloudRepository
 import com.lormusic.app.data.YouTubeMusicRepository
 import com.lormusic.app.model.AppIconOption
+import com.lormusic.app.model.AppStrings
 import com.lormusic.app.model.LyricLine
+import com.lormusic.app.model.PlaybackContext
+import com.lormusic.app.model.PlaybackContextType
 import com.lormusic.app.model.Playlist
 import com.lormusic.app.model.RepeatMode
 import com.lormusic.app.model.Song
@@ -79,6 +82,8 @@ fun NowPlayingScreen(
     useAlbumArtGradient: Boolean = false,
     useDynamicPlayerColors: Boolean = true,
     enableSwipe: Boolean = true,
+    betaDynamicPlaybackContext: Boolean = false,
+    playbackContext: PlaybackContext? = null,
     playlists: List<Playlist> = emptyList(),
     isDownloading: Boolean = false,
     downloadProgressFraction: Float = 0f,
@@ -249,18 +254,49 @@ fun NowPlayingScreen(
                         ) {
                             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = strings.collapse)
                         }
-                        Text(
-                            text = strings.nowPlayingTitle,
-                            style = MaterialTheme.typography.headlineSmall,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface,
-                            textAlign = TextAlign.Center,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis,
-                            modifier = Modifier
-                                .align(Alignment.Center)
-                                .padding(horizontal = 56.dp)
-                        )
+                        if (betaDynamicPlaybackContext) {
+                            val contextLabels = remember(song, playbackContext, strings) {
+                                getDynamicPlaybackContextLabels(song, playbackContext, strings)
+                            }
+                            Column(
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(horizontal = 56.dp),
+                                horizontalAlignment = Alignment.CenterHorizontally
+                            ) {
+                                Text(
+                                    text = contextLabels.first.uppercase(),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.85f),
+                                    letterSpacing = 1.sp,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = contextLabels.second,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    textAlign = TextAlign.Center,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        } else {
+                            Text(
+                                text = strings.nowPlayingTitle,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.ExtraBold,
+                                color = MaterialTheme.colorScheme.onSurface,
+                                textAlign = TextAlign.Center,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis,
+                                modifier = Modifier
+                                    .align(Alignment.Center)
+                                    .padding(horizontal = 56.dp)
+                            )
+                        }
                         IconButton(
                             onClick = onOpenSongActions,
                             modifier = Modifier.align(Alignment.CenterEnd)
@@ -1828,6 +1864,56 @@ fun HalloweenCoverCandies(
                 }
             } else {
                 Spacer(modifier = Modifier.size(24.dp))
+            }
+        }
+    }
+}
+
+private fun getDynamicPlaybackContextLabels(
+    song: Song,
+    playbackContext: PlaybackContext?,
+    strings: AppStrings
+): Pair<String, String> {
+    val type = playbackContext?.type
+    val title = playbackContext?.title?.trim()
+
+    return when {
+        type == PlaybackContextType.MY_WAVE -> {
+            strings.fromMyWave to (title?.takeIf { it.isNotBlank() } ?: song.artist)
+        }
+        type == PlaybackContextType.RADIO -> {
+            strings.fromRadio to (title?.takeIf { it.isNotBlank() } ?: strings.radioMixesTitle)
+        }
+        type == PlaybackContextType.PLAYLIST -> {
+            strings.fromPlaylist to (title?.takeIf { it.isNotBlank() } ?: (song.folderName ?: "LorMusic"))
+        }
+        type == PlaybackContextType.FAVORITES -> {
+            strings.fromFavorites to (title?.takeIf { it.isNotBlank() } ?: song.artist)
+        }
+        type == PlaybackContextType.ALBUM -> {
+            val albumName = title?.takeIf { it.isNotBlank() } ?: song.album.takeIf {
+                it.isNotBlank() && !it.equals("LorMusic", ignoreCase = true) && !it.equals("SoundCloud", ignoreCase = true)
+            } ?: song.title
+            strings.fromAlbum to albumName
+        }
+        type == PlaybackContextType.SINGLE -> {
+            strings.singleTrack to (title?.takeIf { it.isNotBlank() } ?: song.title)
+        }
+        else -> {
+            val album = song.album.trim()
+            val isKnownAlbum = album.isNotBlank() &&
+                !album.equals("LorMusic", ignoreCase = true) &&
+                !album.equals("SoundCloud", ignoreCase = true) &&
+                !album.equals("Unknown Album", ignoreCase = true) &&
+                !album.equals("<unknown>", ignoreCase = true)
+            if (isKnownAlbum) {
+                if (album.contains("Single", ignoreCase = true) || song.title.contains(" - Single", ignoreCase = true)) {
+                    strings.singleTrack to song.title
+                } else {
+                    strings.fromAlbum to album
+                }
+            } else {
+                strings.singleTrack to song.title
             }
         }
     }

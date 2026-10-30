@@ -488,6 +488,22 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_BETA_UPDATES, enabled).apply()
     }
 
+    fun getBetaSeparateHeaderBubbles(): Boolean {
+        return prefs.getBoolean(KEY_BETA_SEPARATE_HEADER_BUBBLES, false)
+    }
+
+    fun saveBetaSeparateHeaderBubbles(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_SEPARATE_HEADER_BUBBLES, enabled).apply()
+    }
+
+    fun getBetaDynamicPlaybackContext(): Boolean {
+        return prefs.getBoolean(KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT, false)
+    }
+
+    fun saveBetaDynamicPlaybackContext(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT, enabled).apply()
+    }
+
     fun getUseAlbumArtGradient(): Boolean {
         return prefs.getBoolean(KEY_ALBUM_ART_GRADIENT, true)
     }
@@ -816,5 +832,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_SC_USER_PROFILE = "sc_user_profile_json"
         private const val KEY_SC_AUTH_TOKEN = "sc_auth_token_raw"
         private const val KEY_UNIFIED_FAVORITES = "unified_favorite_ids"
+        private const val KEY_BETA_SEPARATE_HEADER_BUBBLES = "beta_separate_header_bubbles"
+        private const val KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT = "beta_dynamic_playback_context"
     }
 }

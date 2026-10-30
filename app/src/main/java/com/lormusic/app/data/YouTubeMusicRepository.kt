@@ -1279,7 +1279,7 @@ object YouTubeMusicRepository {
         }.getOrNull()
     }
 
-    private fun injectM4aMetadataAtoms(
+    fun injectM4aMetadataAtoms(
         m4aFile: File,
         title: String,
         artist: String,

@@ -61,6 +61,8 @@ fun ProfileScreen(
     useLiquidGlass: Boolean = false,
     hazeState: HazeState? = null,
     enableBetaUpdates: Boolean = false,
+    betaSeparateHeaderBubbles: Boolean = false,
+    betaDynamicPlaybackContext: Boolean = false,
     useAlbumArtGradient: Boolean = true,
     useMyWaveCoverGradient: Boolean = false,
     useDynamicPlayerColors: Boolean = true,
@@ -81,6 +83,8 @@ fun ProfileScreen(
     onToggleShowNavBarLabels: (Boolean) -> Unit = {},
     onToggleLiquidGlass: (Boolean) -> Unit = {},
     onToggleBetaUpdates: (Boolean) -> Unit = {},
+    onToggleBetaSeparateHeaderBubbles: (Boolean) -> Unit = {},
+    onToggleBetaDynamicPlaybackContext: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
     onToggleMyWaveCoverGradient: (Boolean) -> Unit = {},
     onToggleDynamicPlayerColors: (Boolean) -> Unit = {},
@@ -490,6 +494,30 @@ fun ProfileScreen(
                         Switch(
                             checked = enableBetaUpdates,
                             onCheckedChange = onToggleBetaUpdates
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text(strings.betaSeparateHeaderBubblesTitle) },
+                    supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
+                    leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = betaSeparateHeaderBubbles,
+                            onCheckedChange = onToggleBetaSeparateHeaderBubbles
+                        )
+                    }
+                )
+                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                ListItem(
+                    headlineContent = { Text(strings.betaDynamicPlaybackContextTitle) },
+                    supportingContent = { Text(strings.betaDynamicPlaybackContextDesc) },
+                    leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                    trailingContent = {
+                        Switch(
+                            checked = betaDynamicPlaybackContext,
+                            onCheckedChange = onToggleBetaDynamicPlaybackContext
                         )
                     }
                 )

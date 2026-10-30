@@ -75,6 +75,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val enableBlur = mutableStateOf(prefs.getEnableBlur())
     val useLiquidGlass = mutableStateOf(prefs.getUseLiquidGlass())
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
+    val betaSeparateHeaderBubbles = mutableStateOf(prefs.getBetaSeparateHeaderBubbles())
+    val betaDynamicPlaybackContext = mutableStateOf(prefs.getBetaDynamicPlaybackContext())
+    val currentPlaybackContext = mutableStateOf<PlaybackContext?>(null)
     val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
     val useMyWaveCoverGradient = mutableStateOf(prefs.getUseMyWaveCoverGradient())
     val useDynamicPlayerColors = mutableStateOf(prefs.getUseDynamicPlayerColors())
@@ -1409,8 +1412,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun setQueueAndPlay(songs: List<Song>, startIndex: Int, shuffle: Boolean = false) {
+    fun setQueueAndPlay(songs: List<Song>, startIndex: Int, shuffle: Boolean = false, context: PlaybackContext? = null) {
         if (songs.isEmpty()) return
+        if (context != null) {
+            currentPlaybackContext.value = context
+        }
         shuffleOn.value = shuffle
         exoPlayer.shuffleModeEnabled = false
 
@@ -1700,6 +1706,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         classicLibraryDesign.value = prefs.getClassicLibraryDesign()
         useDynamicPlayerColors.value = prefs.getUseDynamicPlayerColors()
         enableBetaUpdates.value = prefs.getEnableBetaUpdates()
+        betaSeparateHeaderBubbles.value = prefs.getBetaSeparateHeaderBubbles()
+        betaDynamicPlaybackContext.value = prefs.getBetaDynamicPlaybackContext()
         useAlbumArtGradient.value = prefs.getUseAlbumArtGradient()
         useMyWaveCoverGradient.value = prefs.getUseMyWaveCoverGradient()
         autoTagFixEnabled.value = prefs.getAutoTagFixEnabled()
@@ -1904,6 +1912,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         enableBetaUpdates.value = enabled
         prefs.saveEnableBetaUpdates(enabled)
         checkForUpdates(silent = true)
+    }
+
+    fun setBetaSeparateHeaderBubbles(enabled: Boolean) {
+        betaSeparateHeaderBubbles.value = enabled
+        prefs.saveBetaSeparateHeaderBubbles(enabled)
+    }
+
+    fun setBetaDynamicPlaybackContext(enabled: Boolean) {
+        betaDynamicPlaybackContext.value = enabled
+        prefs.saveBetaDynamicPlaybackContext(enabled)
+    }
+
+    fun setPlaybackContext(context: PlaybackContext?) {
+        currentPlaybackContext.value = context
     }
 
     fun setUseAlbumArtGradient(enabled: Boolean) {

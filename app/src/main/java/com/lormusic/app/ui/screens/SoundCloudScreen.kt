@@ -83,7 +83,8 @@ fun SoundCloudScreen(
     isSearching: Boolean = false,
     hazeState: HazeState? = null,
     enableBlur: Boolean = true,
-    useLiquidGlass: Boolean = false
+    useLiquidGlass: Boolean = false,
+    betaSeparateHeaderBubbles: Boolean = false
 ) {
     val view = LocalView.current
     val strings = LocalStrings.current
@@ -115,6 +116,7 @@ fun SoundCloudScreen(
                 hazeState = null,
                 enableBlur = enableBlur,
                 useLiquidGlass = false,
+                betaSeparateHeaderBubbles = betaSeparateHeaderBubbles,
                 onWebLoginClick = { showWebLoginDialog = true },
                 onTokenLoginClick = {
                     forceTokenInput = ""
@@ -129,6 +131,102 @@ fun SoundCloudScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
             ) {
+                if (betaSeparateHeaderBubbles) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp)
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.CenterStart)
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    if (activeTab != ScTab.HOME) {
+                                        onSelectTab(ScTab.HOME)
+                                    } else {
+                                        onSwitchToLocal()
+                                    }
+                                }
+                                .liquidGlassBubble(CircleShape, null, enableBlur, false),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IosBackChevron(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .align(Alignment.Center)
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .liquidGlassBubble(RoundedCornerShape(22.dp), null, enableBlur, false)
+                                .padding(horizontal = 14.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White,
+                                    modifier = Modifier.size(26.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_soundcloud),
+                                            contentDescription = "SoundCloud",
+                                            tint = Color(0xFF111111),
+                                            modifier = Modifier.size(16.dp)
+                                        )
+                                    }
+                                }
+                                Text(
+                                    text = "SoundCloud",
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold,
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier.align(Alignment.CenterEnd)
+                        ) {
+                            Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                showAccountMenuDialog = true
+                            }
+                            .liquidGlassBubble(CircleShape, null, enableBlur, false),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        if (!profile?.avatarUrl.isNullOrBlank()) {
+                            SongArtwork(
+                                seed = (profile?.username ?: "SoundCloud").hashCode(),
+                                albumArtUri = profile?.avatarUrl,
+                                cornerRadius = 22.dp,
+                                modifier = Modifier.size(36.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.AccountCircle,
+                                contentDescription = strings.signInSoundCloud,
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+                    }
+                        }
+                    }
+                } else {
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
@@ -203,6 +301,7 @@ fun SoundCloudScreen(
                             )
                         }
                     }
+                }
                 }
 
                 AnimatedContent(
@@ -498,6 +597,7 @@ private fun ScSignInRequiredGate(
     hazeState: HazeState?,
     enableBlur: Boolean,
     useLiquidGlass: Boolean,
+    betaSeparateHeaderBubbles: Boolean = false,
     onWebLoginClick: () -> Unit,
     onTokenLoginClick: () -> Unit,
     onBackToLocal: () -> Unit
