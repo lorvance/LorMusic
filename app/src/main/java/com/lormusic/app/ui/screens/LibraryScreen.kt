@@ -35,7 +35,6 @@ import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.PlaybackContext
 import com.lormusic.app.model.PlaybackContextType
-import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.SortOption
 import com.lormusic.app.ui.components.ExpressiveLoadingIndicator
 import com.lormusic.app.ui.components.SongRow
@@ -56,6 +55,7 @@ fun LibraryScreen(
     songs: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     hiddenSongIds: Set<String> = emptySet(),
     hideDemoTracks: Boolean = false,
@@ -78,7 +78,6 @@ fun LibraryScreen(
     onOpenTagFix: () -> Unit,
     onOpenYtMusic: () -> Unit = {},
     onOpenSoundCloud: () -> Unit = {},
-    isHalloweenMode: Boolean = false,
     onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit
@@ -322,349 +321,370 @@ fun LibraryScreen(
             }
         }
 
-
-            Box(
-                modifier = Modifier
-                    .align(Alignment.TopCenter)
-                    .fillMaxWidth()
-                    .onGloballyPositioned { coords ->
-                        headerHeightDp = with(density) { coords.size.height.toDp() }
-                    }
-            ) {
-                val topScrimColor = MaterialTheme.colorScheme.background
-                if (enableBlur) {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .hazeEffect(state = hazeState) {
-                                blurEnabled = true
-                                backgroundColor = topScrimColor
-                                blurRadius = 30.dp
-                                tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
-                            }
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        topScrimColor.copy(alpha = 0.75f),
-                                        topScrimColor.copy(alpha = 0.35f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                    )
-                } else {
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .background(
-                                Brush.verticalGradient(
-                                    listOf(
-                                        topScrimColor.copy(alpha = 0.96f),
-                                        topScrimColor.copy(alpha = 0.78f),
-                                        topScrimColor.copy(alpha = 0.42f),
-                                        Color.Transparent
-                                    )
-                                )
-                            )
-                    )
+        Box(
+            modifier = Modifier
+                .align(Alignment.TopCenter)
+                .fillMaxWidth()
+                .onGloballyPositioned { coords ->
+                    headerHeightDp = with(density) { coords.size.height.toDp() }
                 }
-
-                Column(
+        ) {
+            val topScrimColor = MaterialTheme.colorScheme.background
+            if (enableBlur) {
+                Box(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .statusBarsPadding()
-                        .padding(horizontal = 14.dp, vertical = 8.dp)
-                ) {
-                    @Composable
-                    fun MoreMenuDropdown() {
-                        DropdownMenu(
-                            expanded = showMoreMenu,
-                            onDismissRequest = { showMoreMenu = false }
-                        ) {
-                            DropdownMenuItem(
-                                text = { Text(strings.playAll) },
-                                leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
-                                    onPlayQueue(filteredSongs, 0, false, ctx)
-                                },
-                                enabled = filteredSongs.isNotEmpty()
-                            )
-                            DropdownMenuItem(
-                                text = { Text(strings.shuffleAll) },
-                                leadingIcon = { Icon(Icons.Filled.Shuffle, contentDescription = null) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
-                                    onPlayQueue(filteredSongs, 0, true, ctx)
-                                },
-                                enabled = filteredSongs.isNotEmpty()
-                            )
-                            DropdownMenuItem(
-                                text = { Text(strings.rescan) },
-                                leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
-                                onClick = {
-                                    showMoreMenu = false
-                                    onRequestPermissionAndScan()
-                                },
-                                enabled = !isScanningLocal
-                            )
+                        .matchParentSize()
+                        .hazeEffect(state = hazeState) {
+                            blurEnabled = true
+                            backgroundColor = topScrimColor
+                            blurRadius = 30.dp
+                            tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
                         }
-                    }
-
-                    @Composable
-                    fun MoreButtonBubble() {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    showMoreMenu = true
-                                }
-                                .then(bubbleModifier(CircleShape)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.MoreVert,
-                                contentDescription = strings.actions,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    topScrimColor.copy(alpha = 0.75f),
+                                    topScrimColor.copy(alpha = 0.35f),
+                                    Color.Transparent
+                                )
                             )
-                            MoreMenuDropdown()
-                        }
-                    }
-
-                    @Composable
-                    fun SortButtonBubble() {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    showSortMenu = true
-                                }
-                                .then(bubbleModifier(CircleShape)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.AutoMirrored.Filled.Sort,
-                                contentDescription = strings.sorting,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
+                        )
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    topScrimColor.copy(alpha = 0.96f),
+                                    topScrimColor.copy(alpha = 0.78f),
+                                    topScrimColor.copy(alpha = 0.42f),
+                                    Color.Transparent
+                                )
                             )
+                        )
+                )
+            }
 
-                            DropdownMenu(
-                                expanded = showSortMenu,
-                                onDismissRequest = { showSortMenu = false }
-                            ) {
-                                SortOption.entries.forEach { option ->
-                                    DropdownMenuItem(
-                                        text = { Text(option.getDisplayName(strings)) },
-                                        leadingIcon = {
-                                            if (selectedSort == option) {
-                                                Icon(Icons.Filled.Check, contentDescription = null)
-                                            }
-                                        },
-                                        onClick = {
-                                            onSelectSort(option)
-                                            showSortMenu = false
-                                        }
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .statusBarsPadding()
+                    .padding(horizontal = 14.dp, vertical = 8.dp)
+            ) {
+                @Composable
+                fun MoreMenuDropdown() {
+                    DropdownMenu(
+                        expanded = showMoreMenu,
+                        onDismissRequest = { showMoreMenu = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text(strings.playAll) },
+                            leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                            onClick = {
+                                showMoreMenu = false
+                                val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
+                                onPlayQueue(filteredSongs, 0, false, ctx)
+                            },
+                            enabled = filteredSongs.isNotEmpty()
+                        )
+                        DropdownMenuItem(
+                            text = {
+                                Text(
+                                    text = strings.shuffleAll,
+                                    color = if (shuffleOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                    fontWeight = if (shuffleOn) FontWeight.Bold else FontWeight.Normal
+                                )
+                            },
+                            leadingIcon = {
+                                Icon(
+                                    imageVector = Icons.Filled.Shuffle,
+                                    contentDescription = null,
+                                    tint = if (shuffleOn) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                )
+                            },
+                            trailingIcon = if (shuffleOn) {
+                                {
+                                    Icon(
+                                        imageVector = Icons.Filled.Check,
+                                        contentDescription = null,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(18.dp)
                                     )
                                 }
-                            }
-                        }
-                    }
-
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        if (showTopSearchBar) {
-                            Box(
-                                modifier = Modifier
-                                    .size(44.dp)
-                                    .clip(CircleShape)
-                                    .clickable {
-                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        isTopSearchExpanded = !isTopSearchExpanded
-                                        if (!isTopSearchExpanded) searchQuery = ""
-                                    }
-                                    .then(bubbleModifier(CircleShape)),
-                                contentAlignment = Alignment.Center
-                            ) {
-                                Icon(
-                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
-                                    contentDescription = strings.searchTitle,
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                            }
-                        } else {
-                            MoreButtonBubble()
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                                .padding(horizontal = 20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = if (isHalloweenMode && !AppIconOption.isHalloweenExpired()) "🎃 ${strings.navLibrary} 👻" else strings.navLibrary,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold
-                            )
-                        }
-
-                        if (showTopSearchBar) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                MoreButtonBubble()
-                                SortButtonBubble()
-                            }
-                        } else {
-                            SortButtonBubble()
-                        }
-                    }
-
-                    Spacer(Modifier.height(8.dp))
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .horizontalScroll(rememberScrollState()),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp),
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onOpenYtMusic()
-                                }
-                                .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(8.dp)
-                            ) {
-                                Surface(
-                                    shape = CircleShape,
-                                    color = Color.White,
-                                    modifier = Modifier.size(22.dp)
-                                ) {
-                                    Box(contentAlignment = Alignment.Center) {
-                                        Icon(
-                                            imageVector = Icons.Filled.PlayArrow,
-                                            contentDescription = "YouTube Music",
-                                            tint = Color(0xFF111111),
-                                            modifier = Modifier.size(15.dp)
-                                        )
-                                    }
-                                }
-                                Text(
-                                    text = "YouTube Music",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onOpenTagFix()
-                                }
-                                .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    imageVector = Icons.Filled.AutoFixHigh,
-                                    contentDescription = "TagFix",
-                                    tint = MaterialTheme.colorScheme.primary,
-                                    modifier = Modifier.size(18.dp)
-                                )
-                                Text(
-                                    text = "TagFix",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .height(40.dp)
-                                .clip(RoundedCornerShape(20.dp))
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onOpenSoundCloud()
-                                }
-                                .then(bubbleModifier(RoundedCornerShape(20.dp)))
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(
-                                verticalAlignment = Alignment.CenterVertically,
-                                horizontalArrangement = Arrangement.spacedBy(6.dp)
-                            ) {
-                                Icon(
-                                    painter = androidx.compose.ui.res.painterResource(com.lormusic.app.R.drawable.ic_soundcloud),
-                                    contentDescription = "SoundCloud",
-                                    tint = MaterialTheme.colorScheme.onSurface,
-                                    modifier = Modifier.size(20.dp)
-                                )
-                                Text(
-                                    text = "SoundCloud",
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold
-                                )
-                            }
-                        }
-                    }
-
-                    AnimatedVisibility(visible = isSearchVisible) {
-                        Spacer(Modifier.height(8.dp))
-                        OutlinedTextField(
-                            value = searchQuery,
-                            onValueChange = { searchQuery = it },
-                            placeholder = { Text(strings.searchPlaceholder) },
-                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                            trailingIcon = {
-                                if (searchQuery.isNotEmpty()) {
-                                    IconButton(onClick = { searchQuery = "" }) {
-                                        Icon(Icons.Filled.Clear, contentDescription = strings.clear)
-                                    }
-                                }
+                            } else null,
+                            onClick = {
+                                showMoreMenu = false
+                                val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
+                                onPlayQueue(filteredSongs, 0, true, ctx)
                             },
-                            singleLine = true,
-                            shape = RoundedCornerShape(18.dp),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .then(bubbleModifier(RoundedCornerShape(18.dp)))
+                            enabled = filteredSongs.isNotEmpty()
+                        )
+                        DropdownMenuItem(
+                            text = { Text(strings.rescan) },
+                            leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                            onClick = {
+                                showMoreMenu = false
+                                onRequestPermissionAndScan()
+                            },
+                            enabled = !isScanningLocal
                         )
                     }
+                }
+
+                @Composable
+                fun MoreButtonBubble() {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                showMoreMenu = true
+                            }
+                            .then(bubbleModifier(CircleShape)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.MoreVert,
+                            contentDescription = strings.actions,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+                        MoreMenuDropdown()
+                    }
+                }
+
+                @Composable
+                fun SortButtonBubble() {
+                    Box(
+                        modifier = Modifier
+                            .size(44.dp)
+                            .clip(CircleShape)
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                showSortMenu = true
+                            }
+                            .then(bubbleModifier(CircleShape)),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Icon(
+                            imageVector = Icons.AutoMirrored.Filled.Sort,
+                            contentDescription = strings.sorting,
+                            tint = MaterialTheme.colorScheme.onSurface,
+                            modifier = Modifier.size(20.dp)
+                        )
+
+                        DropdownMenu(
+                            expanded = showSortMenu,
+                            onDismissRequest = { showSortMenu = false }
+                        ) {
+                            SortOption.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(option.getDisplayName(strings)) },
+                                    leadingIcon = {
+                                        if (selectedSort == option) {
+                                            Icon(Icons.Filled.Check, contentDescription = null)
+                                        }
+                                    },
+                                    onClick = {
+                                        onSelectSort(option)
+                                        showSortMenu = false
+                                    }
+                                )
+                            }
+                        }
+                    }
+                }
+
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    if (showTopSearchBar) {
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    isTopSearchExpanded = !isTopSearchExpanded
+                                    if (!isTopSearchExpanded) searchQuery = ""
+                                }
+                                .then(bubbleModifier(CircleShape)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                contentDescription = strings.searchTitle,
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                        }
+                    } else {
+                        MoreButtonBubble()
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .height(44.dp)
+                            .clip(RoundedCornerShape(22.dp))
+                            .then(bubbleModifier(RoundedCornerShape(22.dp)))
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = strings.navLibrary,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold
+                        )
+                    }
+
+                    if (showTopSearchBar) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            MoreButtonBubble()
+                            SortButtonBubble()
+                        }
+                    } else {
+                        SortButtonBubble()
+                    }
+                }
+
+                Spacer(Modifier.height(8.dp))
+
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .horizontalScroll(rememberScrollState()),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onOpenYtMusic()
+                            }
+                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(22.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "YouTube Music",
+                                        tint = Color(0xFF111111),
+                                        modifier = Modifier.size(15.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "YouTube Music",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onOpenTagFix()
+                            }
+                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.AutoFixHigh,
+                                contentDescription = "TagFix",
+                                tint = MaterialTheme.colorScheme.primary,
+                                modifier = Modifier.size(18.dp)
+                            )
+                            Text(
+                                text = "TagFix",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .height(40.dp)
+                            .clip(RoundedCornerShape(20.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                onOpenSoundCloud()
+                            }
+                            .then(bubbleModifier(RoundedCornerShape(20.dp)))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(6.dp)
+                        ) {
+                            Icon(
+                                painter = androidx.compose.ui.res.painterResource(com.lormusic.app.R.drawable.ic_soundcloud),
+                                contentDescription = "SoundCloud",
+                                tint = MaterialTheme.colorScheme.onSurface,
+                                modifier = Modifier.size(20.dp)
+                            )
+                            Text(
+                                text = "SoundCloud",
+                                style = MaterialTheme.typography.labelLarge,
+                                fontWeight = FontWeight.Bold
+                            )
+                        }
+                    }
+                }
+
+                AnimatedVisibility(visible = isSearchVisible) {
+                    Spacer(Modifier.height(8.dp))
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { searchQuery = it },
+                        placeholder = { Text(strings.searchPlaceholder) },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                        trailingIcon = {
+                            if (searchQuery.isNotEmpty()) {
+                                IconButton(onClick = { searchQuery = "" }) {
+                                    Icon(Icons.Filled.Clear, contentDescription = strings.clear)
+                                }
+                            }
+                        },
+                        singleLine = true,
+                        shape = RoundedCornerShape(18.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .then(bubbleModifier(RoundedCornerShape(18.dp)))
+                    )
                 }
             }
         }
     }
+}

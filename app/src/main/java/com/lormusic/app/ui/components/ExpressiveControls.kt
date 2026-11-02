@@ -13,7 +13,6 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -31,10 +30,8 @@ import androidx.compose.ui.graphics.drawscope.rotate
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import com.lormusic.app.R
 import com.lormusic.app.model.AppIconOption
 import kotlinx.coroutines.delay
@@ -227,34 +224,13 @@ fun ExpressiveLoadingIndicator(
 
 private fun evalExpressiveShapeRadius(shapeIndex: Int, theta: Float): Float {
     return when (shapeIndex % 7) {
-        0 -> {
-
-            1.0f + 0.14f * cos(8f * theta) - 0.02f * cos(16f * theta)
-        }
-        1 -> {
-
-            1.0f + 0.18f * cos(4f * theta) - 0.03f * cos(8f * theta)
-        }
-        2 -> {
-
-            1.0f + 0.11f * cos(5f * theta) - 0.02f * cos(10f * theta)
-        }
-        3 -> {
-
-            1.0f + 0.10f * cos(7f * theta) - 0.015f * cos(14f * theta)
-        }
-        4 -> {
-
-            1.0f + 0.22f * cos(2f * (theta - 0.6f))
-        }
-        5 -> {
-
-            1.0f + 0.085f * cos(9f * theta) - 0.012f * cos(18f * theta)
-        }
-        else -> {
-
-            1.0f + 0.22f * cos(4f * (theta + 0.785f)) - 0.04f * cos(8f * (theta + 0.785f))
-        }
+        0 -> 1.0f + 0.14f * cos(8f * theta) - 0.02f * cos(16f * theta)
+        1 -> 1.0f + 0.18f * cos(4f * theta) - 0.03f * cos(8f * theta)
+        2 -> 1.0f + 0.11f * cos(5f * theta) - 0.02f * cos(10f * theta)
+        3 -> 1.0f + 0.10f * cos(7f * theta) - 0.015f * cos(14f * theta)
+        4 -> 1.0f + 0.22f * cos(2f * (theta - 0.6f))
+        5 -> 1.0f + 0.085f * cos(9f * theta) - 0.012f * cos(18f * theta)
+        else -> 1.0f + 0.22f * cos(4f * (theta + 0.785f)) - 0.04f * cos(8f * (theta + 0.785f))
     }
 }
 
@@ -331,15 +307,6 @@ fun AppIconVectorPreview(
                         center = Offset(cx + w * 0.12f, cy + h * 0.05f)
                     )
                 }
-            }
-
-            AppIconOption.HALLOWEEN -> {
-                Image(
-                    painter = painterResource(id = R.drawable.icon_preview_halloween),
-                    contentDescription = option.label,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
             }
         }
     }
@@ -649,15 +616,6 @@ fun AnimatedSplashIcon(
                     )
                 }
             }
-
-            AppIconOption.HALLOWEEN -> {
-                Image(
-                    painter = painterResource(id = R.drawable.icon_preview_halloween),
-                    contentDescription = option.label,
-                    contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize()
-                )
-            }
         }
     }
 }
@@ -673,7 +631,6 @@ private fun DrawScope.buildSmoothCookiePath(
     val path = Path()
     for (i in 0..steps) {
         val theta = (i.toFloat() / steps.toFloat()) * (2f * PI.toFloat())
-
         val wave = 0.88f * cos(lobes * theta) - 0.12f * cos(2f * lobes * theta)
         val r = baseRadius + amplitude * wave
         val x = cx + r * cos(theta)

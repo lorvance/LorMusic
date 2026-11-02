@@ -4,19 +4,20 @@ import com.lormusic.app.model.LocalStrings
 
 import android.annotation.SuppressLint
 import android.graphics.Bitmap
+import android.os.Handler
+import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
-import android.accounts.AccountManager
-import android.app.Activity
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
+import android.webkit.WebSettings
+import android.webkit.WebStorage
 import android.webkit.WebView
 import android.webkit.WebViewClient
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -33,10 +34,6 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.foundation.Image
-import androidx.compose.ui.layout.ContentScale
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
-import androidx.compose.material.icons.automirrored.filled.ArrowBackIos
 import androidx.compose.material.icons.automirrored.filled.QueueMusic
 import androidx.compose.material.icons.automirrored.filled.ViewList
 import androidx.compose.material.icons.filled.*
@@ -45,15 +42,14 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
-import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asAndroidBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.LocalView
@@ -67,15 +63,16 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lormusic.app.data.YouTubeMusicRepository
 import com.lormusic.app.model.GoogleAccountProfile
-import com.lormusic.app.model.Playlist
-import com.lormusic.app.model.Song
 import com.lormusic.app.model.PlaybackContext
 import com.lormusic.app.model.PlaybackContextType
+import com.lormusic.app.model.Playlist
+import com.lormusic.app.model.Song
 import com.lormusic.app.ui.components.*
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+import org.json.JSONObject
 
 @Composable
 fun YouTubeMusicScreen(
@@ -90,6 +87,7 @@ fun YouTubeMusicScreen(
     downloadingSongIds: Set<String>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     playlists: List<Playlist>,
     savedYtSongs: List<Song>,
@@ -124,27 +122,12 @@ fun YouTubeMusicScreen(
     var showAccountMenuDialog by remember { mutableStateOf(false) }
     var pendingLoginEmail by remember { mutableStateOf<String?>(null) }
 
-    val accountPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.StartActivityForResult()
-    ) { result ->
-        if (result.resultCode == Activity.RESULT_OK) {
-            val accountName = result.data?.getStringExtra(AccountManager.KEY_ACCOUNT_NAME)
-            if (!accountName.isNullOrBlank()) {
-                val displayName = accountName.substringBefore("@")
-                onSignInNativeAccount(displayName, accountName)
-                pendingLoginEmail = accountName
-                showWebLoginDialog = true
-            }
-        }
-    }
-
     Box(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
         if (googleAccount == null) {
-
             YtSignInRequiredGate(
                 isSyncing = isLoadingFeed,
                 hazeState = hazeState,
@@ -171,6 +154,7 @@ fun YouTubeMusicScreen(
                         downloadingSongIds = downloadingSongIds,
                         currentSong = currentSong,
                         isPlaying = isPlaying,
+                        shuffleOn = shuffleOn,
                         favoriteIds = favoriteIds,
                         googleAccount = googleAccount,
                         hazeState = hazeState,
@@ -200,6 +184,7 @@ fun YouTubeMusicScreen(
                         downloadingSongIds = downloadingSongIds,
                         currentSong = currentSong,
                         isPlaying = isPlaying,
+                        shuffleOn = shuffleOn,
                         favoriteIds = favoriteIds,
                         hazeState = hazeState,
                         enableBlur = enableBlur,
@@ -216,6 +201,7 @@ fun YouTubeMusicScreen(
                         waveSongs = myWaveSongs,
                         currentSong = currentSong,
                         isPlaying = isPlaying,
+                        shuffleOn = shuffleOn,
                         favoriteIds = favoriteIds,
                         downloadingSongIds = downloadingSongIds,
                         hazeState = hazeState,
@@ -251,8 +237,6 @@ fun YouTubeMusicScreen(
             }
         }
     }
-
-
 
     if (showWebLoginDialog) {
         YtMusicRealWebLoginDialog(
@@ -342,6 +326,60 @@ fun YouTubeMusicScreen(
     }
 }
 
+private const val YTCFG_PROBE_JS = """
+(function() {
+  try {
+    var c = window.ytcfg;
+    if (!c || typeof c.get !== 'function') return null;
+    var d = c.data_ || {};
+    var g = function(k) { var v = c.get(k); return v !== undefined ? v : d[k]; };
+    return JSON.stringify({
+      loggedIn: !!g('LOGGED_IN'),
+      pageId: String(g('DELEGATED_SESSION_ID') || ''),
+      dataSyncId: String(g('DATASYNC_ID') || ''),
+      authUser: String(g('SESSION_INDEX') !== undefined ? g('SESSION_INDEX') : '0'),
+      visitorData: String(g('VISITOR_DATA') || ''),
+      clientVersion: String(g('INNERTUBE_CLIENT_VERSION') || '')
+    });
+  } catch (e) { return null; }
+})();
+"""
+
+private const val BITCHORD_LOGIN_URL =
+    "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&prompt=select_account&continue=https%3A%2F%2Fmusic.youtube.com%2F"
+
+private const val BITCHORD_SWITCHER_URL =
+    "https://www.youtube.com/signin?action_handle_signin=true&next=https%3A%2F%2Fmusic.youtube.com%2F&feature=channel_switcher"
+
+private fun unquoteJsEvaluation(raw: String?): String? {
+    if (raw.isNullOrBlank() || raw == "null" || raw == "undefined") return null
+    val trimmed = raw.trim()
+    if (trimmed.length >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
+        return trimmed.substring(1, trimmed.length - 1)
+            .replace("\\\"", "\"")
+            .replace("\\\\", "\\")
+            .replace("\\n", "\n")
+            .replace("\\t", "\t")
+    }
+    return trimmed
+}
+
+private fun mergeDomainCookies(cookieManager: CookieManager, vararg urls: String): String {
+    val map = LinkedHashMap<String, String>()
+    for (u in urls) {
+        val raw = runCatching { cookieManager.getCookie(u) }.getOrNull().orEmpty()
+        raw.split(';').forEach { part ->
+            val idx = part.indexOf('=')
+            if (idx > 0) {
+                val k = part.substring(0, idx).trim()
+                val v = part.substring(idx + 1).trim()
+                if (k.isNotEmpty() && v.isNotEmpty()) map[k] = v
+            }
+        }
+    }
+    return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
+}
+
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
 private fun YtMusicRealWebLoginDialog(
@@ -349,20 +387,87 @@ private fun YtMusicRealWebLoginDialog(
     onDismiss: () -> Unit,
     onAuthSuccess: (String) -> Unit
 ) {
-    var isPageLoading by remember { mutableStateOf(true) }
-    val emailParam = if (!initialEmail.isNullOrBlank()) "&Email=${android.net.Uri.encode(initialEmail)}&login_hint=${android.net.Uri.encode(initialEmail)}" else ""
-    var currentUrl by remember(initialEmail) {
-        mutableStateOf(
-            "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true$emailParam&continue=" +
-                "https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dru%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
-        )
-    }
-    var hasCompletedAuth by remember { mutableStateOf(false) }
     val strings = LocalStrings.current
+    var isPageLoading by remember { mutableStateOf(true) }
+    var statusSubtitle by remember { mutableStateOf(strings.googleSignInSubtitle) }
+    var webViewRef by remember { mutableStateOf<WebView?>(null) }
+    var hasCompletedAuth by remember { mutableStateOf(false) }
+    var redirectedToSwitcher by remember { mutableStateOf(false) }
+    val mainHandler = remember { Handler(Looper.getMainLooper()) }
+
+    fun finishLogin(view: WebView?, metaJson: JSONObject? = null) {
+        if (hasCompletedAuth) return
+        val cm = CookieManager.getInstance()
+        runCatching { cm.flush() }
+        val mergedCookies = mergeDomainCookies(
+            cm,
+            "https://music.youtube.com",
+            "https://www.youtube.com",
+            "https://youtube.com",
+            "https://accounts.google.com"
+        )
+        if (!YouTubeMusicRepository.hasValidAuthCookie(mergedCookies)) return
+        hasCompletedAuth = true
+        YouTubeMusicRepository.updateSessionMetadata(
+            cookie = mergedCookies,
+            pageId = metaJson?.optString("pageId")?.takeIf { it.isNotBlank() },
+            dataSyncId = metaJson?.optString("dataSyncId")?.takeIf { it.isNotBlank() },
+            authUser = metaJson?.optString("authUser")?.takeIf { it.isNotBlank() },
+            visitorData = metaJson?.optString("visitorData")?.takeIf { it.isNotBlank() },
+            clientVersion = metaJson?.optString("clientVersion")?.takeIf { it.isNotBlank() }
+        )
+        runCatching { view?.stopLoading() }
+        onAuthSuccess(mergedCookies)
+    }
+
+    fun probeYtcfgAndCapture(view: WebView?, attempt: Int = 0) {
+        if (hasCompletedAuth || view == null) return
+        val cm = CookieManager.getInstance()
+        val cookies = mergeDomainCookies(
+            cm,
+            "https://music.youtube.com",
+            "https://www.youtube.com",
+            "https://youtube.com"
+        )
+        val hasAuth = YouTubeMusicRepository.hasValidAuthCookie(cookies)
+
+        view.evaluateJavascript(YTCFG_PROBE_JS) { raw ->
+            if (hasCompletedAuth) return@evaluateJavascript
+            val unquoted = unquoteJsEvaluation(raw)
+            val meta = runCatching {
+                if (!unquoted.isNullOrBlank()) JSONObject(unquoted) else null
+            }.getOrNull()
+            val loggedIn = meta?.optBoolean("loggedIn", false) == true
+            val dataSync = meta?.optString("dataSyncId").orEmpty()
+            val hasIdentity = dataSync.isNotBlank() || meta?.optString("pageId").orEmpty().isNotBlank()
+
+            if (hasAuth && (loggedIn || hasIdentity || attempt >= 5)) {
+                finishLogin(view, meta)
+            } else if (attempt < 14) {
+                mainHandler.postDelayed({ probeYtcfgAndCapture(view, attempt + 1) }, 450L)
+            }
+        }
+    }
+
+    DisposableEffect(Unit) {
+        onDispose {
+            mainHandler.removeCallbacksAndMessages(null)
+            webViewRef?.let { wv ->
+                runCatching {
+                    wv.stopLoading()
+                    wv.destroy()
+                }
+            }
+            webViewRef = null
+        }
+    }
 
     Dialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(usePlatformDefaultWidth = false)
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
     ) {
         Surface(
             modifier = Modifier
@@ -372,57 +477,74 @@ private fun YtMusicRealWebLoginDialog(
             color = MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
-
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 12.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                Surface(
+                    tonalElevation = 3.dp,
+                    color = MaterialTheme.colorScheme.surfaceContainer,
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    IconButton(onClick = onDismiss) {
-                        Icon(Icons.Filled.Close, contentDescription = strings.close)
-                    }
-                    Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = strings.googleSignInTitle,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold
-                        )
-                        Text(
-                            text = strings.googleSignInSubtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f),
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                    }
-                    if (isPageLoading) {
-                        ExpressiveLoadingIndicator(size = 28.dp)
-                    }
-                    Spacer(Modifier.width(6.dp))
-                    FilledTonalButton(
-                        onClick = {
-                            val cookie = CookieManager.getInstance().getCookie("https://music.youtube.com")
-                                ?: CookieManager.getInstance().getCookie("https://www.youtube.com")
-                            if (!cookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
-                                hasCompletedAuth = true
-                                onAuthSuccess(cookie)
+                    Column(modifier = Modifier.fillMaxWidth()) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 8.dp, vertical = 8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            IconButton(onClick = onDismiss) {
+                                Icon(Icons.Filled.Close, contentDescription = strings.close)
                             }
-                        },
-                        shape = RoundedCornerShape(14.dp),
-                        contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
-                    ) {
-                        Text(strings.done)
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = strings.googleSignInTitle,
+                                    style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = statusSubtitle,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                            IconButton(
+                                onClick = {
+                                    redirectedToSwitcher = false
+                                    webViewRef?.loadUrl(BITCHORD_LOGIN_URL)
+                                }
+                            ) {
+                                Icon(Icons.Filled.Refresh, contentDescription = strings.refreshStream)
+                            }
+                            Spacer(Modifier.width(4.dp))
+                            FilledTonalButton(
+                                onClick = { probeYtcfgAndCapture(webViewRef, attempt = 5) },
+                                shape = RoundedCornerShape(14.dp),
+                                contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
+                            ) {
+                                Text(strings.done, fontWeight = FontWeight.Bold)
+                            }
+                        }
+
+                        if (isPageLoading) {
+                            Box(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(2.dp)
+                                    .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.65f))
+                            )
+                        } else {
+                            HorizontalDivider()
+                        }
                     }
                 }
-
-                HorizontalDivider()
 
                 Box(modifier = Modifier.weight(1f)) {
                     AndroidView(
                         modifier = Modifier.fillMaxSize(),
                         factory = { ctx ->
                             WebView(ctx).apply {
+                                webViewRef = this
                                 layoutParams = ViewGroup.LayoutParams(
                                     ViewGroup.LayoutParams.MATCH_PARENT,
                                     ViewGroup.LayoutParams.MATCH_PARENT
@@ -435,33 +557,51 @@ private fun YtMusicRealWebLoginDialog(
                                     javaScriptEnabled = true
                                     domStorageEnabled = true
                                     databaseEnabled = true
-                                    setSupportZoom(true)
-
-                                    userAgentString =
-                                        "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
+                                    javaScriptCanOpenWindowsAutomatically = true
+                                    setSupportMultipleWindows(false)
+                                    loadWithOverviewMode = true
+                                    useWideViewPort = true
+                                    cacheMode = WebSettings.LOAD_DEFAULT
+                                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                    userAgentString = userAgentString
+                                        .replace("; wv", "")
+                                        .replace(Regex("""Version/\d+\.\d+\s*"""), "")
                                 }
 
                                 webViewClient = object : WebViewClient() {
                                     override fun onPageStarted(view: WebView?, url: String?, favicon: Bitmap?) {
                                         super.onPageStarted(view, url, favicon)
                                         isPageLoading = true
-                                        if (url != null) currentUrl = url
+                                        val u = url.orEmpty()
+                                        statusSubtitle = when {
+                                            u.contains("accounts.google.com") -> strings.googleSignInSubtitle
+                                            u.contains("channel_switcher") || u.contains("account_advanced") -> "Выбор канала YouTube..."
+                                            u.contains("music.youtube.com") -> strings.syncingWithGoogle
+                                            else -> strings.googleSignInSubtitle
+                                        }
                                     }
 
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
                                         isPageLoading = false
-                                        if (url != null) {
-                                            currentUrl = url
-                                            val ytmCookie = cookieManager.getCookie("https://music.youtube.com")
-                                                ?: cookieManager.getCookie(url)
-                                            if (!hasCompletedAuth &&
-                                                url.contains("music.youtube.com") &&
-                                                YouTubeMusicRepository.hasValidAuthCookie(ytmCookie)
+                                        val u = url.orEmpty()
+                                        val cookies = mergeDomainCookies(
+                                            cookieManager,
+                                            "https://music.youtube.com",
+                                            "https://www.youtube.com",
+                                            "https://youtube.com"
+                                        )
+                                        if (YouTubeMusicRepository.hasValidAuthCookie(cookies)) {
+                                            if ((u.contains("youtube.com/signin") || u.contains("accounts.youtube.com")) &&
+                                                !u.contains("channel_switcher") &&
+                                                !redirectedToSwitcher
                                             ) {
-                                                hasCompletedAuth = true
-                                                cookieManager.flush()
-                                                onAuthSuccess(ytmCookie!!)
+                                                redirectedToSwitcher = true
+                                                view?.loadUrl(BITCHORD_SWITCHER_URL)
+                                                return
+                                            }
+                                            if (u.startsWith("https://music.youtube.com")) {
+                                                probeYtcfgAndCapture(view)
                                             }
                                         }
                                     }
@@ -469,12 +609,25 @@ private fun YtMusicRealWebLoginDialog(
                                     override fun shouldOverrideUrlLoading(
                                         view: WebView?,
                                         request: WebResourceRequest?
-                                    ): Boolean {
-                                        return false
-                                    }
+                                    ): Boolean = false
                                 }
 
-                                loadUrl(currentUrl)
+                                runCatching {
+                                    clearCache(true)
+                                    clearHistory()
+                                    WebStorage.getInstance().deleteAllData()
+                                    cookieManager.removeAllCookies {
+                                        cookieManager.flush()
+                                        val targetUrl = if (!initialEmail.isNullOrBlank()) {
+                                            "$BITCHORD_LOGIN_URL&Email=${android.net.Uri.encode(initialEmail)}&login_hint=${android.net.Uri.encode(initialEmail)}"
+                                        } else {
+                                            BITCHORD_LOGIN_URL
+                                        }
+                                        loadUrl(targetUrl)
+                                    }
+                                }.onFailure {
+                                    loadUrl(BITCHORD_LOGIN_URL)
+                                }
                             }
                         }
                     )
@@ -495,7 +648,6 @@ private fun YtSignInRequiredGate(
     onBackToLocal: () -> Unit
 ) {
     val strings = LocalStrings.current
-    val surfaceColor = MaterialTheme.colorScheme.surface
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
         Modifier.liquidGlassBubble(
             shape = shape,
@@ -688,6 +840,7 @@ private fun YtSignInRequiredGate(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun YtHomeTab(
     recentlyPlayed: List<Song>,
@@ -697,6 +850,7 @@ private fun YtHomeTab(
     downloadingSongIds: Set<String>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     googleAccount: GoogleAccountProfile?,
     hazeState: HazeState,
@@ -719,6 +873,7 @@ private fun YtHomeTab(
 ) {
     val strings = LocalStrings.current
     val context = LocalContext.current
+    var selectedRadioMixForSheet by remember { mutableStateOf<Pair<String, List<Song>>?>(null) }
     var avatarBitmap by remember(googleAccount?.avatarUrl) { mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null) }
     LaunchedEffect(googleAccount?.avatarUrl) {
         val url = googleAccount?.avatarUrl
@@ -727,9 +882,6 @@ private fun YtHomeTab(
         }
     }
     val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val accentColor = MaterialTheme.colorScheme.primary
-    val topHeaderShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
     val smoothFling = rememberSmoothFlingBehavior()
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
         Modifier.liquidGlassBubble(
@@ -872,15 +1024,18 @@ private fun YtHomeTab(
                                         shape = RoundedCornerShape(24.dp),
                                         color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.6f),
                                         modifier = Modifier
-                                            .width(210.dp)
+                                            .width(216.dp)
                                             .clickable {
                                                 if (tracks.isNotEmpty()) {
-                                                    onPlayQueue(tracks, 0, false, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
+                                                    selectedRadioMixForSheet = radioTitle to tracks
                                                 }
                                             }
                                     ) {
                                         Column(modifier = Modifier.padding(14.dp)) {
-                                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Row(
+                                                verticalAlignment = Alignment.CenterVertically,
+                                                horizontalArrangement = Arrangement.spacedBy(6.dp)
+                                            ) {
                                                 val previewSong = tracks.firstOrNull()
                                                 if (previewSong != null) {
                                                     SongArtwork(
@@ -892,13 +1047,27 @@ private fun YtHomeTab(
                                                     )
                                                 }
                                                 Spacer(Modifier.weight(1f))
+                                                FilledTonalIconButton(
+                                                    onClick = {
+                                                        selectedRadioMixForSheet = radioTitle to tracks
+                                                    },
+                                                    modifier = Modifier.size(38.dp)
+                                                ) {
+                                                    Icon(
+                                                        imageVector = Icons.AutoMirrored.Filled.QueueMusic,
+                                                        contentDescription = strings.radioTracksTitle,
+                                                        modifier = Modifier.size(19.dp)
+                                                    )
+                                                }
                                                 FilledIconButton(
                                                     onClick = {
-                                                        if (tracks.isNotEmpty()) onPlayQueue(tracks, 0, true, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
+                                                        if (tracks.isNotEmpty()) {
+                                                            onPlayQueue(tracks, 0, false, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
+                                                        }
                                                     },
-                                                    modifier = Modifier.size(40.dp)
+                                                    modifier = Modifier.size(38.dp)
                                                 ) {
-                                                    Icon(Icons.Filled.Radio, contentDescription = null, modifier = Modifier.size(20.dp))
+                                                    Icon(Icons.Filled.PlayArrow, contentDescription = strings.playAction, modifier = Modifier.size(20.dp))
                                                 }
                                             }
                                             Spacer(Modifier.height(10.dp))
@@ -992,6 +1161,123 @@ private fun YtHomeTab(
             }
         }
 
+        val activeRadioSheet = selectedRadioMixForSheet
+        if (activeRadioSheet != null) {
+            val (radioTitle, radioSongs) = activeRadioSheet
+            ModalBottomSheet(
+                onDismissRequest = { selectedRadioMixForSheet = null },
+                shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .navigationBarsPadding()
+                        .padding(bottom = 16.dp)
+                ) {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(14.dp)
+                    ) {
+                        val previewSong = radioSongs.firstOrNull()
+                        if (previewSong != null) {
+                            SongArtwork(
+                                seed = previewSong.coverColorSeed,
+                                albumArtUri = previewSong.albumArtUri,
+                                songUri = previewSong.uri,
+                                cornerRadius = 16.dp,
+                                modifier = Modifier.size(56.dp)
+                            )
+                        }
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = radioTitle,
+                                style = MaterialTheme.typography.titleLarge,
+                                fontWeight = FontWeight.ExtraBold,
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                            Text(
+                                text = "${strings.radioTracksTitle} • ${strings.tracksCountFormat.format(radioSongs.size)}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    }
+
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 20.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        FilledTonalButton(
+                            onClick = {
+                                if (radioSongs.isNotEmpty()) {
+                                    onPlayQueue(radioSongs, 0, false, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
+                                    selectedRadioMixForSheet = null
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp)
+                        ) {
+                            Icon(Icons.Filled.PlayArrow, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text(strings.playAll, fontWeight = FontWeight.Bold)
+                        }
+
+                        Button(
+                            onClick = {
+                                if (radioSongs.isNotEmpty()) {
+                                    onPlayQueue(radioSongs, 0, true, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
+                                    selectedRadioMixForSheet = null
+                                }
+                            },
+                            modifier = Modifier.weight(1f),
+                            shape = RoundedCornerShape(18.dp),
+                            colors = if (shuffleOn) {
+                                ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.primary,
+                                    contentColor = MaterialTheme.colorScheme.onPrimary
+                                )
+                            } else {
+                                ButtonDefaults.filledTonalButtonColors()
+                            }
+                        ) {
+                            Icon(Icons.Filled.Shuffle, contentDescription = null)
+                            Spacer(Modifier.width(6.dp))
+                            Text(strings.shuffleAll, fontWeight = FontWeight.Bold)
+                        }
+                    }
+
+                    LazyColumn(
+                        modifier = Modifier.heightIn(max = 420.dp),
+                        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 6.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        itemsIndexed(radioSongs, key = { idx, s -> "radio_sheet_${s.id}_$idx" }) { idx, song ->
+                            YtSongRowWithDownload(
+                                song = song,
+                                isCurrentSong = currentSong?.id == song.id,
+                                isPlaying = isPlaying,
+                                isFavorite = favoriteIds.contains(song.id),
+                                isDownloading = downloadingSongIds.contains(song.id),
+                                onClick = {
+                                    onPlayQueue(radioSongs, idx, false, PlaybackContext(PlaybackContextType.RADIO, radioTitle))
+                                    selectedRadioMixForSheet = null
+                                },
+                                onToggleFavorite = { onToggleFavorite(song) },
+                                onDownload = { onDownloadSong(song) },
+                                onMoreClick = { onSongMoreClick(song) }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -1036,248 +1322,248 @@ private fun YtHomeTab(
                 )
             }
 
-        if (betaSeparateHeaderBubbles) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp)
-            ) {
+            if (betaSeparateHeaderBubbles) {
                 Box(
                     modifier = Modifier
-                        .align(Alignment.CenterStart)
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .clickable { onBackToLocal() }
-                        .then(bubbleModifier(CircleShape)),
-                    contentAlignment = Alignment.Center
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
-                    IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
-                }
-
-                Box(
-                    modifier = Modifier
-                        .align(Alignment.Center)
-                        .height(46.dp)
-                        .clip(RoundedCornerShape(23.dp))
-                        .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                        .padding(horizontal = 14.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .size(46.dp)
+                            .clip(CircleShape)
+                            .clickable { onBackToLocal() }
+                            .then(bubbleModifier(CircleShape)),
+                        contentAlignment = Alignment.Center
                     ) {
-                        Surface(
-                            shape = CircleShape,
-                            color = Color.White,
-                            modifier = Modifier.size(26.dp)
+                        IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
+                    }
+
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.Center)
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(23.dp))
+                            .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                            .padding(horizontal = 14.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
                         ) {
-                            Box(contentAlignment = Alignment.Center) {
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(26.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "YouTube Music",
+                                        tint = Color(0xFF111111),
+                                        modifier = Modifier.size(16.dp)
+                                    )
+                                }
+                            }
+                            Text(
+                                text = "YouTube Music",
+                                style = MaterialTheme.typography.titleSmall,
+                                fontWeight = FontWeight.SemiBold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Box(
+                        modifier = Modifier.align(Alignment.CenterEnd)
+                    ) {
+                        Row(
+                            horizontalArrangement = Arrangement.spacedBy(8.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            if (showTopSearchBar) {
+                                Box(
+                                    modifier = Modifier
+                                        .size(46.dp)
+                                        .clip(CircleShape)
+                                        .clickable { onOpenTopSearch() }
+                                        .then(bubbleModifier(CircleShape)),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    Icon(
+                                        imageVector = Icons.Filled.Search,
+                                        contentDescription = strings.searchTitle,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(22.dp)
+                                    )
+                                }
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .clickable { onOpenGoogleAuth() }
+                                    .then(bubbleModifier(CircleShape)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (googleAccount != null) {
+                                    val avatar = avatarBitmap
+                                    if (avatar != null) {
+                                        Image(
+                                            bitmap = avatar,
+                                            contentDescription = googleAccount.displayName,
+                                            contentScale = ContentScale.Crop,
+                                            modifier = Modifier
+                                                .size(34.dp)
+                                                .clip(CircleShape)
+                                        )
+                                    } else {
+                                        val initial = (googleAccount.displayName.ifBlank { googleAccount.email })
+                                            .firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+                                        Surface(
+                                            shape = CircleShape,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(34.dp)
+                                        ) {
+                                            Box(contentAlignment = Alignment.Center) {
+                                                Text(
+                                                    text = initial,
+                                                    style = MaterialTheme.typography.titleMedium,
+                                                    fontWeight = FontWeight.ExtraBold,
+                                                    color = MaterialTheme.colorScheme.onPrimary
+                                                )
+                                            }
+                                        }
+                                    }
+                                } else {
+                                    Icon(
+                                        imageVector = Icons.Filled.AccountCircle,
+                                        contentDescription = strings.signInGoogle,
+                                        tint = MaterialTheme.colorScheme.onSurface,
+                                        modifier = Modifier.size(32.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+                }
+            } else {
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .statusBarsPadding()
+                        .padding(horizontal = 16.dp, vertical = 10.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .height(46.dp)
+                            .clip(RoundedCornerShape(23.dp))
+                            .clickable { onBackToLocal() }
+                            .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                            .padding(horizontal = 10.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            IosBackChevron(
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Surface(
+                                shape = CircleShape,
+                                color = Color.White,
+                                modifier = Modifier.size(28.dp)
+                            ) {
+                                Box(contentAlignment = Alignment.Center) {
+                                    Icon(
+                                        imageVector = Icons.Filled.PlayArrow,
+                                        contentDescription = "YouTube Music",
+                                        tint = Color(0xFF111111),
+                                        modifier = Modifier.size(18.dp)
+                                    )
+                                }
+                            }
+                        }
+                    }
+
+                    Row(
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (showTopSearchBar) {
+                            Box(
+                                modifier = Modifier
+                                    .size(46.dp)
+                                    .clip(CircleShape)
+                                    .clickable { onOpenTopSearch() }
+                                    .then(bubbleModifier(CircleShape)),
+                                contentAlignment = Alignment.Center
+                            ) {
                                 Icon(
-                                    imageVector = Icons.Filled.PlayArrow,
-                                    contentDescription = "YouTube Music",
-                                    tint = Color(0xFF111111),
-                                    modifier = Modifier.size(16.dp)
+                                    imageVector = Icons.Filled.Search,
+                                    contentDescription = strings.searchTitle,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(22.dp)
                                 )
                             }
                         }
-                        Text(
-                            text = "YouTube Music",
-                            style = MaterialTheme.typography.titleSmall,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
 
-                Box(
-                    modifier = Modifier.align(Alignment.CenterEnd)
-                ) {
-                    Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (showTopSearchBar) {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .clickable { onOpenTopSearch() }
-                            .then(bubbleModifier(CircleShape)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = strings.searchTitle,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .clickable { onOpenGoogleAuth() }
-                        .then(bubbleModifier(CircleShape)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (googleAccount != null) {
-                        val avatar = avatarBitmap
-                        if (avatar != null) {
-                            Image(
-                                bitmap = avatar,
-                                contentDescription = googleAccount.displayName,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                            )
-                        } else {
-                            val initial = (googleAccount.displayName.ifBlank { googleAccount.email })
-                                .firstOrNull()?.uppercaseChar()?.toString() ?: "U"
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = initial,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.onPrimary
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .clickable { onOpenGoogleAuth() }
+                                .then(bubbleModifier(CircleShape)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (googleAccount != null) {
+                                val avatar = avatarBitmap
+                                if (avatar != null) {
+                                    Image(
+                                        bitmap = avatar,
+                                        contentDescription = googleAccount.displayName,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier
+                                            .size(34.dp)
+                                            .clip(CircleShape)
                                     )
+                                } else {
+                                    val initial = (googleAccount.displayName.ifBlank { googleAccount.email })
+                                        .firstOrNull()?.uppercaseChar()?.toString() ?: "U"
+                                    Surface(
+                                        shape = CircleShape,
+                                        color = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(34.dp)
+                                    ) {
+                                        Box(contentAlignment = Alignment.Center) {
+                                            Text(
+                                                text = initial,
+                                                style = MaterialTheme.typography.titleMedium,
+                                                fontWeight = FontWeight.ExtraBold,
+                                                color = MaterialTheme.colorScheme.onPrimary
+                                            )
+                                        }
+                                    }
                                 }
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.AccountCircle,
+                                    contentDescription = strings.signInGoogle,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(32.dp)
+                                )
                             }
                         }
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.AccountCircle,
-                            contentDescription = strings.signInGoogle,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(32.dp)
-                        )
                     }
                 }
             }
-                }
-            }
-        } else {
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-            Box(
-                modifier = Modifier
-                    .height(46.dp)
-                    .clip(RoundedCornerShape(23.dp))
-                    .clickable { onBackToLocal() }
-                    .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                    .padding(horizontal = 10.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    IosBackChevron(
-                        color = MaterialTheme.colorScheme.onSurface
-                    )
-                    Surface(
-                        shape = CircleShape,
-                        color = Color.White,
-                        modifier = Modifier.size(28.dp)
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(
-                                imageVector = Icons.Filled.PlayArrow,
-                                contentDescription = "YouTube Music",
-                                tint = Color(0xFF111111),
-                                modifier = Modifier.size(18.dp)
-                            )
-                        }
-                    }
-                }
-            }
-
-            Row(
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                if (showTopSearchBar) {
-                    Box(
-                        modifier = Modifier
-                            .size(46.dp)
-                            .clip(CircleShape)
-                            .clickable { onOpenTopSearch() }
-                            .then(bubbleModifier(CircleShape)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Filled.Search,
-                            contentDescription = strings.searchTitle,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(22.dp)
-                        )
-                    }
-                }
-
-                Box(
-                    modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .clickable { onOpenGoogleAuth() }
-                        .then(bubbleModifier(CircleShape)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    if (googleAccount != null) {
-                        val avatar = avatarBitmap
-                        if (avatar != null) {
-                            Image(
-                                bitmap = avatar,
-                                contentDescription = googleAccount.displayName,
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier
-                                    .size(34.dp)
-                                    .clip(CircleShape)
-                            )
-                        } else {
-                            val initial = (googleAccount.displayName.ifBlank { googleAccount.email })
-                                .firstOrNull()?.uppercaseChar()?.toString() ?: "U"
-                            Surface(
-                                shape = CircleShape,
-                                color = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(34.dp)
-                            ) {
-                                Box(contentAlignment = Alignment.Center) {
-                                    Text(
-                                        text = initial,
-                                        style = MaterialTheme.typography.titleMedium,
-                                        fontWeight = FontWeight.ExtraBold,
-                                        color = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                }
-                            }
-                        }
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.AccountCircle,
-                            contentDescription = strings.signInGoogle,
-                            tint = MaterialTheme.colorScheme.onSurface,
-                            modifier = Modifier.size(32.dp)
-                        )
-                    }
-                }
-            }
-        }
-        }
         }
     }
 }
@@ -1449,6 +1735,7 @@ private fun YtLibrariesTab(
     downloadingSongIds: Set<String>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     hazeState: HazeState,
     enableBlur: Boolean = true,
@@ -1686,7 +1973,6 @@ private fun YtLibrariesTab(
                     .fillMaxWidth()
                     .statusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 val activePl = selectedPlaylist
@@ -1699,22 +1985,19 @@ private fun YtLibrariesTab(
                             .then(bubbleModifier(CircleShape)),
                         contentAlignment = Alignment.Center
                     ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                            contentDescription = strings.back,
-                            tint = MaterialTheme.colorScheme.onSurface
-                        )
+                        IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
                     }
+
+                    Spacer(Modifier.width(10.dp))
 
                     Box(
                         modifier = Modifier
-                            .weight(1f)
+                            .weight(1f, fill = false)
                             .height(46.dp)
-                            .padding(horizontal = 8.dp)
                             .clip(RoundedCornerShape(23.dp))
                             .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                            .padding(horizontal = 16.dp),
-                        contentAlignment = Alignment.CenterStart
+                            .padding(horizontal = 20.dp),
+                        contentAlignment = Alignment.Center
                     ) {
                         Text(
                             text = activePl.name,
@@ -1725,7 +2008,10 @@ private fun YtLibrariesTab(
                         )
                     }
 
+                    Spacer(Modifier.weight(1f))
+
                     if (activePl.songs.isNotEmpty()) {
+                        Spacer(Modifier.width(8.dp))
                         Box(
                             modifier = Modifier
                                 .height(46.dp)
@@ -1742,6 +2028,29 @@ private fun YtLibrariesTab(
                                 Icon(Icons.Filled.PlayArrow, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                                 Text(strings.playAction, fontWeight = FontWeight.Bold)
                             }
+                        }
+                        Spacer(Modifier.width(6.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .clip(CircleShape)
+                                .then(
+                                    if (shuffleOn) {
+                                        Modifier
+                                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                            .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    } else {
+                                        bubbleModifier(CircleShape)
+                                    }
+                                )
+                                .clickable { onPlayQueue(activePl.songs, 0, true, PlaybackContext(PlaybackContextType.PLAYLIST, activePl.name)) },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                Icons.Filled.Shuffle,
+                                contentDescription = strings.shuffle,
+                                tint = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 } else {
@@ -1770,6 +2079,8 @@ private fun YtLibrariesTab(
                             )
                         }
                     }
+
+                    Spacer(Modifier.weight(1f))
 
                     Box(
                         modifier = Modifier
@@ -1998,6 +2309,7 @@ private fun YtMyWaveTab(
     waveSongs: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     downloadingSongIds: Set<String>,
     hazeState: HazeState,
@@ -2080,14 +2392,6 @@ private fun YtMyWaveTab(
     val c2 by animateColorAsState(wavePalette.colors.getOrElse(2) { themeSecondary }, tween(500), label = "wc2")
     val c3 by animateColorAsState(wavePalette.colors.getOrElse(3) { themePrimary }, tween(500), label = "wc3")
 
-    val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
-        Modifier.liquidGlassBubble(
-            shape = shape,
-            hazeState = hazeState,
-            enableBlur = enableBlur,
-            isLiquidGlass = useLiquidGlass
-        )
-    }
     val contentBubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
         Modifier.liquidGlassBubble(
             shape = shape,
@@ -2232,6 +2536,7 @@ private fun YtMyWaveTab(
                             text = when (strings) {
                                 com.lormusic.app.model.StringsEn -> "Personal recommendation stream • 50 tracks"
                                 com.lormusic.app.model.StringsUk -> "Персональний потік рекомендацій • 50 треків"
+                                com.lormusic.app.model.StringsPl -> "Osobisty strumień rekomendacji • 50 utworów"
                                 else -> "Персональный поток рекомендаций • 50 треков"
                             },
                             style = MaterialTheme.typography.bodyMedium,
@@ -2318,18 +2623,34 @@ private fun YtMyWaveTab(
                                     .weight(1f)
                                     .height(44.dp)
                                     .clip(RoundedCornerShape(22.dp))
+                                    .then(
+                                        if (shuffleOn) {
+                                            Modifier
+                                                .background(MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp))
+                                                .border(1.5.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(22.dp))
+                                        } else {
+                                            contentBubbleModifier(RoundedCornerShape(22.dp))
+                                        }
+                                    )
                                     .clickable(enabled = waveSongs.isNotEmpty()) {
                                         onPlayQueue(waveSongs, 0, true, PlaybackContext(PlaybackContextType.MY_WAVE))
-                                    }
-                                    .then(contentBubbleModifier(RoundedCornerShape(22.dp))),
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Row(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(6.dp)
                                 ) {
-                                    Icon(Icons.Filled.Shuffle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
-                                    Text(strings.shuffleAll, fontWeight = FontWeight.Bold)
+                                    Icon(
+                                        Icons.Filled.Shuffle,
+                                        contentDescription = null,
+                                        tint = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                                    )
+                                    Text(
+                                        strings.shuffleAll,
+                                        fontWeight = FontWeight.Bold,
+                                        color = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                                    )
                                 }
                             }
                         }

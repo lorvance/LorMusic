@@ -4,7 +4,8 @@ enum class AppLanguage(val code: String, val displayName: String) {
     SYSTEM("system", "По умолчанию (Система)"),
     RU("ru", "Русский"),
     EN("en", "English"),
-    UK("uk", "Українська");
+    UK("uk", "Українська"),
+    PL("pl", "Polski");
 
     fun getLabel(strings: AppStrings): String {
         return when (this) {
@@ -12,6 +13,7 @@ enum class AppLanguage(val code: String, val displayName: String) {
             RU -> "Русский"
             EN -> "English"
             UK -> "Українська"
+            PL -> "Polski"
         }
     }
 

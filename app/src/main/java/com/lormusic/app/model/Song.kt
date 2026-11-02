@@ -115,15 +115,13 @@ enum class ThemeMode(val label: String) {
 enum class AppIconOption(val label: String, val subtitle: String, val aliasClassName: String) {
     MINIMAL("Минимализм", "Лавандовый цветок с нотой", "com.lormusic.app.MainActivityAliasMinimal"),
     REGULAR("Стандартная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),
-    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld"),
-    HALLOWEEN("Хэллоуин", "Ивентовая хэллоуинская иконка", "com.lormusic.app.MainActivityAliasHalloween");
+    OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld");
 
     fun getDisplayName(strings: AppStrings): String {
         return when (this) {
             MINIMAL -> strings.iconStyleMinimal
             REGULAR -> strings.iconStyleDefault
             OLD -> strings.iconStyleClassic
-            HALLOWEEN -> strings.halloweenIconTitle
         }
     }
 
@@ -132,38 +130,20 @@ enum class AppIconOption(val label: String, val subtitle: String, val aliasClass
             MINIMAL -> when (strings) {
                 StringsEn -> "Lavender flower with note"
                 StringsUk -> "Лавандова квітка з нотою"
+                StringsPl -> "Lawendowy kwiat z nutą"
                 else -> subtitle
             }
             REGULAR -> when (strings) {
                 StringsEn -> "3D flower with equalizer"
                 StringsUk -> "Об'ємна квітка з еквалайзером"
+                StringsPl -> "Kwiat 3D z korektorem"
                 else -> subtitle
             }
             OLD -> when (strings) {
                 StringsEn -> "Classic original icon"
                 StringsUk -> "Класична стара іконка"
+                StringsPl -> "Klasyczna oryginalna ikona"
                 else -> subtitle
-            }
-            HALLOWEEN -> strings.halloweenIconDesc
-        }
-    }
-
-    companion object {
-        fun isHalloweenExpired(): Boolean {
-            return try {
-                val now = java.time.LocalDateTime.now()
-                val month = now.monthValue
-                val day = now.dayOfMonth
-                val hour = now.hour
-                if (month == 10) {
-                    false
-                } else if (month == 11) {
-                    day > 1 || (day == 1 && hour >= 13)
-                } else {
-                    true
-                }
-            } catch (_: Exception) {
-                false
             }
         }
     }
@@ -183,6 +163,7 @@ enum class LibraryFilter(val label: String) {
             ALL -> when (strings) {
                 StringsEn -> "All"
                 StringsUk -> "Всі"
+                StringsPl -> "Wszystkie"
                 else -> "Все"
             }
             FAVORITES -> strings.favorites
@@ -190,6 +171,7 @@ enum class LibraryFilter(val label: String) {
             FOLDERS -> when (strings) {
                 StringsEn -> "Folders"
                 StringsUk -> "Папки"
+                StringsPl -> "Foldery"
                 else -> "По папкам"
             }
             LOCAL -> strings.deviceMusicTitle
@@ -235,11 +217,13 @@ enum class SearchBarPlacement(
             LOCAL_TOP_YT_BOTTOM -> when (strings) {
                 StringsEn -> "Top in Library, bottom in YT Music"
                 StringsUk -> "Зверху в медіатеці, знизу в YT Music"
+                StringsPl -> "U góry w bibliotece, na dole w YT Music"
                 else -> label
             }
             LOCAL_BOTTOM_YT_TOP -> when (strings) {
                 StringsEn -> "Bottom in Library, top in YT Music"
                 StringsUk -> "Знизу в медіатеці, зверху в YT Music"
+                StringsPl -> "Na dole w bibliotece, u góry w YT Music"
                 else -> label
             }
             ALWAYS_BOTTOM -> strings.searchPlacementBottom
@@ -252,21 +236,25 @@ enum class SearchBarPlacement(
             LOCAL_TOP_YT_BOTTOM -> when (strings) {
                 StringsEn -> "In header of local library and separate bottom button in YT Music (default)"
                 StringsUk -> "У шапці локальної медіатеки та окремою кнопкою знизу в YT Music (за замовчуванням)"
+                StringsPl -> "W nagłówku biblioteki lokalnej i osobny przycisk na dole w YT Music (domyślnie)"
                 else -> subtitle
             }
             LOCAL_BOTTOM_YT_TOP -> when (strings) {
                 StringsEn -> "Separate bottom button in local music and in top header of YT Music"
                 StringsUk -> "Окремою кнопкою знизу в локальній музиці та у верхній шапці YT Music"
+                StringsPl -> "Osobny przycisk na dole w muzyce lokalnej i w górnym nagłówku YT Music"
                 else -> subtitle
             }
             ALWAYS_BOTTOM -> when (strings) {
                 StringsEn -> "Round search button next to bottom navigation bar in all modes"
                 StringsUk -> "Кругла кнопка пошуку праворуч від нижньої панелі в усіх режимах"
+                StringsPl -> "Okrągły przycisk wyszukiwania obok dolnego paska nawigacji we wszystkich trybach"
                 else -> subtitle
             }
             ALWAYS_TOP -> when (strings) {
                 StringsEn -> "Search bar is always located in top header"
                 StringsUk -> "Рядок пошуку завжди знаходиться у верхній шапці"
+                StringsPl -> "Pasek wyszukiwania znajduje się zawsze w górnym nagłówku"
                 else -> subtitle
             }
         }

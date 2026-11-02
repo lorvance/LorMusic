@@ -1,4 +1,5 @@
 package com.lormusic.app.ui.screens
+
 import android.os.Build
 import android.content.Context
 import android.content.Intent
@@ -30,7 +31,6 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -46,6 +46,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
+
 @Composable
 fun ProfileScreen(
     totalSongsCount: Int,
@@ -62,7 +63,7 @@ fun ProfileScreen(
     hazeState: HazeState? = null,
     enableBetaUpdates: Boolean = false,
     betaSeparateHeaderBubbles: Boolean = false,
-    betaDynamicPlaybackContext: Boolean = false,
+    betaDynamicPlaybackContext: Boolean = true,
     useAlbumArtGradient: Boolean = true,
     useMyWaveCoverGradient: Boolean = false,
     useDynamicPlayerColors: Boolean = true,
@@ -101,8 +102,6 @@ fun ProfileScreen(
     onOpenTagFix: () -> Unit,
     onExportBackup: () -> String = { "" },
     onImportBackup: (String) -> Boolean = { false },
-    isHalloweenMode: Boolean = false,
-    onToggleHalloweenMode: (Boolean) -> Unit = {},
     onCheckForUpdates: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
@@ -120,17 +119,12 @@ fun ProfileScreen(
     var showBackupDialog by remember { mutableStateOf(false) }
     var showRestoreDialog by remember { mutableStateOf(false) }
     var restoreText by remember { mutableStateOf("") }
-    val isHalloweenExpired = AppIconOption.isHalloweenExpired()
-    val iconChoices = remember(isHalloweenExpired) {
-        val base = mutableListOf(
+    val iconChoices = remember {
+        listOf(
             AppIconOption.MINIMAL,
             AppIconOption.REGULAR,
             AppIconOption.OLD
         )
-        if (!isHalloweenExpired) {
-            base.add(AppIconOption.HALLOWEEN)
-        }
-        base
     }
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
@@ -149,467 +143,441 @@ fun ProfileScreen(
                     .padding(start = 20.dp, end = 20.dp, top = 74.dp, bottom = 14.dp)
             ) {
                 Text(
-            text = strings.appIconSectionTitle,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            text = strings.appIconSectionDesc,
-            style = MaterialTheme.typography.bodySmall,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-        )
-        Spacer(Modifier.height(10.dp))
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
-            modifier = Modifier.fillMaxWidth()
-        ) {
-            Column(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(10.dp),
-                verticalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                iconChoices.forEach { option ->
-                    val isSelected = selectedAppIcon == option
-                    val borderColor = if (isSelected) {
-                        MaterialTheme.colorScheme.primary
-                    } else {
-                        Color.Transparent
-                    }
-                    val cardBg = if (isSelected) {
-                        MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                    } else {
-                        MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-                    }
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
+                    text = strings.appIconSectionTitle,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    text = strings.appIconSectionDesc,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                )
+                Spacer(Modifier.height(10.dp))
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Column(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .clip(RoundedCornerShape(18.dp))
-                            .background(cardBg)
-                            .border(2.dp, borderColor, RoundedCornerShape(18.dp))
-                            .clickable { onSelectAppIcon(option) }
-                            .padding(horizontal = 14.dp, vertical = 10.dp)
+                            .padding(10.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {
-                        AppIconVectorPreview(
-                            option = option,
-                            size = 52.dp,
-                            cornerRadius = 14.dp
-                        )
-                        Spacer(Modifier.width(14.dp))
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = option.getDisplayName(strings),
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                            )
-                            Spacer(Modifier.height(2.dp))
-                            Text(
-                                text = option.getDisplaySubtitle(strings),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                            )
-                        }
-                        Spacer(Modifier.width(8.dp))
-                        RadioButton(
-                            selected = isSelected,
-                            onClick = { onSelectAppIcon(option) }
-                        )
-                    }
-                }
-            }
-        }
-        if (!isHalloweenExpired) {
-            Spacer(Modifier.height(20.dp))
-            Text(
-                text = "🎃 " + strings.halloweenModeTitle,
-                style = MaterialTheme.typography.titleMedium,
-                fontWeight = FontWeight.Bold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(8.dp))
-            Surface(
-                shape = RoundedCornerShape(24.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-            ) {
-                Column {
-                    ListItem(
-                        headlineContent = { Text(strings.halloweenModeTitle) },
-                        supportingContent = { Text(strings.halloweenModeDesc) },
-                        leadingContent = { Text("🎃", fontSize = 24.sp) },
-                        trailingContent = {
-                            Switch(
-                                checked = isHalloweenMode,
-                                onCheckedChange = onToggleHalloweenMode
-                            )
-                        }
-                    )
-                }
-            }
-        }
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = strings.appearanceAndPlayerSection,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        ) {
-            Column {
-                ListItem(
-                    headlineContent = { Text(strings.themeModeTitle) },
-                    supportingContent = { Text(themeMode.getDisplayName(strings)) },
-                    leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
-                    modifier = Modifier.clickable { showThemeDialog = true }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.materialYouTitle) },
-                    supportingContent = { Text(strings.materialYouDesc) },
-                    leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = useDynamicColor,
-                            onCheckedChange = onToggleDynamicColor
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.pureMaterialYouTitle) },
-                    supportingContent = { Text(strings.pureMaterialYouDesc) },
-                    leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = pureMaterialYou,
-                            onCheckedChange = onTogglePureMaterialYou
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.showNavBarLabelsTitle) },
-                    supportingContent = { Text(strings.showNavBarLabelsDesc) },
-                    leadingContent = { Icon(Icons.Filled.Label, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = showNavBarLabels,
-                            onCheckedChange = onToggleShowNavBarLabels
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.blurEffectTitle) },
-                    supportingContent = { Text(strings.blurEffectDesc) },
-                    leadingContent = { Icon(Icons.Filled.BlurOn, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = enableBlur,
-                            onCheckedChange = onToggleBlur
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.liquidGlassTitle) },
-                    supportingContent = {
-                        Text(
-                            if (isLiquidGlassSupported) {
-                                strings.liquidGlassDescSupported
+                        iconChoices.forEach { option ->
+                            val isSelected = selectedAppIcon == option
+                            val borderColor = if (isSelected) {
+                                MaterialTheme.colorScheme.primary
                             } else {
-                                "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
+                                Color.Transparent
+                            }
+                            val cardBg = if (isSelected) {
+                                MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
+                            } else {
+                                MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
+                            }
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clip(RoundedCornerShape(18.dp))
+                                    .background(cardBg)
+                                    .border(2.dp, borderColor, RoundedCornerShape(18.dp))
+                                    .clickable { onSelectAppIcon(option) }
+                                    .padding(horizontal = 14.dp, vertical = 10.dp)
+                            ) {
+                                AppIconVectorPreview(
+                                    option = option,
+                                    size = 52.dp,
+                                    cornerRadius = 14.dp
+                                )
+                                Spacer(Modifier.width(14.dp))
+                                Column(modifier = Modifier.weight(1f)) {
+                                    Text(
+                                        text = option.getDisplayName(strings),
+                                        style = MaterialTheme.typography.titleMedium,
+                                        fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
+                                        color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
+                                    )
+                                    Spacer(Modifier.height(2.dp))
+                                    Text(
+                                        text = option.getDisplaySubtitle(strings),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
+                                    )
+                                }
+                                Spacer(Modifier.width(8.dp))
+                                RadioButton(
+                                    selected = isSelected,
+                                    onClick = { onSelectAppIcon(option) }
+                                )
+                            }
+                        }
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = strings.appearanceAndPlayerSection,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                ) {
+                    Column {
+                        ListItem(
+                            headlineContent = { Text(strings.themeModeTitle) },
+                            supportingContent = { Text(themeMode.getDisplayName(strings)) },
+                            leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
+                            modifier = Modifier.clickable { showThemeDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.materialYouTitle) },
+                            supportingContent = { Text(strings.materialYouDesc) },
+                            leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = useDynamicColor,
+                                    onCheckedChange = onToggleDynamicColor
+                                )
                             }
                         )
-                    },
-                    leadingContent = { Icon(Icons.Filled.AutoFixNormal, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = useLiquidGlass,
-                            onCheckedChange = { checked ->
-                                if (!isLiquidGlassSupported) {
-                                    showLiquidGlassWarning = "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
-                                } else {
-                                    onToggleLiquidGlass(checked)
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.pureMaterialYouTitle) },
+                            supportingContent = { Text(strings.pureMaterialYouDesc) },
+                            leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = pureMaterialYou,
+                                    onCheckedChange = onTogglePureMaterialYou
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.showNavBarLabelsTitle) },
+                            supportingContent = { Text(strings.showNavBarLabelsDesc) },
+                            leadingContent = { Icon(Icons.Filled.Label, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = showNavBarLabels,
+                                    onCheckedChange = onToggleShowNavBarLabels
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.blurEffectTitle) },
+                            supportingContent = { Text(strings.blurEffectDesc) },
+                            leadingContent = { Icon(Icons.Filled.BlurOn, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = enableBlur,
+                                    onCheckedChange = onToggleBlur
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.liquidGlassTitle) },
+                            supportingContent = {
+                                Text(
+                                    if (isLiquidGlassSupported) {
+                                        strings.liquidGlassDescSupported
+                                    } else {
+                                        "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
+                                    }
+                                )
+                            },
+                            leadingContent = { Icon(Icons.Filled.AutoFixNormal, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = useLiquidGlass,
+                                    onCheckedChange = { checked ->
+                                        if (!isLiquidGlassSupported) {
+                                            showLiquidGlassWarning = "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
+                                        } else {
+                                            onToggleLiquidGlass(checked)
+                                        }
+                                    }
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.dynamicCoverGradientTitle) },
+                            supportingContent = { Text(strings.dynamicCoverGradientDesc) },
+                            leadingContent = { Icon(Icons.Filled.Gradient, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = useAlbumArtGradient,
+                                    onCheckedChange = onToggleAlbumArtGradient
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.dynamicPlayerColorsTitle) },
+                            supportingContent = { Text(strings.dynamicPlayerColorsDesc) },
+                            leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = useDynamicPlayerColors,
+                                    onCheckedChange = onToggleDynamicPlayerColors
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        val waveGradTitle = when (strings) {
+                            com.lormusic.app.model.StringsEn -> "Live 'My Wave' cover gradient"
+                            com.lormusic.app.model.StringsUk -> "Живий градієнт «Моєї хвилі»"
+                            com.lormusic.app.model.StringsPl -> "Żywy gradient «Mojej fali»"
+                            else -> "Живой градиент «Моей волны»"
+                        }
+                        val waveGradDesc = when (strings) {
+                            com.lormusic.app.model.StringsEn -> "Powerful moving gradient and Play button color from wave track covers"
+                            com.lormusic.app.model.StringsUk -> "Потужний рухомий градієнт та колір кнопки Play з обкладинок треків хвилі"
+                            com.lormusic.app.model.StringsPl -> "Dynamiczny ruchomy gradient i kolor przycisku Play z okładek utworów fali"
+                            else -> "Мощный движущийся градиент и цвет кнопки Play из обложек треков волны"
+                        }
+                        ListItem(
+                            headlineContent = {
+                                Text(text = waveGradTitle)
+                            },
+                            supportingContent = { Text(waveGradDesc) },
+                            leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = useMyWaveCoverGradient,
+                                    onCheckedChange = onToggleMyWaveCoverGradient
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.searchPlacementTitle) },
+                            supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
+                            leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            modifier = Modifier.clickable { showSearchPlacementDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.playerSwipeTitle) },
+                            supportingContent = { Text(strings.playerSwipeDesc) },
+                            leadingContent = { Icon(Icons.Filled.Swipe, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = enablePlayerSwipe,
+                                    onCheckedChange = onTogglePlayerSwipe
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.squigglySliderTitle) },
+                            supportingContent = { Text(strings.squigglySliderDesc) },
+                            leadingContent = { Icon(Icons.Filled.Waves, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = useSquigglySlider,
+                                    onCheckedChange = onToggleSquigglySlider
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.languageTitle) },
+                            supportingContent = { Text(appLanguage.getLabel(strings)) },
+                            leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
+                            modifier = Modifier.clickable { showLanguageDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.hideDemoTracksTitle) },
+                            supportingContent = { Text(strings.hideDemoTracksTitle) },
+                            leadingContent = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = hideDemoTracks,
+                                    onCheckedChange = onToggleHideDemoTracks
+                                )
+                            }
+                        )
+                    }
+                }
+                Spacer(Modifier.height(20.dp))
+                Text(
+                    text = strings.librarySection,
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.primary
+                )
+                Spacer(Modifier.height(8.dp))
+                Surface(
+                    shape = RoundedCornerShape(24.dp),
+                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                ) {
+                    Column {
+                        ListItem(
+                            headlineContent = {
+                                Text(
+                                    text = strings.tagFixSectionTitle,
+                                    fontWeight = FontWeight.Bold
+                                )
+                            },
+                            supportingContent = {
+                                Text(strings.tagFixSubtitle)
+                            },
+                            leadingContent = {
+                                Icon(
+                                    imageVector = Icons.Filled.AutoFixHigh,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            modifier = Modifier.clickable { onOpenTagFix() }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.autoTagFixTitle) },
+                            supportingContent = { Text(strings.autoTagFixDesc) },
+                            leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = autoTagFixEnabled,
+                                    onCheckedChange = onToggleAutoTagFix
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.betaUpdatesTitle) },
+                            supportingContent = { Text(strings.betaUpdatesDesc) },
+                            leadingContent = { Icon(Icons.Filled.BugReport, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = enableBetaUpdates,
+                                    onCheckedChange = onToggleBetaUpdates
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.betaSeparateHeaderBubblesTitle) },
+                            supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
+                            leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = betaSeparateHeaderBubbles,
+                                    onCheckedChange = onToggleBetaSeparateHeaderBubbles
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.betaDynamicPlaybackContextTitle) },
+                            supportingContent = { Text(strings.betaDynamicPlaybackContextDesc) },
+                            leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = betaDynamicPlaybackContext,
+                                    onCheckedChange = onToggleBetaDynamicPlaybackContext
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.playbackSpeedTitle) },
+                            supportingContent = { Text("${playbackSpeed}x") },
+                            leadingContent = { Icon(Icons.Filled.Speed, contentDescription = null) },
+                            modifier = Modifier.clickable { showSpeedDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.sleepTimerTitle) },
+                            supportingContent = {
+                                val status = sleepTimerRemainingSec?.let {
+                                    formatDurationShort(it * 1000L)
+                                } ?: strings.sleepTimerOff
+                                Text(status)
+                            },
+                            leadingContent = { Icon(Icons.Filled.Bedtime, contentDescription = null) },
+                            modifier = Modifier.clickable { showSleepDialog = true }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as? PowerManager }
+                        val isIgnoringBattery = remember(context) {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
+                            } else true
+                        }
+                        ListItem(
+                            headlineContent = { Text(strings.backgroundPlaybackTitle) },
+                            supportingContent = { Text(strings.backgroundPlaybackDesc) },
+                            leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
+                            trailingContent = {
+                                Icon(
+                                    if (isIgnoringBattery) Icons.Filled.Check else Icons.Filled.ChevronRight,
+                                    contentDescription = null,
+                                    tint = if (isIgnoringBattery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                                    try {
+                                        val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+                                        context.startActivity(intent)
+                                    } catch (_: Exception) {
+                                        val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
+                                        context.startActivity(intent)
+                                    }
                                 }
                             }
                         )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.dynamicCoverGradientTitle) },
-                    supportingContent = { Text(strings.dynamicCoverGradientDesc) },
-                    leadingContent = { Icon(Icons.Filled.Gradient, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = useAlbumArtGradient,
-                            onCheckedChange = onToggleAlbumArtGradient
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.rescanLibraryTitle) },
+                            supportingContent = { Text("$localSongsCount ${strings.tracksCount}") },
+                            leadingContent = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
+                            modifier = Modifier.clickable { onRescanLocalMusic() }
                         )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.dynamicPlayerColorsTitle) },
-                    supportingContent = { Text(strings.dynamicPlayerColorsDesc) },
-                    leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = useDynamicPlayerColors,
-                            onCheckedChange = onToggleDynamicPlayerColors
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                val waveGradTitle = when (strings) {
-                    com.lormusic.app.model.StringsEn -> "Live 'My Wave' cover gradient"
-                    com.lormusic.app.model.StringsUk -> "Живий градієнт «Моєї хвилі»"
-                    else -> "Живой градиент «Моей волны»"
-                }
-                val waveGradDesc = when (strings) {
-                    com.lormusic.app.model.StringsEn -> "Powerful moving gradient and Play button color from wave track covers"
-                    com.lormusic.app.model.StringsUk -> "Потужний рухомий градієнт та колір кнопки Play з обкладинок треків хвилі"
-                    else -> "Мощный движущийся градиент и цвет кнопки Play из обложек треков волны"
-                }
-                ListItem(
-                    headlineContent = {
-                        Text(text = waveGradTitle)
-                    },
-                    supportingContent = { Text(waveGradDesc) },
-                    leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = useMyWaveCoverGradient,
-                            onCheckedChange = onToggleMyWaveCoverGradient
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.searchPlacementTitle) },
-                    supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
-                    leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
-                    modifier = Modifier.clickable { showSearchPlacementDialog = true }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.playerSwipeTitle) },
-                    supportingContent = { Text(strings.playerSwipeDesc) },
-                    leadingContent = { Icon(Icons.Filled.Swipe, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = enablePlayerSwipe,
-                            onCheckedChange = onTogglePlayerSwipe
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.squigglySliderTitle) },
-                    supportingContent = { Text(strings.squigglySliderDesc) },
-                    leadingContent = { Icon(Icons.Filled.Waves, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = useSquigglySlider,
-                            onCheckedChange = onToggleSquigglySlider
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.languageTitle) },
-                    supportingContent = { Text(appLanguage.getLabel(strings)) },
-                    leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
-                    modifier = Modifier.clickable { showLanguageDialog = true }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.hideDemoTracksTitle) },
-                    supportingContent = { Text(strings.hideDemoTracksTitle) },
-                    leadingContent = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = hideDemoTracks,
-                            onCheckedChange = onToggleHideDemoTracks
-                        )
-                    }
-                )
-            }
-        }
-        Spacer(Modifier.height(20.dp))
-        Text(
-            text = strings.librarySection,
-            style = MaterialTheme.typography.titleMedium,
-            fontWeight = FontWeight.Bold,
-            color = MaterialTheme.colorScheme.primary
-        )
-        Spacer(Modifier.height(8.dp))
-        Surface(
-            shape = RoundedCornerShape(24.dp),
-            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
-        ) {
-            Column {
-                ListItem(
-                    headlineContent = {
-                        Text(
-                            text = strings.tagFixSectionTitle,
-                            fontWeight = FontWeight.Bold
-                        )
-                    },
-                    supportingContent = {
-                        Text(strings.tagFixSubtitle)
-                    },
-                    leadingContent = {
-                        Icon(
-                            imageVector = Icons.Filled.AutoFixHigh,
-                            contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
-                        )
-                    },
-                    modifier = Modifier.clickable { onOpenTagFix() }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.autoTagFixTitle) },
-                    supportingContent = { Text(strings.autoTagFixDesc) },
-                    leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = autoTagFixEnabled,
-                            onCheckedChange = onToggleAutoTagFix
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.betaUpdatesTitle) },
-                    supportingContent = { Text(strings.betaUpdatesDesc) },
-                    leadingContent = { Icon(Icons.Filled.BugReport, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = enableBetaUpdates,
-                            onCheckedChange = onToggleBetaUpdates
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.betaSeparateHeaderBubblesTitle) },
-                    supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
-                    leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = betaSeparateHeaderBubbles,
-                            onCheckedChange = onToggleBetaSeparateHeaderBubbles
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.betaDynamicPlaybackContextTitle) },
-                    supportingContent = { Text(strings.betaDynamicPlaybackContextDesc) },
-                    leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
-                    trailingContent = {
-                        Switch(
-                            checked = betaDynamicPlaybackContext,
-                            onCheckedChange = onToggleBetaDynamicPlaybackContext
-                        )
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.playbackSpeedTitle) },
-                    supportingContent = { Text("${playbackSpeed}x") },
-                    leadingContent = { Icon(Icons.Filled.Speed, contentDescription = null) },
-                    modifier = Modifier.clickable { showSpeedDialog = true }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.sleepTimerTitle) },
-                    supportingContent = {
-                        val status = sleepTimerRemainingSec?.let {
-                            formatDurationShort(it * 1000L)
-                        } ?: strings.sleepTimerOff
-                        Text(status)
-                    },
-                    leadingContent = { Icon(Icons.Filled.Bedtime, contentDescription = null) },
-                    modifier = Modifier.clickable { showSleepDialog = true }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as? PowerManager }
-                val isIgnoringBattery = remember(context) {
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                        powerManager?.isIgnoringBatteryOptimizations(context.packageName) == true
-                    } else true
-                }
-                ListItem(
-                    headlineContent = { Text(strings.backgroundPlaybackTitle) },
-                    supportingContent = { Text(strings.backgroundPlaybackDesc) },
-                    leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
-                    trailingContent = {
-                        Icon(
-                            if (isIgnoringBattery) Icons.Filled.Check else Icons.Filled.ChevronRight,
-                            contentDescription = null,
-                            tint = if (isIgnoringBattery) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
-                        )
-                    },
-                    modifier = Modifier.clickable {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-                            try {
-                                val intent = Intent(android.provider.Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-                                context.startActivity(intent)
-                            } catch (_: Exception) {
-                                val intent = Intent(android.provider.Settings.ACTION_SETTINGS)
-                                context.startActivity(intent)
+                        val currentAppVersion = "${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}"
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.checkForUpdatesTitle) },
+                            supportingContent = { Text(currentAppVersion) },
+                            leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
+                            modifier = Modifier.clickable {
+                                updateClickCount++
+                                if (updateClickCount == 10) {
+                                    playScreamSound()
+                                    easterEggStage = 1
+                                    android.widget.Toast.makeText(context, strings.easterEgg1Title, android.widget.Toast.LENGTH_LONG).show()
+                                } else if (updateClickCount >= 20) {
+                                    playScreamSound()
+                                    easterEggStage = 2
+                                    android.widget.Toast.makeText(context, "${strings.easterEgg2Title} ${strings.easterEgg2Text}", android.widget.Toast.LENGTH_LONG).show()
+                                } else {
+                                    onCheckForUpdates()
+                                }
                             }
-                        }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
+                            headlineContent = { Text(strings.aboutAppSection) },
+                            supportingContent = { Text(currentAppVersion) },
+                            leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
+                            modifier = Modifier.clickable { showAboutDialog = true }
+                        )
                     }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.rescanLibraryTitle) },
-                    supportingContent = { Text("$localSongsCount ${strings.tracksCount}") },
-                    leadingContent = { Icon(Icons.Filled.FolderOpen, contentDescription = null) },
-                    modifier = Modifier.clickable { onRescanLocalMusic() }
-                )
-                val currentAppVersion = "${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}"
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.checkForUpdatesTitle) },
-                    supportingContent = { Text(currentAppVersion) },
-                    leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                    modifier = Modifier.clickable {
-                        updateClickCount++
-                        if (updateClickCount == 10) {
-                            playScreamSound()
-                            easterEggStage = 1
-                            android.widget.Toast.makeText(context, strings.easterEgg1Title, android.widget.Toast.LENGTH_LONG).show()
-                        } else if (updateClickCount >= 20) {
-                            playScreamSound()
-                            easterEggStage = 2
-                            android.widget.Toast.makeText(context, "${strings.easterEgg2Title} ${strings.easterEgg2Text}", android.widget.Toast.LENGTH_LONG).show()
-                        } else {
-                            onCheckForUpdates()
-                        }
-                    }
-                )
-                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                ListItem(
-                    headlineContent = { Text(strings.aboutAppSection) },
-                    supportingContent = { Text(currentAppVersion) },
-                    leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
-                    modifier = Modifier.clickable { showAboutDialog = true }
-                )
-            }
-        }
+                }
                 Spacer(Modifier.height(210.dp))
             }
         }
@@ -1002,6 +970,13 @@ fun ProfileScreen(
                             "• Отримання бета-оновлень та вікно автоапдейтера з Markdown\n" +
                             "• Автоматичний TagFix та розпізнавання через Shazam\n" +
                             "• Динамічний градієнт обкладинки та завантаження треків"
+                    com.lormusic.app.model.StringsPl ->
+                        "Odtwarzacz muzyczny w stylu Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                            "• Integracja z YouTube Music oraz SoundCloud i wspólnymi playlistami\n" +
+                            "• Nowoczesny interfejs z pływającymi bąbelkami i efektami Liquid Glass\n" +
+                            "• Wiele źródeł tekstów piosenek z synchronizacją i tłumaczeniem\n" +
+                            "• Automatyczny TagFix oraz rozpoznawanie utworów przez Shazam\n" +
+                            "• Dynamiczny gradient okładki w odtwarzaczu i bezpośrednie pobieranie"
                     else ->
                         "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
                             "• Интеграция SoundCloud с чартами, поиском и общими плейлистами с YouTube Music\n" +
@@ -1282,6 +1257,7 @@ fun ProfileScreen(
         )
     }
 }
+
 private fun playScreamSound() {
     try {
         val sampleRate = 44100
@@ -1317,34 +1293,5 @@ private fun playScreamSound() {
         track.write(buffer, 0, buffer.size)
         track.play()
     } catch (_: Exception) {
-    }
-}
-@Composable
-private fun StatCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier
-) {
-    Surface(
-        modifier = modifier,
-        shape = RoundedCornerShape(22.dp),
-        color = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.75f)
-    ) {
-        Column(
-            modifier = Modifier.padding(vertical = 14.dp, horizontal = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.onSecondaryContainer
-            )
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSecondaryContainer.copy(alpha = 0.8f)
-            )
-        }
     }
 }

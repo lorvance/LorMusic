@@ -1,6 +1,10 @@
 package com.lormusic.app.ui.screens
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
 import android.view.HapticFeedbackConstants
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.collection.LruCache
 import androidx.compose.animation.*
@@ -8,7 +12,6 @@ import androidx.compose.animation.core.*
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
-import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -41,7 +44,6 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.lormusic.app.data.SoundCloudRepository
 import com.lormusic.app.data.YouTubeMusicRepository
-import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.AppStrings
 import com.lormusic.app.model.LyricLine
 import com.lormusic.app.model.PlaybackContext
@@ -51,12 +53,10 @@ import com.lormusic.app.model.RepeatMode
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.ui.components.*
+import com.lormusic.app.ui.components.backdrop.backdrops.layerBackdrop
+import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeTint
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
-import kotlinx.coroutines.delay
-import kotlinx.coroutines.launch
 
 private enum class LyricsDisplayMode {
     SYNCED,
@@ -82,7 +82,9 @@ fun NowPlayingScreen(
     useAlbumArtGradient: Boolean = false,
     useDynamicPlayerColors: Boolean = true,
     enableSwipe: Boolean = true,
-    betaDynamicPlaybackContext: Boolean = false,
+    enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
+    betaDynamicPlaybackContext: Boolean = true,
     playbackContext: PlaybackContext? = null,
     playlists: List<Playlist> = emptyList(),
     isDownloading: Boolean = false,
@@ -107,15 +109,11 @@ fun NowPlayingScreen(
     onOpenTagEditor: () -> Unit,
     onOpenArtistProfile: ((String) -> Unit)? = null,
     onTranslateLyrics: (() -> Unit)? = null,
-    halloweenCandies: Boolean = false,
-    isHalloweenMode: Boolean = false,
-    onEatCandies: () -> Unit = {},
     onClose: () -> Unit
 ) {
     val view = LocalView.current
     val context = LocalContext.current
     val strings = LocalStrings.current
-    val areCandiesActive = halloweenCandies && !AppIconOption.isHalloweenExpired()
     val ytShareUrl = remember(song) { YouTubeMusicRepository.getShareUrl(song) }
     val scShareUrl = remember(song) { SoundCloudRepository.getShareUrl(song) }
     val shareUrl = ytShareUrl ?: scShareUrl
@@ -213,6 +211,8 @@ fun NowPlayingScreen(
                     lyrics = lyrics,
                     isLoading = isLoadingLyrics,
                     accentColor = accentColor,
+                    enableBlur = enableBlur,
+                    useLiquidGlass = useLiquidGlass,
                     onTogglePlay = {
                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                         onTogglePlay()
@@ -361,11 +361,7 @@ fun NowPlayingScreen(
                         }
                     }
 
-                    if (isHalloweenMode && !AppIconOption.isHalloweenExpired()) {
-                        SpookyAtmosphereDecor()
-                    } else {
-                        Spacer(Modifier.height(6.dp))
-                    }
+                    Spacer(Modifier.height(6.dp))
 
                     var coverDragX by remember { mutableFloatStateOf(0f) }
                     val animatedCoverDragX by animateFloatAsState(
@@ -433,31 +429,6 @@ fun NowPlayingScreen(
                                 cornerRadius = 30.dp,
                                 modifier = Modifier.fillMaxSize()
                             )
-                            if (areCandiesActive) {
-                                HalloweenCoverCandies(
-                                    onEatAllCandies = onEatCandies,
-                                    modifier = Modifier
-                                        .align(Alignment.TopCenter)
-                                        .padding(top = 10.dp)
-                                )
-                            }
-                            if (isPlaying) {
-                                Surface(
-                                    color = Color.Black.copy(alpha = 0.55f),
-                                    shape = RoundedCornerShape(18.dp),
-                                    modifier = Modifier
-                                        .align(Alignment.BottomEnd)
-                                        .padding(12.dp)
-                                ) {
-                                    AnimatedEqualizerBars(
-                                        modifier = Modifier
-                                            .padding(horizontal = 10.dp, vertical = 7.dp)
-                                            .size(width = 24.dp, height = 18.dp),
-                                        color = accentColor,
-                                        barCount = 4
-                                    )
-                                }
-                            }
                         }
                     }
 
@@ -1141,7 +1112,7 @@ private fun LiveBottomLyricBanner(
 
                     activeLine == null -> {
                         Text(
-                            text = strings.tapToOpenLyrics,
+                            text = strings.lyricsNotFound,
                             style = MaterialTheme.typography.bodyMedium,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
                             textAlign = TextAlign.Center,
@@ -1222,6 +1193,8 @@ private fun FullScreenLyricsLayout(
     lyrics: List<LyricLine>,
     isLoading: Boolean,
     accentColor: Color,
+    enableBlur: Boolean = true,
+    useLiquidGlass: Boolean = false,
     onTogglePlay: () -> Unit,
     onPrevious: () -> Unit,
     onNext: () -> Unit,
@@ -1232,8 +1205,15 @@ private fun FullScreenLyricsLayout(
 ) {
     var displayMode by remember { mutableStateOf(LyricsDisplayMode.SYNCED) }
     val strings = LocalStrings.current
+    val context = LocalContext.current
+    val view = LocalView.current
     val listState = rememberLazyListState()
     val lyricsHazeState = remember { HazeState() }
+    val lyricsBgColor = MaterialTheme.colorScheme.background
+    val lyricsBackdrop = rememberLayerBackdrop(onDraw = {
+        drawRect(lyricsBgColor)
+        drawContent()
+    })
 
     val activeIndex = remember(lyrics, positionMs) {
         if (lyrics.isEmpty()) -1
@@ -1335,15 +1315,21 @@ private fun FullScreenLyricsLayout(
                 }
             }
             Spacer(Modifier.height(8.dp))
-            LinearProgressIndicator(
-                progress = { progress },
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(2.5.dp)
-                    .clip(CircleShape),
-                color = accentColor,
-                trackColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.12f)
-            )
+                    .height(3.dp)
+                    .clip(CircleShape)
+                    .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.14f))
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth(progress)
+                        .fillMaxHeight()
+                        .clip(CircleShape)
+                        .background(accentColor)
+                )
+            }
         }
 
         Spacer(Modifier.height(10.dp))
@@ -1360,6 +1346,13 @@ private fun FullScreenLyricsLayout(
                     .fillMaxSize()
                     .background(MaterialTheme.colorScheme.background.copy(alpha = 0.55f))
                     .hazeSource(state = lyricsHazeState)
+                    .then(
+                        if (useLiquidGlass && isLiquidGlassSupported()) {
+                            Modifier.layerBackdrop(lyricsBackdrop)
+                        } else {
+                            Modifier
+                        }
+                    )
             ) {
                 when {
                     isLoading -> {
@@ -1396,13 +1389,6 @@ private fun FullScreenLyricsLayout(
                                     style = MaterialTheme.typography.titleMedium,
                                     textAlign = TextAlign.Center,
                                     color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                                )
-                                Spacer(Modifier.height(6.dp))
-                                Text(
-                                    text = strings.lyricsHint,
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    textAlign = TextAlign.Center,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
                                 Spacer(Modifier.height(14.dp))
                                 FilledTonalButton(onClick = onRefresh) {
@@ -1500,123 +1486,139 @@ private fun FullScreenLyricsLayout(
                 }
             }
 
-            val controlsSurface = MaterialTheme.colorScheme.surfaceVariant
-            Row(
-                modifier = Modifier
-                    .align(Alignment.BottomCenter)
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 14.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.spacedBy(10.dp)
+            CompositionLocalProvider(
+                LocalAppBackdrop provides lyricsBackdrop,
+                LocalLiquidGlassEnabled provides useLiquidGlass
             ) {
-                Box(
+                Row(
                     modifier = Modifier
-                        .size(46.dp)
-                        .clip(CircleShape)
-                        .hazeEffect(state = lyricsHazeState) {
-                            blurEnabled = true
-                            backgroundColor = controlsSurface
-                            blurRadius = 24.dp
-                            tints = listOf(HazeTint(controlsSurface.copy(alpha = 0.55f)))
-                        }
-                        .clickable { onRefresh() },
-                    contentAlignment = Alignment.Center
+                        .align(Alignment.BottomCenter)
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp, vertical = 14.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(10.dp)
                 ) {
-                    Icon(
-                        imageVector = Icons.Filled.Refresh,
-                        contentDescription = strings.refreshLyrics,
-                        tint = MaterialTheme.colorScheme.onSurface
-                    )
-                }
-
-                if (onTranslate != null) {
-                    val hasTranslations = lyrics.any { it.isTranslation }
+                    val isPlainMode = displayMode == LyricsDisplayMode.PLAIN
                     Box(
                         modifier = Modifier
                             .size(46.dp)
-                            .clip(CircleShape)
-                            .hazeEffect(state = lyricsHazeState) {
-                                blurEnabled = true
-                                backgroundColor = controlsSurface
-                                blurRadius = 24.dp
-                                tints = listOf(HazeTint(controlsSurface.copy(alpha = 0.55f)))
-                            }
-                            .clickable { onTranslate() },
+                            .liquidGlassBubble(
+                                shape = CircleShape,
+                                hazeState = lyricsHazeState,
+                                enableBlur = enableBlur,
+                                isLiquidGlass = useLiquidGlass
+                            )
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                if (isPlainMode) {
+                                    val plainText = lyrics
+                                        .filter { !it.isInstrumental && !it.isTranslation && it.content.isNotBlank() }
+                                        .joinToString("\n") { it.content }
+                                    if (plainText.isNotBlank()) {
+                                        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as? ClipboardManager
+                                        clipboard?.setPrimaryClip(ClipData.newPlainText("${song.artist} - ${song.title}", plainText))
+                                        Toast.makeText(context, strings.lyricsCopied, Toast.LENGTH_SHORT).show()
+                                    }
+                                } else {
+                                    onRefresh()
+                                }
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Translate,
-                            contentDescription = strings.translateLyrics,
-                            tint = if (hasTranslations) accentColor else MaterialTheme.colorScheme.onSurface
+                            imageVector = if (isPlainMode) Icons.Filled.ContentCopy else Icons.Filled.Refresh,
+                            contentDescription = if (isPlainMode) strings.copyLyrics else strings.refreshLyrics,
+                            tint = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                }
 
-                val syncedSelected = displayMode == LyricsDisplayMode.SYNCED
-                val animatedBias by animateFloatAsState(
-                    targetValue = if (syncedSelected) -1f else 1f,
-                    animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
-                    label = "lyricsPillBias"
-                )
-
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .height(46.dp)
-                        .clip(CircleShape)
-                        .hazeEffect(state = lyricsHazeState) {
-                            blurEnabled = true
-                            backgroundColor = controlsSurface
-                            blurRadius = 24.dp
-                            tints = listOf(HazeTint(controlsSurface.copy(alpha = 0.55f)))
+                    if (onTranslate != null) {
+                        val hasTranslations = lyrics.any { it.isTranslation }
+                        Box(
+                            modifier = Modifier
+                                .size(46.dp)
+                                .liquidGlassBubble(
+                                    shape = CircleShape,
+                                    hazeState = lyricsHazeState,
+                                    enableBlur = enableBlur,
+                                    isLiquidGlass = useLiquidGlass
+                                )
+                                .clickable { onTranslate() },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Translate,
+                                contentDescription = strings.translateLyrics,
+                                tint = if (hasTranslations) accentColor else MaterialTheme.colorScheme.onSurface
+                            )
                         }
-                        .padding(3.dp)
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .fillMaxWidth(0.5f)
-                            .fillMaxHeight()
-                            .align(BiasAlignment(animatedBias, 0f))
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f))
+                    }
+
+                    val syncedSelected = displayMode == LyricsDisplayMode.SYNCED
+                    val animatedBias by animateFloatAsState(
+                        targetValue = if (syncedSelected) -1f else 1f,
+                        animationSpec = spring(dampingRatio = 0.8f, stiffness = Spring.StiffnessMediumLow),
+                        label = "lyricsPillBias"
                     )
 
-                    Row(
-                        modifier = Modifier.fillMaxSize(),
-                        verticalAlignment = Alignment.CenterVertically
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .height(46.dp)
+                            .liquidGlassBubble(
+                                shape = CircleShape,
+                                hazeState = lyricsHazeState,
+                                enableBlur = enableBlur,
+                                isLiquidGlass = useLiquidGlass
+                            )
+                            .padding(3.dp)
                     ) {
                         Box(
                             modifier = Modifier
-                                .weight(1f)
+                                .fillMaxWidth(0.5f)
                                 .fillMaxHeight()
+                                .align(BiasAlignment(animatedBias, 0f))
                                 .clip(CircleShape)
-                                .clickable { displayMode = LyricsDisplayMode.SYNCED },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = strings.syncedLyrics,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (syncedSelected) MaterialTheme.colorScheme.surface
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                            )
-                        }
+                                .background(MaterialTheme.colorScheme.onSurface.copy(alpha = 0.85f))
+                        )
 
-                        Box(
-                            modifier = Modifier
-                                .weight(1f)
-                                .fillMaxHeight()
-                                .clip(CircleShape)
-                                .clickable { displayMode = LyricsDisplayMode.PLAIN },
-                            contentAlignment = Alignment.Center
+                        Row(
+                            modifier = Modifier.fillMaxSize(),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            Text(
-                                text = strings.plainLyrics,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold,
-                                color = if (!syncedSelected) MaterialTheme.colorScheme.surface
-                                else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                            )
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .clickable { displayMode = LyricsDisplayMode.SYNCED },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = strings.syncedLyrics,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (syncedSelected) MaterialTheme.colorScheme.surface
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                )
+                            }
+
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .fillMaxHeight()
+                                    .clip(CircleShape)
+                                    .clickable { displayMode = LyricsDisplayMode.PLAIN },
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Text(
+                                    text = strings.plainLyrics,
+                                    style = MaterialTheme.typography.labelLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = if (!syncedSelected) MaterialTheme.colorScheme.surface
+                                    else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
+                                )
+                            }
                         }
                     }
                 }
@@ -1800,80 +1802,6 @@ private fun extractSongGradientColors(
     return pair
 }
 
-@Composable
-fun HalloweenCoverCandies(
-    onEatAllCandies: () -> Unit,
-    modifier: Modifier = Modifier
-) {
-    val view = LocalView.current
-    val eatenStates = remember { mutableStateListOf(false, false, false, false, false, false) }
-    val initialCandies = remember {
-        listOf(
-            Triple("🍬", -18f, 0.95f),
-            Triple("🍭", 12f, 1.05f),
-            Triple("🍫", -8f, 0.90f),
-            Triple("🎃", 16f, 1.10f),
-            Triple("🍬", -14f, 0.95f),
-            Triple("🍭", 8f, 1.0f)
-        )
-    }
-
-    val coroutineScope = rememberCoroutineScope()
-
-    Row(
-        modifier = modifier
-            .fillMaxWidth()
-            .padding(horizontal = 14.dp, vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        initialCandies.forEachIndexed { index, (emoji, rot, sc) ->
-            val isEaten = eatenStates.getOrNull(index) == true
-            val animScale by animateFloatAsState(
-                targetValue = if (isEaten) 0f else sc,
-                animationSpec = spring(stiffness = Spring.StiffnessMediumLow),
-                label = "candyScale$index"
-            )
-            val animAlpha by animateFloatAsState(
-                targetValue = if (isEaten) 0f else 1f,
-                animationSpec = tween(200),
-                label = "candyAlpha$index"
-            )
-
-            if (!isEaten || animScale > 0.05f) {
-                Box(
-                    modifier = Modifier
-                        .clickable(
-                            interactionSource = remember { MutableInteractionSource() },
-                            indication = null
-                        ) {
-                            view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                            eatenStates[index] = true
-                            if (eatenStates.all { it }) {
-                                coroutineScope.launch {
-                                    delay(280)
-                                    onEatAllCandies()
-                                }
-                            }
-                        }
-                        .graphicsLayer {
-                            rotationZ = rot
-                            scaleX = animScale
-                            scaleY = animScale
-                            alpha = animAlpha
-                            shadowElevation = 8f
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Text(text = emoji, fontSize = 24.sp)
-                }
-            } else {
-                Spacer(modifier = Modifier.size(24.dp))
-            }
-        }
-    }
-}
-
 private fun getDynamicPlaybackContextLabels(
     song: Song,
     playbackContext: PlaybackContext?,
@@ -1926,72 +1854,5 @@ private fun getDynamicPlaybackContextLabels(
                 strings.singleTrack to songTitle
             }
         }
-    }
-}
-
-
-@Composable
-private fun SpookyAtmosphereDecor() {
-    val infiniteTransition = rememberInfiniteTransition(label = "spookyFloat")
-    val offsetY by infiniteTransition.animateFloat(
-        initialValue = -4f,
-        targetValue = 4f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2000, easing = FastOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "spookyY"
-    )
-    val rotation by infiniteTransition.animateFloat(
-        initialValue = -6f,
-        targetValue = 6f,
-        animationSpec = infiniteRepeatable(
-            animation = tween(2400, easing = FastOutSlowInEasing),
-            repeatMode = androidx.compose.animation.core.RepeatMode.Reverse
-        ),
-        label = "spookyRot"
-    )
-
-    Row(
-        modifier = Modifier
-            .fillMaxWidth()
-            .padding(horizontal = 24.dp, vertical = 2.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically
-    ) {
-        Text(
-            text = "👻",
-            fontSize = 20.sp,
-            modifier = Modifier
-                .offset(y = offsetY.dp)
-                .graphicsLayer(rotationZ = rotation)
-        )
-        Text(
-            text = "🦇",
-            fontSize = 17.sp,
-            modifier = Modifier
-                .offset(y = (-offsetY).dp)
-                .graphicsLayer(rotationZ = -rotation)
-        )
-        Text(
-            text = "🎃",
-            fontSize = 22.sp,
-            modifier = Modifier
-                .offset(y = (offsetY * 0.8f).dp)
-                .graphicsLayer(rotationZ = rotation * 0.7f)
-        )
-        Text(
-            text = "🕷️",
-            fontSize = 17.sp,
-            modifier = Modifier
-                .offset(y = (-offsetY * 0.8f).dp)
-        )
-        Text(
-            text = "👻",
-            fontSize = 20.sp,
-            modifier = Modifier
-                .offset(y = offsetY.dp)
-                .graphicsLayer(rotationZ = -rotation)
-        )
     }
 }

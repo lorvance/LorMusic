@@ -69,6 +69,7 @@ fun SoundCloudScreen(
     savedSongs: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     isFavorite: (String) -> Boolean,
     onToggleFavorite: (Song) -> Unit,
     onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
@@ -200,110 +201,110 @@ fun SoundCloudScreen(
                             modifier = Modifier.align(Alignment.CenterEnd)
                         ) {
                             Box(
-                        modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                showAccountMenuDialog = true
-                            }
-                            .liquidGlassBubble(CircleShape, null, enableBlur, false),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        if (!profile?.avatarUrl.isNullOrBlank()) {
-                            SongArtwork(
-                                seed = (profile?.username ?: "SoundCloud").hashCode(),
-                                albumArtUri = profile?.avatarUrl,
-                                cornerRadius = 22.dp,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.AccountCircle,
-                                contentDescription = strings.signInSoundCloud,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-                    }
-                        }
-                    }
-                } else {
-                Row(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 14.dp, vertical = 8.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Box(
-                        modifier = Modifier
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                if (activeTab != ScTab.HOME) {
-                                    onSelectTab(ScTab.HOME)
-                                } else {
-                                    onSwitchToLocal()
-                                }
-                            }
-                            .liquidGlassBubble(RoundedCornerShape(22.dp), null, enableBlur, false)
-                            .padding(horizontal = 12.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            IosBackChevron(
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                            Surface(
-                                shape = CircleShape,
-                                color = Color.White,
-                                modifier = Modifier.size(28.dp)
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        showAccountMenuDialog = true
+                                    }
+                                    .liquidGlassBubble(CircleShape, null, enableBlur, false),
+                                contentAlignment = Alignment.Center
                             ) {
-                                Box(contentAlignment = Alignment.Center) {
+                                if (!profile?.avatarUrl.isNullOrBlank()) {
+                                    SongArtwork(
+                                        seed = (profile?.username ?: "SoundCloud").hashCode(),
+                                        albumArtUri = profile?.avatarUrl,
+                                        cornerRadius = 22.dp,
+                                        modifier = Modifier.size(36.dp)
+                                    )
+                                } else {
                                     Icon(
-                                        painter = painterResource(R.drawable.ic_soundcloud),
-                                        contentDescription = "SoundCloud",
-                                        tint = Color(0xFF111111),
-                                        modifier = Modifier.size(18.dp)
+                                        imageVector = Icons.Filled.AccountCircle,
+                                        contentDescription = strings.signInSoundCloud,
+                                        tint = MaterialTheme.colorScheme.primary,
+                                        modifier = Modifier.size(26.dp)
                                     )
                                 }
                             }
                         }
                     }
-
-                    Box(
+                } else {
+                    Row(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
-                            .clickable {
-                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                showAccountMenuDialog = true
-                            }
-                            .liquidGlassBubble(CircleShape, null, enableBlur, false),
-                        contentAlignment = Alignment.Center
+                            .fillMaxWidth()
+                            .padding(horizontal = 14.dp, vertical = 8.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (!profile?.avatarUrl.isNullOrBlank()) {
-                            SongArtwork(
-                                seed = (profile?.username ?: "SoundCloud").hashCode(),
-                                albumArtUri = profile?.avatarUrl,
-                                cornerRadius = 22.dp,
-                                modifier = Modifier.size(36.dp)
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.AccountCircle,
-                                contentDescription = strings.signInSoundCloud,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(26.dp)
-                            )
+                        Box(
+                            modifier = Modifier
+                                .height(44.dp)
+                                .clip(RoundedCornerShape(22.dp))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    if (activeTab != ScTab.HOME) {
+                                        onSelectTab(ScTab.HOME)
+                                    } else {
+                                        onSwitchToLocal()
+                                    }
+                                }
+                                .liquidGlassBubble(RoundedCornerShape(22.dp), null, enableBlur, false)
+                                .padding(horizontal = 12.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                IosBackChevron(
+                                    color = MaterialTheme.colorScheme.onSurface
+                                )
+                                Surface(
+                                    shape = CircleShape,
+                                    color = Color.White,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Box(contentAlignment = Alignment.Center) {
+                                        Icon(
+                                            painter = painterResource(R.drawable.ic_soundcloud),
+                                            contentDescription = "SoundCloud",
+                                            tint = Color(0xFF111111),
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    showAccountMenuDialog = true
+                                }
+                                .liquidGlassBubble(CircleShape, null, enableBlur, false),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (!profile?.avatarUrl.isNullOrBlank()) {
+                                SongArtwork(
+                                    seed = (profile?.username ?: "SoundCloud").hashCode(),
+                                    albumArtUri = profile?.avatarUrl,
+                                    cornerRadius = 22.dp,
+                                    modifier = Modifier.size(36.dp)
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.AccountCircle,
+                                    contentDescription = strings.signInSoundCloud,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(26.dp)
+                                )
+                            }
                         }
                     }
-                }
                 }
 
                 AnimatedContent(
@@ -324,6 +325,7 @@ fun SoundCloudScreen(
                             isLoading = isLoadingCharts,
                             currentSong = currentSong,
                             isPlaying = isPlaying,
+                            shuffleOn = shuffleOn,
                             isFavorite = isFavorite,
                             onPlayQueue = onPlayQueue,
                             onToggleFavorite = onToggleFavorite,
@@ -342,6 +344,7 @@ fun SoundCloudScreen(
                             isLoading = isLoadingCharts,
                             currentSong = currentSong,
                             isPlaying = isPlaying,
+                            shuffleOn = shuffleOn,
                             isFavorite = isFavorite,
                             onPlayQueue = onPlayQueue,
                             onToggleFavorite = onToggleFavorite,
@@ -591,9 +594,6 @@ fun SoundCloudScreen(
     }
 }
 
-/**
- * Gate requiring sign-in to SoundCloud (Принудительный вход, как в Google)
- */
 @Composable
 private fun ScSignInRequiredGate(
     hazeState: HazeState?,
@@ -735,6 +735,7 @@ private fun ScHomeTab(
     isLoading: Boolean,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     isFavorite: (String) -> Boolean,
     onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
@@ -791,8 +792,21 @@ private fun ScHomeTab(
                             color = MaterialTheme.colorScheme.onSurface
                         )
                     }
-                    IconButton(onClick = { onPlayQueue(likes, 0, true, PlaybackContext(PlaybackContextType.FAVORITES)) }) {
-                        Icon(Icons.Filled.Shuffle, contentDescription = strings.shuffle)
+                    Surface(
+                        shape = CircleShape,
+                        color = if (shuffleOn) MaterialTheme.colorScheme.primary else Color.Transparent,
+                        modifier = Modifier
+                            .size(40.dp)
+                            .clip(CircleShape)
+                            .clickable { onPlayQueue(likes, 0, true, PlaybackContext(PlaybackContextType.FAVORITES)) }
+                    ) {
+                        Box(contentAlignment = Alignment.Center) {
+                            Icon(
+                                imageVector = Icons.Filled.Shuffle,
+                                contentDescription = strings.shuffle,
+                                tint = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurface
+                            )
+                        }
                     }
                 }
             }
@@ -1062,6 +1076,7 @@ private fun ScChartsTab(
     isLoading: Boolean,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     isFavorite: (String) -> Boolean,
     onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onToggleFavorite: (Song) -> Unit,
@@ -1106,7 +1121,11 @@ private fun ScChartsTab(
                     if (charts.isNotEmpty()) {
                         Button(
                             onClick = { onPlayQueue(charts, 0, true, PlaybackContext(PlaybackContextType.SINGLE, charts.firstOrNull()?.title)) },
-                            shape = RoundedCornerShape(16.dp)
+                            shape = RoundedCornerShape(16.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = if (shuffleOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.secondaryContainer,
+                                contentColor = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSecondaryContainer
+                            )
                         ) {
                             Icon(Icons.Filled.Shuffle, contentDescription = null, modifier = Modifier.size(18.dp))
                             Spacer(Modifier.width(6.dp))
@@ -1307,7 +1326,7 @@ private fun ScLibrariesTab(
                             checked = isUnifiedToggle,
                             onCheckedChange = { isUnifiedToggle = it }
                         )
-                        Text("Создать как общий плейлист")
+                        Text(strings.unifiedPlaylist)
                     }
                 }
             },
@@ -1547,7 +1566,7 @@ private fun ScRealWebLoginDialog(
                                 fontWeight = FontWeight.Bold
                             )
                             Text(
-                                text = "Войдите через Google или аккаунт",
+                                text = strings.scSignInSubtitle,
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
@@ -1739,9 +1758,6 @@ private fun ScRealWebLoginDialog(
     }
 }
 
-/**
- * Modern Material 3 SoundCloud Profile Dialog / Sheet
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ScUserProfileSheet(

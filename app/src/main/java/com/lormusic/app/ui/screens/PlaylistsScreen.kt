@@ -1,6 +1,7 @@
 package com.lormusic.app.ui.screens
 
 import android.view.HapticFeedbackConstants
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -9,7 +10,9 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -18,12 +21,12 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.GridItemSpan
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.CornerBasedShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -32,20 +35,25 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
-import androidx.compose.foundation.lazy.items
+import com.lormusic.app.R
 import com.lormusic.app.model.LocalStrings
-import com.lormusic.app.model.Playlist
-import com.lormusic.app.model.Song
 import com.lormusic.app.model.PlaybackContext
 import com.lormusic.app.model.PlaybackContextType
+import com.lormusic.app.model.Playlist
+import com.lormusic.app.model.Song
+import com.lormusic.app.ui.components.IosBackChevron
 import com.lormusic.app.ui.components.SongArtwork
 import com.lormusic.app.ui.components.SongRow
 import com.lormusic.app.ui.components.appBackdropSource
@@ -61,6 +69,7 @@ fun PlaylistsScreen(
     allSongs: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     onPlayQueue: (List<Song>, Int, Boolean, PlaybackContext?) -> Unit = { _, _, _, _ -> },
     onCreatePlaylist: (String, List<Song>) -> Unit,
@@ -129,6 +138,7 @@ fun PlaylistsScreen(
                 allSongs = allSongs,
                 currentSong = currentSong,
                 isPlaying = isPlaying,
+                shuffleOn = shuffleOn,
                 favoriteIds = favoriteIds,
                 onBack = { selectedPlaylistId = null },
                 onPlayAll = { shuffle ->
@@ -668,6 +678,7 @@ private fun PlaylistDetailContent(
     allSongs: List<Song>,
     currentSong: Song?,
     isPlaying: Boolean,
+    shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     onBack: () -> Unit,
     onPlayAll: (Boolean) -> Unit,
@@ -685,9 +696,12 @@ private fun PlaylistDetailContent(
     BackHandler(onBack = onBack)
 
     val strings = LocalStrings.current
+    val context = LocalContext.current
+    val view = LocalView.current
     var showAddTracksDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
     val firstSong = playlist.songs.firstOrNull()
+    val isUnifiedPlaylist = playlist.isUnified || playlist.id == "sys_unified_favorites"
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -741,11 +755,23 @@ private fun PlaylistDetailContent(
                             modifier = Modifier
                                 .size(40.dp)
                                 .clip(CircleShape)
-                                .then(contentBubbleModifier(CircleShape))
+                                .then(
+                                    if (shuffleOn) {
+                                        Modifier
+                                            .background(MaterialTheme.colorScheme.primary, CircleShape)
+                                            .border(1.5.dp, MaterialTheme.colorScheme.primary, CircleShape)
+                                    } else {
+                                        contentBubbleModifier(CircleShape)
+                                    }
+                                )
                                 .clickable(enabled = playlist.songs.isNotEmpty(), onClick = { onPlayAll(true) }),
                             contentAlignment = Alignment.Center
                         ) {
-                            Icon(Icons.Filled.Shuffle, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
+                            Icon(
+                                Icons.Filled.Shuffle,
+                                contentDescription = strings.shuffle,
+                                tint = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
+                            )
                         }
                     }
                 }
@@ -804,6 +830,24 @@ private fun PlaylistDetailContent(
                                     onToggleFavorite = { onToggleFavorite(song) }
                                 )
                             }
+                            if (isUnifiedPlaylist) {
+                                TrackSourceBadgeBubble(
+                                    song = song,
+                                    bubbleModifier = { contentBubbleModifier(it) },
+                                    onClick = {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        val isYt = song.isRemoteYt || song.id.startsWith("yt_") || song.uri.startsWith("yt://")
+                                        val isSc = song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("sc://")
+                                        val msg = when {
+                                            isYt -> strings.trackFromYtMusic
+                                            isSc -> strings.trackFromSoundCloud
+                                            else -> strings.trackFromLocal
+                                        }
+                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                    }
+                                )
+                                Spacer(Modifier.width(4.dp))
+                            }
                             if (!playlist.isSystem) {
                                 IconButton(onClick = { onRemoveSong(song.id) }) {
                                     Icon(
@@ -834,22 +878,17 @@ private fun PlaylistDetailContent(
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center
             ) {
-                Icon(
-                    imageVector = Icons.AutoMirrored.Filled.ArrowBack,
-                    contentDescription = strings.back,
-                    tint = MaterialTheme.colorScheme.onSurface,
-                    modifier = Modifier.size(20.dp)
-                )
+                IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
             }
-            Spacer(Modifier.width(12.dp))
+            Spacer(Modifier.width(10.dp))
             Box(
                 modifier = Modifier
-                    .weight(1f)
+                    .weight(1f, fill = false)
                     .height(44.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                    .padding(horizontal = 16.dp),
-                contentAlignment = Alignment.CenterStart
+                    .padding(horizontal = 20.dp),
+                contentAlignment = Alignment.Center
             ) {
                 Text(
                     text = playlist.name,
@@ -861,6 +900,7 @@ private fun PlaylistDetailContent(
                 )
             }
             if (!playlist.isSystem) {
+                Spacer(Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
@@ -1148,6 +1188,73 @@ private fun PlaylistDetailContent(
 }
 
 @Composable
+private fun TrackSourceBadgeBubble(
+    song: Song,
+    bubbleModifier: @Composable (CornerBasedShape) -> Modifier,
+    onClick: () -> Unit
+) {
+    val isYt = song.isRemoteYt || song.id.startsWith("yt_") || song.uri.startsWith("yt://")
+    val isSc = song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("sc://")
+
+    Box(
+        modifier = Modifier
+            .size(34.dp)
+            .clip(CircleShape)
+            .then(bubbleModifier(CircleShape))
+            .clickable(onClick = onClick),
+        contentAlignment = Alignment.Center
+    ) {
+        when {
+            isYt -> {
+                Canvas(modifier = Modifier.size(20.dp)) {
+                    val c = center
+                    val r = size.minDimension / 2f
+                    drawCircle(color = Color(0xFFFF0033), radius = r, center = c)
+                    drawCircle(
+                        color = Color.White,
+                        radius = r * 0.56f,
+                        center = c,
+                        style = Stroke(width = size.minDimension * 0.08f)
+                    )
+                    val triPath = Path().apply {
+                        val s = r * 0.28f
+                        moveTo(c.x - s * 0.65f, c.y - s)
+                        lineTo(c.x - s * 0.65f, c.y + s)
+                        lineTo(c.x + s * 1.05f, c.y)
+                        close()
+                    }
+                    drawPath(path = triPath, color = Color.White)
+                }
+            }
+            isSc -> {
+                Box(
+                    modifier = Modifier
+                        .size(20.dp)
+                        .clip(CircleShape)
+                        .background(Color(0xFFFF5500)),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(
+                        painter = painterResource(id = R.drawable.ic_soundcloud),
+                        contentDescription = "SoundCloud",
+                        tint = Color.Unspecified,
+                        modifier = Modifier.size(16.dp)
+                    )
+                }
+            }
+            else -> {
+                Icon(
+                    imageVector = Icons.Filled.MusicNote,
+                    contentDescription = "Local",
+                    tint = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.size(17.dp)
+                )
+            }
+        }
+    }
+}
+
+@Composable
 private fun EnhancedStatBubble(
     icon: androidx.compose.ui.graphics.vector.ImageVector,
     iconTint: Color,
@@ -1204,42 +1311,6 @@ private fun EnhancedStatBubble(
                     overflow = TextOverflow.Ellipsis
                 )
             }
-        }
-    }
-}
-
-@Composable
-private fun StatCard(
-    title: String,
-    value: String,
-    modifier: Modifier = Modifier,
-    bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { Modifier }
-) {
-    Box(
-        modifier = modifier
-            .clip(RoundedCornerShape(22.dp))
-            .then(bubbleModifier(RoundedCornerShape(22.dp)))
-            .padding(vertical = 12.dp, horizontal = 8.dp),
-        contentAlignment = Alignment.Center
-    ) {
-        Column(
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            Text(
-                text = value,
-                style = MaterialTheme.typography.headlineMedium,
-                fontWeight = FontWeight.ExtraBold,
-                color = MaterialTheme.colorScheme.primary
-            )
-            Spacer(Modifier.height(2.dp))
-            Text(
-                text = title,
-                style = MaterialTheme.typography.labelMedium,
-                fontWeight = FontWeight.SemiBold,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f),
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis
-            )
         }
     }
 }

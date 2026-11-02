@@ -497,7 +497,7 @@ class PreferencesRepository(context: Context) {
     }
 
     fun getBetaDynamicPlaybackContext(): Boolean {
-        return prefs.getBoolean(KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT, false)
+        return prefs.getBoolean(KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT, true)
     }
 
     fun saveBetaDynamicPlaybackContext(enabled: Boolean) {
@@ -518,38 +518,6 @@ class PreferencesRepository(context: Context) {
 
     fun saveUseMyWaveCoverGradient(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_MY_WAVE_COVER_GRADIENT, enabled).apply()
-    }
-
-    fun getHalloweenExpiredNotified(): Boolean {
-        return prefs.getBoolean(KEY_HALLOWEEN_EXPIRED_NOTIFIED, false)
-    }
-
-    fun saveHalloweenExpiredNotified(notified: Boolean) {
-        prefs.edit().putBoolean(KEY_HALLOWEEN_EXPIRED_NOTIFIED, notified).apply()
-    }
-
-    fun getHalloweenMode(): Boolean {
-        return prefs.getBoolean(KEY_HALLOWEEN_MODE, false)
-    }
-
-    fun saveHalloweenMode(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_HALLOWEEN_MODE, enabled).apply()
-    }
-
-    fun getHalloweenCandies(): Boolean {
-        return prefs.getBoolean(KEY_HALLOWEEN_CANDIES, false)
-    }
-
-    fun saveHalloweenCandies(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_HALLOWEEN_CANDIES, enabled).apply()
-    }
-
-    fun hasSeenHalloweenGreeting(dateKey: String): Boolean {
-        return prefs.getString(KEY_HALLOWEEN_GREETING_DATE, "") == dateKey
-    }
-
-    fun saveSeenHalloweenGreeting(dateKey: String) {
-        prefs.edit().putString(KEY_HALLOWEEN_GREETING_DATE, dateKey).apply()
     }
 
     fun getAutoTagFixEnabled(): Boolean {
@@ -809,10 +777,6 @@ class PreferencesRepository(context: Context) {
         private const val KEY_BETA_UPDATES = "enable_beta_updates"
         private const val KEY_ALBUM_ART_GRADIENT = "use_album_art_gradient_v2"
         private const val KEY_MY_WAVE_COVER_GRADIENT = "use_my_wave_cover_gradient"
-        private const val KEY_HALLOWEEN_EXPIRED_NOTIFIED = "halloween_expired_notified"
-        private const val KEY_HALLOWEEN_MODE = "halloween_mode_active"
-        private const val KEY_HALLOWEEN_CANDIES = "halloween_candies_active"
-        private const val KEY_HALLOWEEN_GREETING_DATE = "halloween_greeting_date"
         private const val KEY_AUTO_TAGFIX = "auto_tagfix_enabled"
         private const val KEY_RECENTS_VIEW_MODE = "yt_recents_view_mode"
         private const val KEY_APP_LANGUAGE = "app_language"

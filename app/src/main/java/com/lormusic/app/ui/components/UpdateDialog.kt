@@ -104,12 +104,14 @@ fun UpdateDialog(
     val strings = LocalStrings.current
     val targetLang = when (appLanguage) {
         AppLanguage.UK -> "uk"
+        AppLanguage.PL -> "pl"
         AppLanguage.RU -> "ru"
         AppLanguage.EN -> null
         AppLanguage.SYSTEM -> {
             val loc = java.util.Locale.getDefault().language.lowercase()
             when {
                 loc.startsWith("uk") -> "uk"
+                loc.startsWith("pl") -> "pl"
                 loc.startsWith("ru") || loc.startsWith("be") || loc.startsWith("kk") -> "ru"
                 else -> null
             }
@@ -181,7 +183,7 @@ fun UpdateDialog(
                     .clickable(
                         interactionSource = remember { MutableInteractionSource() },
                         indication = null
-                    ) { /* absorb clicks */ }
+                    ) {}
             ) {
                 Column(
                     modifier = Modifier

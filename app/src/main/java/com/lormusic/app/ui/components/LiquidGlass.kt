@@ -37,7 +37,7 @@ internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 fun isLiquidGlassSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
 private const val SURFACE_OPACITY = 0.35f
-private val BLUR_RADIUS = 8.dp
+private val BLUR_RADIUS = 12.dp
 private val REFRACTION_HEIGHT = 24.dp
 private val REFRACTION_AMOUNT = 48.dp
 
@@ -132,17 +132,17 @@ fun Modifier.liquidGlassBubble(
         Modifier.hazeEffect(state = hazeState) {
             blurEnabled = true
             backgroundColor = baseSurface
-            blurRadius = 22.dp
-            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.65f)))
+            blurRadius = 38.dp
+            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.45f)))
         }
     } else {
         Modifier
     }
 
-    val bgModifier = if (effectiveBlur) {
-        Modifier.background(baseSurface.copy(alpha = 0.60f), shape)
-    } else {
-        Modifier.background(baseSurface.copy(alpha = 0.94f), shape)
+    val bgModifier = when {
+        hazeState != null && effectiveBlur -> Modifier.background(baseSurface.copy(alpha = 0.25f), shape)
+        effectiveBlur -> Modifier.background(baseSurface.copy(alpha = 0.60f), shape)
+        else -> Modifier.background(baseSurface.copy(alpha = 0.94f), shape)
     }
 
     val borderModifier = Modifier.border(
@@ -155,8 +155,8 @@ fun Modifier.liquidGlassBubble(
                 )
             } else {
                 listOf(
-                    Color.White.copy(alpha = 0.22f),
-                    Color.White.copy(alpha = 0.06f)
+                    Color.White.copy(alpha = 0.24f),
+                    Color.White.copy(alpha = 0.07f)
                 )
             }
         ),
