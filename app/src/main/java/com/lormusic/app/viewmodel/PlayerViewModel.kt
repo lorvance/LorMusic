@@ -876,7 +876,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun getAllPlaylistsWithFavorites(): List<Playlist> {
-        val pool = (allSongs.value + savedYtSongs.value + savedScSongs.value).distinctBy { it.id }
+        val pool = (allSongs.value + savedYtSongs.value + savedScSongs.value + queue.value + listOfNotNull(currentSong.value)).distinctBy { it.id }
         val strings = resolveStrings(appLanguage.value)
         val favSongs = pool.filter { localFavoriteIds.value.contains(it.id) }
         val favPlaylist = Playlist(

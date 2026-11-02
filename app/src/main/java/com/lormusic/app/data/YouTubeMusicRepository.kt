@@ -92,7 +92,11 @@ object YouTubeMusicRepository {
     @Volatile
     var currentClientVersion: String = "1.20250219.01.00"
 
+    @Volatile
+    var cachedWebViewProfile: GoogleAccountProfile? = null
+
     private val albumBrowseIdMap = ConcurrentHashMap<String, String>()
+    private val albumCoverUrlMap = ConcurrentHashMap<String, String>()
     private val itunesCollectionIdMap = ConcurrentHashMap<String, Long>()
 
     fun updateSessionMetadata(
@@ -101,29 +105,38 @@ object YouTubeMusicRepository {
         dataSyncId: String? = null,
         authUser: String? = null,
         visitorData: String? = null,
-        clientVersion: String? = null
+        clientVersion: String? = null,
+        accountName: String? = null,
+        accountEmail: String? = null,
+        accountAvatar: String? = null
     ) {
         currentAuthCookie = cookie
-        if (!pageId.isNullOrBlank()) currentPageId = pageId
-        if (!dataSyncId.isNullOrBlank()) currentDataSyncId = dataSyncId
-        if (!authUser.isNullOrBlank()) currentAuthUser = authUser
-        if (!visitorData.isNullOrBlank()) {
+        currentPageId = pageId?.takeIf { it.isNotBlank() && it != "null" && it != "undefined" }
+        currentDataSyncId = dataSyncId?.takeIf { it.isNotBlank() && it != "null" && it != "undefined" }
+        if (!authUser.isNullOrBlank() && authUser != "null" && authUser != "undefined") {
+            currentAuthUser = authUser
+        }
+        if (!visitorData.isNullOrBlank() && visitorData != "null" && visitorData != "undefined") {
             currentVisitorData = visitorData
             cachedVisitorData = visitorData
             visitorDataFetchedAtMs = System.currentTimeMillis()
         }
-        if (!clientVersion.isNullOrBlank()) currentClientVersion = clientVersion
+        if (!accountName.isNullOrBlank() && accountName != "null") {
+            cachedWebViewProfile = GoogleAccountProfile(
+                displayName = accountName,
+                email = accountEmail?.takeIf { it.isNotBlank() && it != "null" } ?: "YouTube Music",
+                avatarUrl = accountAvatar?.takeIf { it.isNotBlank() && it != "null" }
+            )
+        }
     }
 
     private fun resolveEffectivePageId(): String? {
         currentPageId?.trim()?.takeIf { it.isNotEmpty() }?.let { return it }
         val raw = currentDataSyncId?.trim()?.takeIf { it.isNotEmpty() } ?: return null
-        val parts = raw.split("||").map { it.trim() }.filter { it.isNotEmpty() }
-        return when {
-            parts.size >= 2 && parts[1].isNotEmpty() -> parts[0]
-            parts.size == 1 -> parts[0]
-            else -> null
-        }
+        if (!raw.contains("||")) return null
+        val first = raw.substringBefore("||").trim()
+        val second = raw.substringAfter("||").trim()
+        return if (first.isNotEmpty() && second.isNotEmpty()) first else null
     }
 
     enum class WaveMood(val label: String, val queryHint: String) {
@@ -160,8 +173,8 @@ object YouTubeMusicRepository {
         return "SAPISIDHASH ${timestampSec}_$sha1Hex"
     }
 
-    private fun buildWebRemixContextJson(): JSONObject {
-        val effectivePageId = resolveEffectivePageId()
+    private fun buildWebRemixContextJson(includePageId: Boolean = false): JSONObject {
+        val effectivePageId = if (includePageId) resolveEffectivePageId() else null
         return JSONObject().apply {
             put(
                 "context",
@@ -170,12 +183,9 @@ object YouTubeMusicRepository {
                         "client",
                         JSONObject().apply {
                             put("clientName", "WEB_REMIX")
-                            put("clientVersion", currentClientVersion)
+                            put("clientVersion", "1.20250219.01.00")
                             put("hl", "ru")
                             put("gl", "RU")
-                            currentVisitorData?.takeIf { it.isNotBlank() }?.let {
-                                put("visitorData", it)
-                            }
                         }
                     )
                     if (!effectivePageId.isNullOrBlank()) {
@@ -192,13 +202,13 @@ object YouTubeMusicRepository {
         }
     }
 
-    private fun postInnertubeJson(
+    private fun executeInnertubePost(
         endpointUrl: String,
         body: JSONObject,
-        cookie: String?
+        cookie: String?,
+        pageIdHeader: String? = null
     ): JSONObject? {
         return runCatching {
-            val effectivePageId = resolveEffectivePageId()
             val conn = (URL(endpointUrl).openConnection() as HttpURLConnection).apply {
                 requestMethod = "POST"
                 doOutput = true
@@ -211,11 +221,8 @@ object YouTubeMusicRepository {
                 setRequestProperty("Referer", "$YTM_ORIGIN/")
                 setRequestProperty("X-Goog-AuthUser", currentAuthUser.ifBlank { "0" })
                 setRequestProperty("X-YouTube-Client-Name", "67")
-                setRequestProperty("X-YouTube-Client-Version", currentClientVersion)
-                effectivePageId?.let { setRequestProperty("X-Goog-PageId", it) }
-                (currentVisitorData ?: cachedVisitorData)?.takeIf { it.isNotBlank() }?.let {
-                    setRequestProperty("X-Goog-Visitor-Id", it)
-                }
+                setRequestProperty("X-YouTube-Client-Version", "1.20250219.01.00")
+                pageIdHeader?.takeIf { it.isNotBlank() }?.let { setRequestProperty("X-Goog-PageId", it) }
                 setRequestProperty(
                     "User-Agent",
                     "Mozilla/5.0 (Linux; Android 14; Pixel 8) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/131.0.0.0 Mobile Safari/537.36"
@@ -237,6 +244,20 @@ object YouTubeMusicRepository {
                 null
             }
         }.getOrNull()
+    }
+
+    private fun postInnertubeJson(
+        endpointUrl: String,
+        body: JSONObject,
+        cookie: String?
+    ): JSONObject? {
+        val primary = executeInnertubePost(endpointUrl, body, cookie, pageIdHeader = null)
+        if (primary != null) return primary
+        val pageId = resolveEffectivePageId()
+        if (!pageId.isNullOrBlank()) {
+            return executeInnertubePost(endpointUrl, body, cookie, pageIdHeader = pageId)
+        }
+        return null
     }
 
     private fun getOrFetchVisitorData(): String? {
@@ -286,24 +307,41 @@ object YouTubeMusicRepository {
         }.getOrNull()
     }
 
+    private fun findActiveAccountHeaderRecursive(node: Any?): JSONObject? {
+        when (node) {
+            is JSONObject -> {
+                node.optJSONObject("activeAccountHeaderRenderer")?.let { return it }
+                val keys = node.keys()
+                while (keys.hasNext()) {
+                    val found = findActiveAccountHeaderRecursive(node.opt(keys.next()))
+                    if (found != null) return found
+                }
+            }
+            is JSONArray -> {
+                for (i in 0 until node.length()) {
+                    val found = findActiveAccountHeaderRecursive(node.opt(i))
+                    if (found != null) return found
+                }
+            }
+        }
+        return null
+    }
+
     suspend fun fetchAuthenticatedAccountProfile(cookie: String): GoogleAccountProfile? = withContext(Dispatchers.IO) {
         currentAuthCookie = cookie
         val body = buildWebRemixContextJson()
-        val json = postInnertubeJson(YTM_ACCOUNT_URL, body, cookie) ?: return@withContext null
-        runCatching {
-            val header = json.optJSONArray("actions")
-                ?.optJSONObject(0)
-                ?.optJSONObject("openPopupAction")
-                ?.optJSONObject("popup")
-                ?.optJSONObject("multiPageMenuRenderer")
-                ?.optJSONObject("header")
-                ?.optJSONObject("activeAccountHeaderRenderer")
-                ?: return@runCatching null
+        val json = postInnertubeJson(YTM_ACCOUNT_URL, body, cookie)
+        val parsed = runCatching {
+            val header = json?.let { findActiveAccountHeaderRecursive(it) } ?: return@runCatching null
 
-            val name = extractRunsText(header.optJSONObject("accountName")).ifBlank { "Google Пользователь" }
+            val name = extractRunsText(header.optJSONObject("accountName")).ifBlank {
+                cachedWebViewProfile?.displayName ?: ""
+            }
+            if (name.isBlank()) return@runCatching null
+
             val email = extractRunsText(header.optJSONObject("email"))
                 .ifBlank { extractRunsText(header.optJSONObject("channelHandle")) }
-                .ifBlank { "Синхронизировано с YouTube Music" }
+                .ifBlank { cachedWebViewProfile?.email ?: "Синхронизировано с YouTube Music" }
 
             val photoThumbs = header.optJSONObject("accountPhoto")?.optJSONArray("thumbnails")
             val rawAvatar = if (photoThumbs != null && photoThumbs.length() > 0) {
@@ -311,10 +349,11 @@ object YouTubeMusicRepository {
             } else null
             val avatarUrl = rawAvatar?.let {
                 if (it.startsWith("//")) "https:$it" else it
-            }
+            } ?: cachedWebViewProfile?.avatarUrl
 
             GoogleAccountProfile(displayName = name, email = email, avatarUrl = avatarUrl)
         }.getOrNull()
+        parsed ?: cachedWebViewProfile
     }
 
     suspend fun syncAuthenticatedAccount(cookie: String): YtAccountSyncResult = withContext(Dispatchers.IO) {
@@ -496,8 +535,11 @@ object YouTubeMusicRepository {
             ?.let { arr ->
                 arr.optJSONObject(arr.length() - 1)?.optString("url", "")
             }
+            ?.let { if (it.startsWith("//")) "https:$it" else it }
             ?.replace("w120-h120", "w544-h544")
             ?.replace("w60-h60", "w544-h544")
+            ?.takeIf { it.isNotBlank() }
+            ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
 
         return Song(
             id = "yt_v_$videoId",
@@ -507,7 +549,7 @@ object YouTubeMusicRepository {
             durationMs = parsedDurationMs ?: 195_000L,
             uri = "yt://$videoId",
             coverColorSeed = videoId.hashCode(),
-            albumArtUri = thumbUrl?.takeIf { it.isNotBlank() },
+            albumArtUri = thumbUrl,
             isLocal = false,
             folderName = "YouTube Music",
             dateAddedSec = System.currentTimeMillis() / 1000L,
@@ -551,8 +593,11 @@ object YouTubeMusicRepository {
             ?.let { arr ->
                 arr.optJSONObject(arr.length() - 1)?.optString("url", "")
             }
+            ?.let { if (it.startsWith("//")) "https:$it" else it }
             ?.replace("w120-h120", "w544-h544")
             ?.replace("w60-h60", "w544-h544")
+            ?.takeIf { it.isNotBlank() }
+            ?: "https://i.ytimg.com/vi/$videoId/hqdefault.jpg"
 
         return Song(
             id = "yt_v_$videoId",
@@ -562,7 +607,7 @@ object YouTubeMusicRepository {
             durationMs = 195_000L,
             uri = "yt://$videoId",
             coverColorSeed = videoId.hashCode(),
-            albumArtUri = thumbUrl?.takeIf { it.isNotBlank() },
+            albumArtUri = thumbUrl,
             isLocal = false,
             folderName = "YouTube Music",
             dateAddedSec = System.currentTimeMillis() / 1000L,
@@ -1359,7 +1404,10 @@ object YouTubeMusicRepository {
             val albumsMap = LinkedHashMap<String, List<Song>>()
             val singlesReleaseTitles = mutableListOf<YtReleaseItem>()
 
-            for ((_, rel) in allReleases) {
+            for ((key, rel) in allReleases) {
+                if (!rel.coverUrl.isNullOrBlank()) {
+                    albumCoverUrlMap["${clean.lowercase()}|$key"] = rel.coverUrl
+                }
                 if (rel.isSingleOrEp) {
                     singlesReleaseTitles.add(rel)
                 } else {
@@ -1450,6 +1498,39 @@ object YouTubeMusicRepository {
         }
     }
 
+    private fun findAlbumHeaderThumbnailRecursive(node: Any?): String? {
+        when (node) {
+            is JSONObject -> {
+                val headerNode = node.optJSONObject("musicResponsiveHeaderRenderer")
+                    ?: node.optJSONObject("musicDetailHeaderRenderer")
+                    ?: node.optJSONObject("microformatDataRenderer")
+                if (headerNode != null) {
+                    val thumbs = headerNode.optJSONObject("thumbnail")
+                        ?.optJSONObject("musicThumbnailRenderer")
+                        ?.optJSONObject("thumbnail")
+                        ?.optJSONArray("thumbnails")
+                        ?: headerNode.optJSONObject("thumbnail")?.optJSONArray("thumbnails")
+                    if (thumbs != null && thumbs.length() > 0) {
+                        val url = thumbs.optJSONObject(thumbs.length() - 1)?.optString("url", "").orEmpty()
+                        if (url.isNotBlank()) return if (url.startsWith("//")) "https:$url" else url
+                    }
+                }
+                val keys = node.keys()
+                while (keys.hasNext()) {
+                    val found = findAlbumHeaderThumbnailRecursive(node.opt(keys.next()))
+                    if (!found.isNullOrBlank()) return found
+                }
+            }
+            is JSONArray -> {
+                for (i in 0 until node.length()) {
+                    val found = findAlbumHeaderThumbnailRecursive(node.opt(i))
+                    if (!found.isNullOrBlank()) return found
+                }
+            }
+        }
+        return null
+    }
+
     private fun fetchBrowseAlbumTracksById(
         browseId: String,
         artistName: String,
@@ -1461,28 +1542,27 @@ object YouTubeMusicRepository {
                 put("browseId", browseId)
             }
             val json = postInnertubeJson(YTM_BROWSE_URL, body, cookie) ?: return emptyList()
+            val mapKey = "${artistName.trim().lowercase()}|${albumTitle.trim().lowercase()}"
 
-            val headerCover = json.optJSONObject("header")
-                ?.let { hdr ->
-                    hdr.optJSONObject("musicDetailHeaderRenderer")
-                        ?: hdr.optJSONObject("musicResponsiveHeaderRenderer")
-                }
-                ?.optJSONObject("thumbnail")
-                ?.optJSONObject("musicThumbnailRenderer")
-                ?.optJSONObject("thumbnail")
-                ?.optJSONArray("thumbnails")
-                ?.let { arr -> arr.optJSONObject(arr.length() - 1)?.optString("url", "") }
+            val headerCover = findAlbumHeaderThumbnailRecursive(json)
                 ?.replace("w120-h120", "w544-h544")
+                ?.replace("w60-h60", "w544-h544")
                 ?.takeIf { it.isNotBlank() }
+                ?: albumCoverUrlMap[mapKey]
 
             val rawSongs = mutableListOf<Song>()
             collectMusicItemsRecursive(json, rawSongs, maxCount = 60)
 
             rawSongs.mapIndexed { index, song ->
+                val resolvedCover = if (!headerCover.isNullOrBlank()) {
+                    headerCover
+                } else {
+                    song.albumArtUri
+                }
                 song.copy(
                     artist = if (song.artist == "YouTube Music" || isGenericTrackTypeLabel(song.artist)) artistName else song.artist,
                     album = albumTitle,
-                    albumArtUri = song.albumArtUri ?: headerCover,
+                    albumArtUri = resolvedCover,
                     trackNumber = (index + 1).toString()
                 )
             }.distinctBy { it.id }

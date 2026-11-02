@@ -200,9 +200,14 @@ fun ArtistProfileDialog(
                     LaunchedEffect(albumName) {
                         if (albumTrackList.size < 5) {
                             isLoadingAlbumTracks = true
+                            val fallbackArt = fallbackCoverSong?.albumArtUri
                             val extra = YouTubeMusicRepository.fetchAlbumTracks(artistName, albumName)
                             if (extra.isNotEmpty()) {
-                                val combined = (initialPlayableSongs + extra).distinctBy { it.id }
+                                val combined = (initialPlayableSongs + extra).distinctBy { it.id }.map { s ->
+                                    if (s.albumArtUri.isNullOrBlank() && !fallbackArt.isNullOrBlank()) {
+                                        s.copy(albumArtUri = fallbackArt)
+                                    } else s
+                                }
                                 albumTrackList = combined
                             }
                             isLoadingAlbumTracks = false

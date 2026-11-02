@@ -749,7 +749,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 MiniPlayer(
                                     song = song,
                                     isPlaying = isPlaying,
-                                    isFavorite = favoriteIds.contains(song.id),
+                                    isFavorite = playerViewModel.isFavorite(song.id),
                                     progress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f),
                                     hazeState = hazeState,
                                     enableBlur = effectiveEnableBlur,
@@ -829,7 +829,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             NowPlayingScreen(
                                 song = song,
                                 isPlaying = isPlaying,
-                                isFavorite = favoriteIds.contains(song.id),
+                                isFavorite = playerViewModel.isFavorite(song.id),
                                 positionMs = positionMs,
                                 durationMs = durationMs,
                                 shuffleOn = shuffleOn,

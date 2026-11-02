@@ -151,8 +151,13 @@ fun NowPlayingScreen(
     val activeLyricLine = remember(lyrics, positionMs) {
         if (lyrics.isEmpty()) null
         else {
-            lyrics.lastOrNull { !it.isTranslation && it.timeStampMs <= positionMs + 180L }
-                ?: lyrics.firstOrNull { !it.isTranslation }
+            val hasSynced = lyrics.any { it.timeStampMs > 0L }
+            if (!hasSynced) {
+                lyrics.firstOrNull { !it.isTranslation }
+            } else {
+                lyrics.lastOrNull { !it.isTranslation && it.timeStampMs <= positionMs + 180L }
+                    ?: LyricLine(timeStampMs = 0L, content = "...", isInstrumental = true)
+            }
         }
     }
 
@@ -472,7 +477,7 @@ fun NowPlayingScreen(
                             )
                         }
 
-                        val isSavedAnywhere = isFavorite || playlists.any { pl -> !pl.isSystem && pl.songs.any { it.id == song.id } }
+                        val isSavedAnywhere = isFavorite || playlists.any { pl -> pl.songs.any { it.id == song.id } }
                         IconButton(
                             onClick = {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
@@ -482,7 +487,7 @@ fun NowPlayingScreen(
                             Icon(
                                 imageVector = if (isSavedAnywhere) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
                                 contentDescription = strings.addToPlaylist,
-                                tint = if (isSavedAnywhere) effectiveAccentColor else MaterialTheme.colorScheme.onSurface,
+                                tint = if (isSavedAnywhere) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface,
                                 modifier = Modifier.size(32.dp)
                             )
                         }
@@ -884,9 +889,9 @@ private fun AddToPlaylistOrFavoritesSheet(
                 trailingContent = {
                     if (isFavorite) {
                         Icon(
-                            imageVector = Icons.Filled.Check,
+                            imageVector = Icons.Filled.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = Color(0xFF4CAF50)
                         )
                     }
                 },
@@ -921,15 +926,15 @@ private fun AddToPlaylistOrFavoritesSheet(
                     Icon(
                         imageVector = Icons.Filled.AutoAwesome,
                         contentDescription = null,
-                        tint = if (isInUnified) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
+                        tint = if (isInUnified) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                     )
                 },
                 trailingContent = {
                     if (isInUnified) {
                         Icon(
-                            imageVector = Icons.Filled.Check,
+                            imageVector = Icons.Filled.CheckCircle,
                             contentDescription = null,
-                            tint = MaterialTheme.colorScheme.primary
+                            tint = Color(0xFF4CAF50)
                         )
                     }
                 },
@@ -994,7 +999,7 @@ private fun AddToPlaylistOrFavoritesSheet(
                                 Icon(
                                     imageVector = if (containsSong) Icons.Filled.CheckCircle else Icons.Filled.AddCircleOutline,
                                     contentDescription = null,
-                                    tint = if (containsSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
+                                    tint = if (containsSong) Color(0xFF4CAF50) else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)
                                 )
                             },
                             modifier = Modifier.clickable {
@@ -1215,11 +1220,14 @@ private fun FullScreenLyricsLayout(
         drawContent()
     })
 
-    val activeIndex = remember(lyrics, positionMs) {
-        if (lyrics.isEmpty()) -1
+    val hasSyncedTimestamps = remember(lyrics) {
+        lyrics.any { it.timeStampMs > 0L }
+    }
+
+    val activeIndex = remember(lyrics, positionMs, hasSyncedTimestamps) {
+        if (lyrics.isEmpty() || !hasSyncedTimestamps) -1
         else {
             lyrics.indexOfLast { !it.isTranslation && it.timeStampMs <= positionMs + 150L }
-                .coerceAtLeast(0)
         }
     }
 
@@ -1421,23 +1429,30 @@ private fun FullScreenLyricsLayout(
                             horizontalAlignment = Alignment.CenterHorizontally,
                             modifier = Modifier.fillMaxSize()
                         ) {
-                            if (displayMode == LyricsDisplayMode.SYNCED && visibleLines.firstOrNull()?.isInstrumental != true) {
+                            val firstLineTimeMs = visibleLines.firstOrNull()?.timeStampMs ?: 0L
+                            val showIntroDots = displayMode == LyricsDisplayMode.SYNCED &&
+                                hasSyncedTimestamps &&
+                                visibleLines.firstOrNull()?.isInstrumental != true &&
+                                firstLineTimeMs >= 1500L &&
+                                activeIndex < 0
+
+                            if (showIntroDots) {
                                 item(key = "intro_dots") {
-                                    val introActive = activeIndex <= 0 && positionMs < (visibleLines.firstOrNull()?.timeStampMs ?: 3000L)
                                     InstrumentalDotsIndicator(
-                                        isActive = introActive,
+                                        isActive = true,
                                         isPlaying = isPlaying,
                                         accentColor = accentColor,
-                                        inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.30f),
+                                        inactiveColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.22f),
                                         onClick = { onSeekToLine(0L) }
                                     )
                                 }
                             }
 
                             itemsIndexed(visibleLines) { index, line ->
-                                val isActive = displayMode == LyricsDisplayMode.SYNCED && (
-                                    index == activeIndex ||
-                                        (line.isTranslation && index - 1 == activeIndex)
+                                val isActive = displayMode == LyricsDisplayMode.SYNCED &&
+                                    activeIndex >= 0 && (
+                                        index == activeIndex ||
+                                            (line.isTranslation && index - 1 == activeIndex)
                                     )
 
                                 val targetColor = when {
@@ -1679,7 +1694,7 @@ private fun InstrumentalDotsIndicator(
                 label = "dotAlpha_$i"
             )
             val effectiveOffsetY = if (animateNow) bounceOffset.dp else 0.dp
-            val effectiveAlpha = if (isActive) pulseAlpha else (if (i == 2) 0.4f else 0.75f)
+            val effectiveAlpha = if (isActive) pulseAlpha else (if (i == 2) 0.14f else 0.24f)
 
             Box(
                 modifier = Modifier

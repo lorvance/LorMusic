@@ -118,9 +118,22 @@ fun YouTubeMusicScreen(
     onSwitchToLocal: () -> Unit
 ) {
     val strings = LocalStrings.current
+    val context = LocalContext.current
     var showWebLoginDialog by remember { mutableStateOf(false) }
+    var switchAccountMode by remember { mutableStateOf(false) }
     var showAccountMenuDialog by remember { mutableStateOf(false) }
     var pendingLoginEmail by remember { mutableStateOf<String?>(null) }
+    var accountDialogAvatar by remember(googleAccount?.avatarUrl) {
+        mutableStateOf<androidx.compose.ui.graphics.ImageBitmap?>(null)
+    }
+    LaunchedEffect(googleAccount?.avatarUrl) {
+        val url = googleAccount?.avatarUrl
+        if (!url.isNullOrBlank()) {
+            accountDialogAvatar = loadSongBitmap(context, "yt_avatar_${url.hashCode()}", url, null)
+        } else {
+            accountDialogAvatar = null
+        }
+    }
 
     Box(
         modifier = Modifier
@@ -134,7 +147,10 @@ fun YouTubeMusicScreen(
                 enableBlur = enableBlur,
                 useLiquidGlass = useLiquidGlass,
                 betaSeparateHeaderBubbles = betaSeparateHeaderBubbles,
-                onSignInClick = { showWebLoginDialog = true },
+                onSignInClick = {
+                    switchAccountMode = false
+                    showWebLoginDialog = true
+                },
                 onBackToLocal = onSwitchToLocal
             )
         } else {
@@ -241,88 +257,251 @@ fun YouTubeMusicScreen(
     if (showWebLoginDialog) {
         YtMusicRealWebLoginDialog(
             initialEmail = pendingLoginEmail,
-            onDismiss = { showWebLoginDialog = false },
+            clearCookiesFirst = switchAccountMode,
+            onDismiss = {
+                showWebLoginDialog = false
+                switchAccountMode = false
+            },
             onAuthSuccess = { cookie ->
                 showWebLoginDialog = false
+                switchAccountMode = false
                 onSignInWithCookie(cookie)
             }
         )
     }
 
     if (showAccountMenuDialog && googleAccount != null) {
-        AlertDialog(
+        val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+        val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+        val backdropColor = if (enableBlur) {
+            Color.Black.copy(alpha = 0.35f)
+        } else {
+            Color.Black.copy(alpha = 0.75f)
+        }
+        Dialog(
             onDismissRequest = { showAccountMenuDialog = false },
-            icon = {
-                Icon(
-                    imageVector = Icons.Filled.CloudDone,
-                    contentDescription = null,
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(36.dp)
-                )
-            },
-            title = {
-                Text(
-                    text = googleAccount.displayName,
-                    fontWeight = FontWeight.ExtraBold
-                )
-            },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Text(
-                        text = googleAccount.email,
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.primary,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                    Text(
-                        text = strings.googleConnectedDesc,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.75f)
-                    )
-                    FilledTonalButton(
-                        onClick = {
-                            showAccountMenuDialog = false
-                            onSyncGoogleLibrary()
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Filled.Sync, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(strings.syncWithGoogle)
-                    }
-                    OutlinedButton(
-                        onClick = {
-                            showAccountMenuDialog = false
-                            showWebLoginDialog = true
-                        },
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Icon(Icons.Filled.SwitchAccount, contentDescription = null)
-                        Spacer(Modifier.width(8.dp))
-                        Text(strings.switchAccount)
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showAccountMenuDialog = false }) {
-                    Text(strings.close)
-                }
-            },
-            dismissButton = {
-                TextButton(
-                    onClick = {
-                        runCatching {
-                            CookieManager.getInstance().removeAllCookies(null)
-                            CookieManager.getInstance().flush()
-                        }
-                        showAccountMenuDialog = false
-                        onSignOutGoogle()
-                    }
+            properties = DialogProperties(
+                usePlatformDefaultWidth = false,
+                decorFitsSystemWindows = false
+            )
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .background(backdropColor)
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) { showAccountMenuDialog = false },
+                contentAlignment = Alignment.BottomCenter
+            ) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                        .navigationBarsPadding()
+                        .clip(RoundedCornerShape(28.dp))
+                        .background(
+                            if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f)
+                            else surfaceContainerHigh
+                        )
+                        .border(
+                            1.dp,
+                            if (enableBlur) Color.White.copy(alpha = 0.18f)
+                            else outlineVariant.copy(alpha = 0.35f),
+                            RoundedCornerShape(28.dp)
+                        )
+                        .clickable(
+                            interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                            indication = null
+                        ) {}
                 ) {
-                    Text(strings.signOut, color = MaterialTheme.colorScheme.error)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(22.dp)
+                    ) {
+                        Row(
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(16.dp),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(52.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primaryContainer),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val bmp = accountDialogAvatar
+                                if (bmp != null) {
+                                    Image(
+                                        bitmap = bmp,
+                                        contentDescription = googleAccount.displayName,
+                                        contentScale = ContentScale.Crop,
+                                        modifier = Modifier.fillMaxSize()
+                                    )
+                                } else {
+                                    Text(
+                                        text = googleAccount.displayName.firstOrNull()?.uppercase() ?: "G",
+                                        style = MaterialTheme.typography.titleLarge,
+                                        fontWeight = FontWeight.ExtraBold,
+                                        color = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                }
+                            }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = googleAccount.displayName,
+                                    style = MaterialTheme.typography.titleLarge.copy(
+                                        fontWeight = FontWeight.ExtraBold
+                                    ),
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Spacer(modifier = Modifier.height(2.dp))
+                                Text(
+                                    text = googleAccount.email,
+                                    style = MaterialTheme.typography.titleSmall.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    ),
+                                    color = MaterialTheme.colorScheme.primary,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Surface(
+                            shape = RoundedCornerShape(18.dp),
+                            color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp)
+                            ) {
+                                Icon(
+                                    imageVector = Icons.Filled.CloudDone,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary,
+                                    modifier = Modifier.size(22.dp)
+                                )
+                                Text(
+                                    text = strings.googleConnectedDesc,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.weight(1f)
+                                )
+                            }
+                        }
+
+                        Spacer(modifier = Modifier.height(18.dp))
+
+                        Button(
+                            onClick = {
+                                showAccountMenuDialog = false
+                                onSyncGoogleLibrary()
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(50.dp),
+                            shape = RoundedCornerShape(20.dp),
+                            colors = ButtonDefaults.buttonColors(
+                                containerColor = MaterialTheme.colorScheme.primary,
+                                contentColor = MaterialTheme.colorScheme.onPrimary
+                            )
+                        ) {
+                            Icon(Icons.Filled.Sync, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = strings.syncWithGoogle,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                ),
+                                maxLines = 1,
+                                overflow = TextOverflow.Ellipsis
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        FilledTonalButton(
+                            onClick = {
+                                showAccountMenuDialog = false
+                                switchAccountMode = true
+                                showWebLoginDialog = true
+                            },
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .height(48.dp),
+                            shape = RoundedCornerShape(20.dp)
+                        ) {
+                            Icon(Icons.Filled.SwitchAccount, contentDescription = null, modifier = Modifier.size(20.dp))
+                            Spacer(Modifier.width(8.dp))
+                            Text(
+                                text = strings.switchAccount,
+                                style = MaterialTheme.typography.labelLarge.copy(
+                                    fontWeight = FontWeight.Bold
+                                )
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(10.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            TextButton(
+                                onClick = {
+                                    runCatching {
+                                        CookieManager.getInstance().removeAllCookies(null)
+                                        CookieManager.getInstance().flush()
+                                    }
+                                    showAccountMenuDialog = false
+                                    onSignOutGoogle()
+                                },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text(
+                                    text = strings.signOut,
+                                    color = MaterialTheme.colorScheme.error,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
+
+                            TextButton(
+                                onClick = { showAccountMenuDialog = false },
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .height(46.dp),
+                                shape = RoundedCornerShape(20.dp)
+                            ) {
+                                Text(
+                                    text = strings.close,
+                                    style = MaterialTheme.typography.labelLarge.copy(
+                                        fontWeight = FontWeight.SemiBold
+                                    )
+                                )
+                            }
+                        }
+                    }
                 }
             }
-        )
+        }
     }
 }
 
@@ -345,11 +524,8 @@ private const val YTCFG_PROBE_JS = """
 })();
 """
 
-private const val BITCHORD_LOGIN_URL =
-    "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&prompt=select_account&continue=https%3A%2F%2Fmusic.youtube.com%2F"
-
-private const val BITCHORD_SWITCHER_URL =
-    "https://www.youtube.com/signin?action_handle_signin=true&next=https%3A%2F%2Fmusic.youtube.com%2F&feature=channel_switcher"
+private const val YTM_WEB_LOGIN_URL =
+    "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dru%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
 
 private fun unquoteJsEvaluation(raw: String?): String? {
     if (raw.isNullOrBlank() || raw == "null" || raw == "undefined") return null
@@ -364,9 +540,14 @@ private fun unquoteJsEvaluation(raw: String?): String? {
     return trimmed
 }
 
-private fun mergeDomainCookies(cookieManager: CookieManager, vararg urls: String): String {
+private fun extractYoutubeMusicCookies(cookieManager: CookieManager): String {
     val map = LinkedHashMap<String, String>()
-    for (u in urls) {
+    val domains = listOf(
+        "https://youtube.com",
+        "https://www.youtube.com",
+        "https://music.youtube.com"
+    )
+    for (u in domains) {
         val raw = runCatching { cookieManager.getCookie(u) }.getOrNull().orEmpty()
         raw.split(';').forEach { part ->
             val idx = part.indexOf('=')
@@ -384,6 +565,7 @@ private fun mergeDomainCookies(cookieManager: CookieManager, vararg urls: String
 @Composable
 private fun YtMusicRealWebLoginDialog(
     initialEmail: String? = null,
+    clearCookiesFirst: Boolean = false,
     onDismiss: () -> Unit,
     onAuthSuccess: (String) -> Unit
 ) {
@@ -392,20 +574,13 @@ private fun YtMusicRealWebLoginDialog(
     var statusSubtitle by remember { mutableStateOf(strings.googleSignInSubtitle) }
     var webViewRef by remember { mutableStateOf<WebView?>(null) }
     var hasCompletedAuth by remember { mutableStateOf(false) }
-    var redirectedToSwitcher by remember { mutableStateOf(false) }
     val mainHandler = remember { Handler(Looper.getMainLooper()) }
 
     fun finishLogin(view: WebView?, metaJson: JSONObject? = null) {
         if (hasCompletedAuth) return
         val cm = CookieManager.getInstance()
         runCatching { cm.flush() }
-        val mergedCookies = mergeDomainCookies(
-            cm,
-            "https://music.youtube.com",
-            "https://www.youtube.com",
-            "https://youtube.com",
-            "https://accounts.google.com"
-        )
+        val mergedCookies = extractYoutubeMusicCookies(cm)
         if (!YouTubeMusicRepository.hasValidAuthCookie(mergedCookies)) return
         hasCompletedAuth = true
         YouTubeMusicRepository.updateSessionMetadata(
@@ -423,12 +598,7 @@ private fun YtMusicRealWebLoginDialog(
     fun probeYtcfgAndCapture(view: WebView?, attempt: Int = 0) {
         if (hasCompletedAuth || view == null) return
         val cm = CookieManager.getInstance()
-        val cookies = mergeDomainCookies(
-            cm,
-            "https://music.youtube.com",
-            "https://www.youtube.com",
-            "https://youtube.com"
-        )
+        val cookies = extractYoutubeMusicCookies(cm)
         val hasAuth = YouTubeMusicRepository.hasValidAuthCookie(cookies)
 
         view.evaluateJavascript(YTCFG_PROBE_JS) { raw ->
@@ -441,10 +611,10 @@ private fun YtMusicRealWebLoginDialog(
             val dataSync = meta?.optString("dataSyncId").orEmpty()
             val hasIdentity = dataSync.isNotBlank() || meta?.optString("pageId").orEmpty().isNotBlank()
 
-            if (hasAuth && (loggedIn || hasIdentity || attempt >= 5)) {
+            if (hasAuth && (loggedIn || hasIdentity || attempt >= 4)) {
                 finishLogin(view, meta)
             } else if (attempt < 14) {
-                mainHandler.postDelayed({ probeYtcfgAndCapture(view, attempt + 1) }, 450L)
+                mainHandler.postDelayed({ probeYtcfgAndCapture(view, attempt + 1) }, 400L)
             }
         }
     }
@@ -510,15 +680,14 @@ private fun YtMusicRealWebLoginDialog(
                             }
                             IconButton(
                                 onClick = {
-                                    redirectedToSwitcher = false
-                                    webViewRef?.loadUrl(BITCHORD_LOGIN_URL)
+                                    webViewRef?.loadUrl(YTM_WEB_LOGIN_URL)
                                 }
                             ) {
                                 Icon(Icons.Filled.Refresh, contentDescription = strings.refreshStream)
                             }
                             Spacer(Modifier.width(4.dp))
                             FilledTonalButton(
-                                onClick = { probeYtcfgAndCapture(webViewRef, attempt = 5) },
+                                onClick = { probeYtcfgAndCapture(webViewRef, attempt = 4) },
                                 shape = RoundedCornerShape(14.dp),
                                 contentPadding = PaddingValues(horizontal = 12.dp, vertical = 6.dp)
                             ) {
@@ -574,10 +743,14 @@ private fun YtMusicRealWebLoginDialog(
                                         isPageLoading = true
                                         val u = url.orEmpty()
                                         statusSubtitle = when {
-                                            u.contains("accounts.google.com") -> strings.googleSignInSubtitle
-                                            u.contains("channel_switcher") || u.contains("account_advanced") -> "Выбор канала YouTube..."
                                             u.contains("music.youtube.com") -> strings.syncingWithGoogle
                                             else -> strings.googleSignInSubtitle
+                                        }
+                                        val cookies = extractYoutubeMusicCookies(cookieManager)
+                                        if (u.startsWith("https://music.youtube.com") &&
+                                            YouTubeMusicRepository.hasValidAuthCookie(cookies)
+                                        ) {
+                                            probeYtcfgAndCapture(view)
                                         }
                                     }
 
@@ -585,23 +758,12 @@ private fun YtMusicRealWebLoginDialog(
                                         super.onPageFinished(view, url)
                                         isPageLoading = false
                                         val u = url.orEmpty()
-                                        val cookies = mergeDomainCookies(
-                                            cookieManager,
-                                            "https://music.youtube.com",
-                                            "https://www.youtube.com",
-                                            "https://youtube.com"
-                                        )
+                                        val cookies = extractYoutubeMusicCookies(cookieManager)
                                         if (YouTubeMusicRepository.hasValidAuthCookie(cookies)) {
-                                            if ((u.contains("youtube.com/signin") || u.contains("accounts.youtube.com")) &&
-                                                !u.contains("channel_switcher") &&
-                                                !redirectedToSwitcher
-                                            ) {
-                                                redirectedToSwitcher = true
-                                                view?.loadUrl(BITCHORD_SWITCHER_URL)
-                                                return
-                                            }
                                             if (u.startsWith("https://music.youtube.com")) {
                                                 probeYtcfgAndCapture(view)
+                                            } else if (!u.contains("accounts.google.com") && !u.contains("/signin")) {
+                                                view?.loadUrl("https://music.youtube.com/")
                                             }
                                         }
                                     }
@@ -612,21 +774,26 @@ private fun YtMusicRealWebLoginDialog(
                                     ): Boolean = false
                                 }
 
-                                runCatching {
-                                    clearCache(true)
-                                    clearHistory()
-                                    WebStorage.getInstance().deleteAllData()
-                                    cookieManager.removeAllCookies {
-                                        cookieManager.flush()
-                                        val targetUrl = if (!initialEmail.isNullOrBlank()) {
-                                            "$BITCHORD_LOGIN_URL&Email=${android.net.Uri.encode(initialEmail)}&login_hint=${android.net.Uri.encode(initialEmail)}"
-                                        } else {
-                                            BITCHORD_LOGIN_URL
+                                val targetUrl = if (!initialEmail.isNullOrBlank()) {
+                                    "$YTM_WEB_LOGIN_URL&Email=${android.net.Uri.encode(initialEmail)}&login_hint=${android.net.Uri.encode(initialEmail)}"
+                                } else {
+                                    YTM_WEB_LOGIN_URL
+                                }
+
+                                if (clearCookiesFirst) {
+                                    runCatching {
+                                        clearCache(true)
+                                        clearHistory()
+                                        WebStorage.getInstance().deleteAllData()
+                                        cookieManager.removeAllCookies {
+                                            cookieManager.flush()
+                                            loadUrl(targetUrl)
                                         }
+                                    }.onFailure {
                                         loadUrl(targetUrl)
                                     }
-                                }.onFailure {
-                                    loadUrl(BITCHORD_LOGIN_URL)
+                                } else {
+                                    loadUrl(targetUrl)
                                 }
                             }
                         }
@@ -1988,7 +2155,8 @@ private fun YtLibrariesTab(
                         IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
                     }
 
-                    Spacer(Modifier.width(10.dp))
+                    Spacer(Modifier.width(8.dp))
+                    Spacer(Modifier.weight(1f))
 
                     Box(
                         modifier = Modifier
@@ -2004,7 +2172,8 @@ private fun YtLibrariesTab(
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.Bold,
                             maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            overflow = TextOverflow.Ellipsis,
+                            textAlign = TextAlign.Center
                         )
                     }
 
@@ -2052,6 +2221,8 @@ private fun YtLibrariesTab(
                                 tint = if (shuffleOn) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.primary
                             )
                         }
+                    } else {
+                        Spacer(Modifier.width(54.dp))
                     }
                 } else {
                     Box(

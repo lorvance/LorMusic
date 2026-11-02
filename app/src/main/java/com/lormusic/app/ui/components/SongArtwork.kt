@@ -129,6 +129,21 @@ private fun scaleDownBitmapIfNeeded(source: Bitmap, maxDimPx: Int = 420): Bitmap
     }.getOrDefault(source)
 }
 
+private fun downloadRemoteBitmap(urlStr: String): Bitmap? {
+    return runCatching {
+        val normalized = if (urlStr.startsWith("//")) "https:$urlStr" else urlStr
+        val conn = (URL(normalized).openConnection() as HttpURLConnection).apply {
+            instanceFollowRedirects = true
+            connectTimeout = 6000
+            readTimeout = 6000
+            setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14) AppleWebKit/537.36 Chrome/131.0.0.0 Mobile Safari/537.36")
+        }
+        if (conn.responseCode in 200..299) {
+            conn.inputStream.use { BitmapFactory.decodeStream(it) }
+        } else null
+    }.getOrNull()
+}
+
 suspend fun loadSongBitmap(
     context: Context,
     cacheKey: String,
@@ -136,34 +151,48 @@ suspend fun loadSongBitmap(
     songUri: String?
 ): ImageBitmap? = withContext(Dispatchers.IO) {
     ArtworkCache.getBitmap(cacheKey)?.let { return@withContext it }
-    if (ArtworkCache.hasNoCover(cacheKey)) return@withContext null
+    val isRemote = (!albumArtUri.isNullOrBlank() && (albumArtUri.startsWith("http") || albumArtUri.startsWith("//"))) ||
+        (!songUri.isNullOrBlank() && (songUri.startsWith("yt://") || songUri.startsWith("http")))
+    if (!isRemote && ArtworkCache.hasNoCover(cacheKey)) return@withContext null
 
     var rawBitmap: Bitmap? = null
+    val normalizedArtUri = albumArtUri?.trim()?.let {
+        if (it.startsWith("//")) "https:$it" else it
+    }
 
-    if (!albumArtUri.isNullOrBlank() && (
-            albumArtUri.startsWith("http://") ||
-                albumArtUri.startsWith("https://") ||
-                albumArtUri.startsWith("file://") ||
-                albumArtUri.startsWith("/")
+    if (!normalizedArtUri.isNullOrBlank() && (
+            normalizedArtUri.startsWith("http://") ||
+                normalizedArtUri.startsWith("https://") ||
+                normalizedArtUri.startsWith("file://") ||
+                normalizedArtUri.startsWith("/")
             )
     ) {
         rawBitmap = runCatching {
             when {
-                albumArtUri.startsWith("http://") || albumArtUri.startsWith("https://") -> {
-                    val conn = (URL(albumArtUri).openConnection() as HttpURLConnection).apply {
-                        connectTimeout = 5000
-                        readTimeout = 5000
-                        setRequestProperty("User-Agent", "LorMusic/1.15.3")
-                    }
-                    conn.inputStream.use { BitmapFactory.decodeStream(it) }
+                normalizedArtUri.startsWith("http://") || normalizedArtUri.startsWith("https://") -> {
+                    downloadRemoteBitmap(normalizedArtUri)
+                        ?: if (normalizedArtUri.contains("w544-h544")) {
+                            downloadRemoteBitmap(normalizedArtUri.replace("w544-h544", "w226-h226"))
+                                ?: downloadRemoteBitmap(normalizedArtUri.replace("w544-h544", "w120-h120"))
+                        } else if (normalizedArtUri.contains("maxresdefault")) {
+                            downloadRemoteBitmap(normalizedArtUri.replace("maxresdefault", "hqdefault"))
+                        } else null
                 }
-                albumArtUri.startsWith("file://") -> {
-                    val path = Uri.parse(albumArtUri).path ?: albumArtUri.removePrefix("file://")
+                normalizedArtUri.startsWith("file://") -> {
+                    val path = Uri.parse(normalizedArtUri).path ?: normalizedArtUri.removePrefix("file://")
                     BitmapFactory.decodeFile(path)
                 }
-                else -> BitmapFactory.decodeFile(File(albumArtUri).absolutePath)
+                else -> BitmapFactory.decodeFile(File(normalizedArtUri).absolutePath)
             }
         }.getOrNull()
+    }
+
+    if (rawBitmap == null && !songUri.isNullOrBlank() && songUri.startsWith("yt://")) {
+        val videoId = songUri.removePrefix("yt://").substringBefore("?").substringBefore("&").trim()
+        if (videoId.isNotEmpty()) {
+            rawBitmap = downloadRemoteBitmap("https://i.ytimg.com/vi/$videoId/hqdefault.jpg")
+                ?: downloadRemoteBitmap("https://i.ytimg.com/vi/$videoId/mqdefault.jpg")
+        }
     }
 
     if (rawBitmap == null && !songUri.isNullOrBlank() && (songUri.startsWith("content://") || songUri.startsWith("file://"))) {
@@ -180,16 +209,18 @@ suspend fun loadSongBitmap(
         }.getOrNull()
     }
 
-    if (rawBitmap == null && !albumArtUri.isNullOrBlank() && albumArtUri.startsWith("content://")) {
+    if (rawBitmap == null && !normalizedArtUri.isNullOrBlank() && normalizedArtUri.startsWith("content://")) {
         rawBitmap = runCatching {
-            context.contentResolver.openInputStream(Uri.parse(albumArtUri))?.use { stream ->
+            context.contentResolver.openInputStream(Uri.parse(normalizedArtUri))?.use { stream ->
                 BitmapFactory.decodeStream(stream)
             }
         }.getOrNull()
     }
 
     val imgBmp = rawBitmap?.let { scaleDownBitmapIfNeeded(it, 420).asImageBitmap() }
-    ArtworkCache.putBitmap(cacheKey, imgBmp)
+    if (imgBmp != null || !isRemote) {
+        ArtworkCache.putBitmap(cacheKey, imgBmp)
+    }
     imgBmp
 }
 

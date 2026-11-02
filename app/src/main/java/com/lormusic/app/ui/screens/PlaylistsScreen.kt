@@ -696,10 +696,10 @@ private fun PlaylistDetailContent(
     BackHandler(onBack = onBack)
 
     val strings = LocalStrings.current
-    val context = LocalContext.current
     val view = LocalView.current
     var showAddTracksDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var selectedSourceInfoSong by remember { mutableStateOf<Song?>(null) }
     val firstSong = playlist.songs.firstOrNull()
     val isUnifiedPlaylist = playlist.isUnified || playlist.id == "sys_unified_favorites"
 
@@ -815,7 +815,7 @@ private fun PlaylistDetailContent(
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(start = 12.dp, end = 12.dp, top = 4.dp, bottom = 180.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 14.dp, top = 4.dp, bottom = 180.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     itemsIndexed(playlist.songs, key = { idx, s -> "${s.id}_$idx" }) { idx, song ->
@@ -831,19 +831,13 @@ private fun PlaylistDetailContent(
                                 )
                             }
                             if (isUnifiedPlaylist) {
+                                Spacer(Modifier.width(10.dp))
                                 TrackSourceBadgeBubble(
                                     song = song,
                                     bubbleModifier = { contentBubbleModifier(it) },
                                     onClick = {
                                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                        val isYt = song.isRemoteYt || song.id.startsWith("yt_") || song.uri.startsWith("yt://")
-                                        val isSc = song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("sc://")
-                                        val msg = when {
-                                            isYt -> strings.trackFromYtMusic
-                                            isSc -> strings.trackFromSoundCloud
-                                            else -> strings.trackFromLocal
-                                        }
-                                        Toast.makeText(context, msg, Toast.LENGTH_SHORT).show()
+                                        selectedSourceInfoSong = song
                                     }
                                 )
                                 Spacer(Modifier.width(4.dp))
@@ -880,7 +874,8 @@ private fun PlaylistDetailContent(
             ) {
                 IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
             }
-            Spacer(Modifier.width(10.dp))
+            Spacer(Modifier.width(8.dp))
+            Spacer(Modifier.weight(1f))
             Box(
                 modifier = Modifier
                     .weight(1f, fill = false)
@@ -899,8 +894,8 @@ private fun PlaylistDetailContent(
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
+            Spacer(Modifier.weight(1f))
             if (!playlist.isSystem) {
-                Spacer(Modifier.weight(1f))
                 Spacer(Modifier.width(8.dp))
                 Box(
                     modifier = Modifier
@@ -933,8 +928,19 @@ private fun PlaylistDetailContent(
                         modifier = Modifier.size(20.dp)
                     )
                 }
+            } else {
+                Spacer(Modifier.width(52.dp))
             }
         }
+    }
+
+    val sourceSong = selectedSourceInfoSong
+    if (sourceSong != null) {
+        TrackSourceInfoDialog(
+            song = sourceSong,
+            enableBlur = enableBlur,
+            onDismiss = { selectedSourceInfoSong = null }
+        )
     }
 
     if (showDeleteConfirmDialog) {
@@ -1195,10 +1201,11 @@ private fun TrackSourceBadgeBubble(
 ) {
     val isYt = song.isRemoteYt || song.id.startsWith("yt_") || song.uri.startsWith("yt://")
     val isSc = song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("sc://")
+    val iconColor = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.88f)
 
     Box(
         modifier = Modifier
-            .size(34.dp)
+            .size(38.dp)
             .clip(CircleShape)
             .then(bubbleModifier(CircleShape))
             .clickable(onClick = onClick),
@@ -1206,49 +1213,249 @@ private fun TrackSourceBadgeBubble(
     ) {
         when {
             isYt -> {
-                Canvas(modifier = Modifier.size(20.dp)) {
+                Canvas(modifier = Modifier.size(18.dp)) {
                     val c = center
                     val r = size.minDimension / 2f
-                    drawCircle(color = Color(0xFFFF0033), radius = r, center = c)
                     drawCircle(
-                        color = Color.White,
-                        radius = r * 0.56f,
+                        color = iconColor,
+                        radius = r * 0.86f,
                         center = c,
-                        style = Stroke(width = size.minDimension * 0.08f)
+                        style = Stroke(width = size.minDimension * 0.11f)
                     )
                     val triPath = Path().apply {
-                        val s = r * 0.28f
-                        moveTo(c.x - s * 0.65f, c.y - s)
-                        lineTo(c.x - s * 0.65f, c.y + s)
+                        val s = r * 0.36f
+                        moveTo(c.x - s * 0.60f, c.y - s)
+                        lineTo(c.x - s * 0.60f, c.y + s)
                         lineTo(c.x + s * 1.05f, c.y)
                         close()
                     }
-                    drawPath(path = triPath, color = Color.White)
+                    drawPath(path = triPath, color = iconColor)
                 }
             }
             isSc -> {
-                Box(
-                    modifier = Modifier
-                        .size(20.dp)
-                        .clip(CircleShape)
-                        .background(Color(0xFFFF5500)),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        painter = painterResource(id = R.drawable.ic_soundcloud),
-                        contentDescription = "SoundCloud",
-                        tint = Color.Unspecified,
-                        modifier = Modifier.size(16.dp)
-                    )
-                }
+                Icon(
+                    painter = painterResource(id = R.drawable.ic_soundcloud),
+                    contentDescription = "SoundCloud",
+                    tint = iconColor,
+                    modifier = Modifier.size(20.dp)
+                )
             }
             else -> {
                 Icon(
                     imageVector = Icons.Filled.MusicNote,
                     contentDescription = "Local",
-                    tint = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.size(17.dp)
+                    tint = iconColor,
+                    modifier = Modifier.size(18.dp)
                 )
+            }
+        }
+    }
+}
+
+@Composable
+private fun TrackSourceInfoDialog(
+    song: Song,
+    enableBlur: Boolean,
+    onDismiss: () -> Unit
+) {
+    val strings = LocalStrings.current
+    val isYt = song.isRemoteYt || song.id.startsWith("yt_") || song.uri.startsWith("yt://")
+    val isSc = song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("sc://")
+    val sourceTitle = when {
+        isYt -> strings.trackFromYtMusic
+        isSc -> strings.trackFromSoundCloud
+        else -> strings.trackFromLocal
+    }
+    val sourceSubtitle = when {
+        isYt -> "YouTube Music"
+        isSc -> "SoundCloud"
+        else -> "LorMusic"
+    }
+    val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+    val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+    val backdropColor = if (enableBlur) {
+        Color.Black.copy(alpha = 0.35f)
+    } else {
+        Color.Black.copy(alpha = 0.75f)
+    }
+
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false
+        )
+    ) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(backdropColor)
+                .clickable(
+                    interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .navigationBarsPadding()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f)
+                        else surfaceContainerHigh
+                    )
+                    .border(
+                        1.dp,
+                        if (enableBlur) Color.White.copy(alpha = 0.18f)
+                        else outlineVariant.copy(alpha = 0.35f),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { androidx.compose.foundation.interaction.MutableInteractionSource() },
+                        indication = null
+                    ) {}
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val badgeColor = MaterialTheme.colorScheme.onPrimaryContainer
+                            when {
+                                isYt -> {
+                                    Canvas(modifier = Modifier.size(24.dp)) {
+                                        val c = center
+                                        val r = size.minDimension / 2f
+                                        drawCircle(
+                                            color = badgeColor,
+                                            radius = r * 0.86f,
+                                            center = c,
+                                            style = Stroke(width = size.minDimension * 0.11f)
+                                        )
+                                        val triPath = Path().apply {
+                                            val s = r * 0.36f
+                                            moveTo(c.x - s * 0.60f, c.y - s)
+                                            lineTo(c.x - s * 0.60f, c.y + s)
+                                            lineTo(c.x + s * 1.05f, c.y)
+                                            close()
+                                        }
+                                        drawPath(path = triPath, color = badgeColor)
+                                    }
+                                }
+                                isSc -> {
+                                    Icon(
+                                        painter = painterResource(id = R.drawable.ic_soundcloud),
+                                        contentDescription = "SoundCloud",
+                                        tint = badgeColor,
+                                        modifier = Modifier.size(26.dp)
+                                    )
+                                }
+                                else -> {
+                                    Icon(
+                                        imageVector = Icons.Filled.MusicNote,
+                                        contentDescription = "Local",
+                                        tint = badgeColor,
+                                        modifier = Modifier.size(24.dp)
+                                    )
+                                }
+                            }
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = sourceTitle,
+                                style = MaterialTheme.typography.titleLarge.copy(
+                                    fontWeight = FontWeight.ExtraBold
+                                ),
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = sourceSubtitle,
+                                style = MaterialTheme.typography.titleSmall.copy(
+                                    fontWeight = FontWeight.SemiBold
+                                ),
+                                color = MaterialTheme.colorScheme.primary
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    Surface(
+                        shape = RoundedCornerShape(18.dp),
+                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(horizontal = 14.dp, vertical = 12.dp),
+                            verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(12.dp)
+                        ) {
+                            SongArtwork(
+                                seed = song.coverColorSeed,
+                                albumArtUri = song.albumArtUri,
+                                songUri = song.uri,
+                                cornerRadius = 12.dp,
+                                modifier = Modifier.size(46.dp)
+                            )
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(
+                                    text = song.title,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    fontWeight = FontWeight.Bold,
+                                    color = MaterialTheme.colorScheme.onSurface,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                                Text(
+                                    text = song.artist,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Button(
+                        onClick = onDismiss,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        colors = ButtonDefaults.buttonColors(
+                            containerColor = MaterialTheme.colorScheme.primary,
+                            contentColor = MaterialTheme.colorScheme.onPrimary
+                        )
+                    ) {
+                        Text(
+                            text = strings.close,
+                            style = MaterialTheme.typography.labelLarge.copy(
+                                fontWeight = FontWeight.Bold
+                            )
+                        )
+                    }
+                }
             }
         }
     }
