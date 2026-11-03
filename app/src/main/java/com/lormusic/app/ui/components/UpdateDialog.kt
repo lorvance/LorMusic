@@ -13,6 +13,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Bedtime
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.NewReleases
 import androidx.compose.material.icons.rounded.SystemUpdate
@@ -145,7 +146,7 @@ fun UpdateDialog(
         val outlineVariant = MaterialTheme.colorScheme.outlineVariant
 
         val backdropColor = if (enableBlur) {
-            Color.Black.copy(alpha = 0.35f)
+            Color.Black.copy(alpha = 0.55f)
         } else {
             Color.Black.copy(alpha = 0.75f)
         }
@@ -171,7 +172,7 @@ fun UpdateDialog(
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
-                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f)
+                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
                         else surfaceContainerHigh
                     )
                     .border(
@@ -393,3 +394,162 @@ fun UpdateDialog(
     }
 }
 }
+
+@Composable
+fun SleepTimerAutoUpdaterDialog(
+    currentRemainingSec: Int? = null,
+    enableBlur: Boolean = true,
+    onSelectMinutes: (Int?) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val strings = LocalStrings.current
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+        val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+        val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(backdropColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .navigationBarsPadding()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
+                        else surfaceContainerHigh
+                    )
+                    .border(
+                        1.dp,
+                        if (enableBlur) Color.White.copy(alpha = 0.18f)
+                        else outlineVariant.copy(alpha = 0.35f),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {}
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(22.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.Bedtime,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = strings.sleepTimerTitle,
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                            if (currentRemainingSec != null && currentRemainingSec > 0) {
+                                val mins = currentRemainingSec / 60
+                                val secs = currentRemainingSec % 60
+                                Text(
+                                    text = "%02d:%02d".format(mins, secs),
+                                    style = MaterialTheme.typography.titleMedium,
+                                    color = MaterialTheme.colorScheme.primary,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Column(
+                        modifier = Modifier.fillMaxWidth(),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        listOf(
+                            null to strings.sleepTimerOff,
+                            5 to strings.minutesFormat.format(5),
+                            15 to strings.minutesFormat.format(15),
+                            30 to strings.minutesFormat.format(30),
+                            60 to strings.minutesFormat.format(60)
+                        ).forEach { (mins, label) ->
+                            val isOff = mins == null
+                            Button(
+                                onClick = {
+                                    onSelectMinutes(mins)
+                                    onDismiss()
+                                },
+                                shape = RoundedCornerShape(18.dp),
+                                colors = if (isOff) {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        contentColor = MaterialTheme.colorScheme.error
+                                    )
+                                } else {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f),
+                                        contentColor = MaterialTheme.colorScheme.onPrimaryContainer
+                                    )
+                                },
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(48.dp)
+                            ) {
+                                Text(
+                                    text = label,
+                                    style = MaterialTheme.typography.titleSmall,
+                                    fontWeight = FontWeight.SemiBold
+                                )
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(strings.close, style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+            }
+        }
+    }
+}
+

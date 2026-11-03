@@ -180,6 +180,13 @@ fun NowPlayingScreen(
                     Modifier.background(MaterialTheme.colorScheme.background)
                 }
             )
+            .then(
+                if (showSleepDialog && enableBlur && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    Modifier.blur(24.dp)
+                } else {
+                    Modifier
+                }
+            )
     ) {
 
         Box(
@@ -307,7 +314,7 @@ fun NowPlayingScreen(
                             onClick = onOpenSongActions,
                             modifier = Modifier.align(Alignment.CenterEnd)
                         ) {
-                            Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = strings.songActions)
+                            Icon(Icons.Filled.Menu, contentDescription = strings.songActions)
                         }
                     }
 
@@ -768,35 +775,11 @@ fun NowPlayingScreen(
     }
 
     if (showSleepDialog) {
-        AlertDialog(
-            onDismissRequest = { showSleepDialog = false },
-            title = { Text(strings.sleepTimerDialogTitle) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf(
-                        null to strings.sleepTimerOff,
-                        5 to strings.minutesFormat.format(5),
-                        15 to strings.minutesFormat.format(15),
-                        30 to strings.minutesFormat.format(30),
-                        60 to strings.minutesFormat.format(60)
-                    ).forEach { (mins, label) ->
-                        TextButton(
-                            onClick = {
-                                onSelectSleepTimer(mins)
-                                showSleepDialog = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(label)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSleepDialog = false }) {
-                    Text(strings.close)
-                }
-            }
+        com.lormusic.app.ui.components.SleepTimerAutoUpdaterDialog(
+            currentRemainingSec = sleepTimerRemainingSec,
+            enableBlur = enableBlur,
+            onSelectMinutes = onSelectSleepTimer,
+            onDismiss = { showSleepDialog = false }
         )
     }
 

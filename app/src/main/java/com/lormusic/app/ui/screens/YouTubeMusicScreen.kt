@@ -42,6 +42,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.draw.scale
@@ -139,6 +140,13 @@ fun YouTubeMusicScreen(
         modifier = Modifier
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
+            .then(
+                if (showAccountMenuDialog && enableBlur && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    Modifier.blur(24.dp)
+                } else {
+                    Modifier
+                }
+            )
     ) {
         if (googleAccount == null) {
             YtSignInRequiredGate(
@@ -274,7 +282,7 @@ fun YouTubeMusicScreen(
         val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
         val outlineVariant = MaterialTheme.colorScheme.outlineVariant
         val backdropColor = if (enableBlur) {
-            Color.Black.copy(alpha = 0.35f)
+            Color.Black.copy(alpha = 0.55f)
         } else {
             Color.Black.copy(alpha = 0.75f)
         }
@@ -302,7 +310,7 @@ fun YouTubeMusicScreen(
                         .navigationBarsPadding()
                         .clip(RoundedCornerShape(28.dp))
                         .background(
-                            if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f)
+                            if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
                             else surfaceContainerHigh
                         )
                         .border(

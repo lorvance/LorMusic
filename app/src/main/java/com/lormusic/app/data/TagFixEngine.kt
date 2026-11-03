@@ -93,6 +93,24 @@ object TagFixEngine {
         context: Context,
         song: Song
     ): TagFixProposal = withContext(Dispatchers.IO) {
+        val acoustic = ShazamRecognizer.recognizeAudioFile(context, song.uri)
+        if (acoustic != null) {
+            val enriched = searchOnlineTrackMetadata("${acoustic.artist} ${acoustic.title}", song.durationMs)
+            val finalCover = enriched?.coverUrl ?: acoustic.coverUrl
+            val cachedCover = finalCover?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: finalCover
+            return@withContext TagFixProposal(
+                originalSong = song,
+                proposedTitle = acoustic.title,
+                proposedArtist = acoustic.artist,
+                proposedAlbum = if (acoustic.album.isNotBlank()) acoustic.album else (enriched?.album ?: song.album),
+                proposedYear = if (acoustic.year.isNotBlank()) acoustic.year else (enriched?.year ?: ""),
+                proposedGenre = if (acoustic.genre.isNotBlank()) acoustic.genre else (enriched?.genre ?: ""),
+                proposedCoverUri = cachedCover ?: song.albumArtUri,
+                isAudioRecognized = true,
+                reason = "Распознано через акустический отпечаток Shazam"
+            )
+        }
+
         val recognized = performDeepAudioRecognition(context, song)
         if (recognized != null) {
             val cachedCover = recognized.coverUrl?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: recognized.coverUrl
@@ -140,6 +158,24 @@ object TagFixEngine {
         }
 
         if (isRandom) {
+            val acoustic = ShazamRecognizer.recognizeAudioFile(context, song.uri)
+            if (acoustic != null) {
+                val enriched = searchOnlineTrackMetadata("${acoustic.artist} ${acoustic.title}", song.durationMs)
+                val finalCover = enriched?.coverUrl ?: acoustic.coverUrl
+                val cachedCover = finalCover?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: finalCover
+                return@withContext TagFixProposal(
+                    originalSong = song,
+                    proposedTitle = acoustic.title,
+                    proposedArtist = acoustic.artist,
+                    proposedAlbum = if (acoustic.album.isNotBlank()) acoustic.album else (enriched?.album ?: song.album),
+                    proposedYear = if (acoustic.year.isNotBlank()) acoustic.year else (enriched?.year ?: ""),
+                    proposedGenre = if (acoustic.genre.isNotBlank()) acoustic.genre else (enriched?.genre ?: ""),
+                    proposedCoverUri = cachedCover ?: song.albumArtUri,
+                    isAudioRecognized = true,
+                    reason = "Распознано через акустический отпечаток Shazam"
+                )
+            }
+
             val recognized = performDeepAudioRecognition(context, song)
             if (recognized != null) {
                 val cachedCover = recognized.coverUrl?.let { cacheRemoteCoverToDisk(context, song.id, it) } ?: recognized.coverUrl

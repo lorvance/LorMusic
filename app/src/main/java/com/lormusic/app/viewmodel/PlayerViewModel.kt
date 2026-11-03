@@ -1938,7 +1938,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun checkForUpdates(silent: Boolean = false) {
         viewModelScope.launch {
             if (!silent) updateState.value = UpdateState.Checking
-            val result = updateManager.checkForUpdates(BuildConfig.VERSION_NAME, includeBeta = enableBetaUpdates.value)
+            val result = updateManager.checkForUpdates(BuildConfig.VERSION_NAME, includeBeta = false)
             updateState.value = result
             if (result is UpdateState.Available) {
                 availableUpdateInfo.value = result.info

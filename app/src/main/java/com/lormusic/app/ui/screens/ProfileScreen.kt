@@ -132,7 +132,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
-                .then(if ((showLanguageDialog || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
+                .then(if ((showLanguageDialog || showSleepDialog || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
         ) {
             Column(
@@ -458,18 +458,6 @@ fun ProfileScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         ListItem(
-                            headlineContent = { Text(strings.betaUpdatesTitle) },
-                            supportingContent = { Text(strings.betaUpdatesDesc) },
-                            leadingContent = { Icon(Icons.Filled.BugReport, contentDescription = null) },
-                            trailingContent = {
-                                Switch(
-                                    checked = enableBetaUpdates,
-                                    onCheckedChange = onToggleBetaUpdates
-                                )
-                            }
-                        )
-                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                        ListItem(
                             headlineContent = { Text(strings.betaSeparateHeaderBubblesTitle) },
                             supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
                             leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
@@ -559,12 +547,10 @@ fun ProfileScreen(
                                 if (updateClickCount == 10) {
                                     playScreamSound()
                                     easterEggStage = 1
-                                    android.widget.Toast.makeText(context, strings.easterEgg1Title, android.widget.Toast.LENGTH_LONG).show()
                                 } else if (updateClickCount >= 20) {
                                     playScreamSound()
                                     easterEggStage = 2
-                                    android.widget.Toast.makeText(context, "${strings.easterEgg2Title} ${strings.easterEgg2Text}", android.widget.Toast.LENGTH_LONG).show()
-                                } else {
+                                } else if (updateClickCount == 1) {
                                     onCheckForUpdates()
                                 }
                             }
@@ -800,33 +786,11 @@ fun ProfileScreen(
         )
     }
     if (showSleepDialog) {
-        AlertDialog(
-            onDismissRequest = { showSleepDialog = false },
-            title = { Text(strings.sleepTimerTitle) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    listOf(
-                        null to strings.sleepTimerOff,
-                        5 to strings.minutesFormat.format(5),
-                        15 to strings.minutesFormat.format(15),
-                        30 to strings.minutesFormat.format(30),
-                        60 to strings.minutesFormat.format(60)
-                    ).forEach { (mins, label) ->
-                        TextButton(
-                            onClick = {
-                                onSetSleepTimer(mins)
-                                showSleepDialog = false
-                            },
-                            modifier = Modifier.fillMaxWidth()
-                        ) {
-                            Text(label)
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSleepDialog = false }) { Text(strings.close) }
-            }
+        com.lormusic.app.ui.components.SleepTimerAutoUpdaterDialog(
+            currentRemainingSec = null,
+            enableBlur = enableBlur,
+            onSelectMinutes = onSetSleepTimer,
+            onDismiss = { showSleepDialog = false }
         )
     }
     if (showLiquidGlassWarning != null) {
@@ -861,7 +825,7 @@ fun ProfileScreen(
         ) {
             val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
             val outlineVariant = MaterialTheme.colorScheme.outlineVariant
-            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.75f)
+            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -878,7 +842,7 @@ fun ProfileScreen(
                         .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
                         .navigationBarsPadding()
                         .clip(RoundedCornerShape(28.dp))
-                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f) else surfaceContainerHigh)
+                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f) else surfaceContainerHigh)
                         .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                         .padding(20.dp)
@@ -958,7 +922,7 @@ fun ProfileScreen(
                             "• Launch animations: equalizer for Default, ball bounce for Classic, pulse for Minimalism\n" +
                             "• Strict sequential track playback order when shuffle is off\n" +
                             "• Liquid Glass (Apple) design on Android 13+\n" +
-                            "• Beta update notifications and Markdown changelog\n" +
+                            "• Markdown update changelog and Auto-Updater\n" +
                             "• Automatic TagFix and Shazam track recognition\n" +
                             "• Dynamic album art backdrop gradient and direct track downloads"
                     com.lormusic.app.model.StringsUk ->
@@ -967,7 +931,7 @@ fun ProfileScreen(
                             "• Анімації запуску: еквалайзер для стандартної, політ кульки для класичної, підстрибування для мінімалізму\n" +
                             "• Виправлено випадковий порядок треків при вимкненому перемішуванні\n" +
                             "• Дизайн Liquid Glass (Apple) для Android 13+\n" +
-                            "• Отримання бета-оновлень та вікно автоапдейтера з Markdown\n" +
+                            "• Вікно автоапдейтера з Markdown\n" +
                             "• Автоматичний TagFix та розпізнавання через Shazam\n" +
                             "• Динамічний градієнт обкладинки та завантаження треків"
                     com.lormusic.app.model.StringsPl ->
@@ -984,7 +948,7 @@ fun ProfileScreen(
                             "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
                             "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
                             "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
-                            "• Получение бета-обновлений и редизайн окна автоапдейтера с Markdown\n" +
+                            "• Редизайн окна автоапдейтера с Markdown\n" +
                             "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
                             "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
                 }
@@ -1007,7 +971,7 @@ fun ProfileScreen(
         ) {
             val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
             val outlineVariant = MaterialTheme.colorScheme.outlineVariant
-            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.75f)
+            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1024,7 +988,7 @@ fun ProfileScreen(
                         .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
                         .navigationBarsPadding()
                         .clip(RoundedCornerShape(28.dp))
-                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f) else surfaceContainerHigh)
+                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f) else surfaceContainerHigh)
                         .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                         .padding(20.dp)
@@ -1079,7 +1043,7 @@ fun ProfileScreen(
         ) {
             val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
             val outlineVariant = MaterialTheme.colorScheme.outlineVariant
-            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.35f) else Color.Black.copy(alpha = 0.75f)
+            val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
             Box(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1096,7 +1060,7 @@ fun ProfileScreen(
                         .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
                         .navigationBarsPadding()
                         .clip(RoundedCornerShape(28.dp))
-                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.90f) else surfaceContainerHigh)
+                        .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f) else surfaceContainerHigh)
                         .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
                         .clickable(interactionSource = remember { MutableInteractionSource() }, indication = null) {}
                         .padding(20.dp)
