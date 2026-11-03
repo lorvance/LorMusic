@@ -7,7 +7,7 @@
 [![Compose](https://img.shields.io/badge/Jetpack%20Compose-Material%203%20Expressive-4285F4.svg?logo=jetpackcompose&logoColor=white)](https://developer.android.com/jetpack/compose)
 [![Media3](https://img.shields.io/badge/Media3-ExoPlayer-red.svg)](https://developer.android.com/media/media3)
 [![Releases](https://img.shields.io/github/v/release/Lorvance/LorMusic?logo=github&color=blue)](https://github.com/Lorvance/LorMusic/releases/latest)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![License: GPL-3.0](https://img.shields.io/badge/License-GPLv3-blue.svg)](LICENSE)
 
 ---
 
@@ -109,4 +109,4 @@ cd LorMusic
 ---
 
 ## 📄 License
-This project is licensed under the [MIT License](LICENSE).
+This project is licensed under the [GNU General Public License v3.0 (GPL-3.0)](LICENSE).
