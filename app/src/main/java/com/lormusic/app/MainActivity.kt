@@ -15,6 +15,7 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.viewModels
 import androidx.compose.animation.*
 import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.isSystemInDarkTheme
@@ -692,8 +693,18 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         )
                     }
 
+                    val isNavBarVisible = !betaAutoHideNavBar || !isNavBarHidden
+                    val navBarBottomExtraPadding by animateDpAsState(
+                        targetValue = if (!isNavBarVisible) 16.dp else 0.dp,
+                        animationSpec = tween(260),
+                        label = "navBarBottomExtraPadding"
+                    )
+
                     Column(
-                        modifier = Modifier.fillMaxWidth().then(if (selectedArtist != null) Modifier.navigationBarsPadding().padding(bottom = 16.dp) else Modifier)
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .navigationBarsPadding()
+                            .padding(bottom = if (selectedArtist != null) 16.dp else navBarBottomExtraPadding)
                     ) {
                         AnimatedVisibility(
                             visible = downloadingSongIds.isNotEmpty(),
@@ -791,7 +802,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         }
 
                         AnimatedVisibility(
-                            visible = !betaAutoHideNavBar || !isNavBarHidden,
+                            visible = isNavBarVisible,
                             enter = slideInVertically(tween(260)) { it } + fadeIn(tween(200)),
                             exit = slideOutVertically(tween(260)) { it } + fadeOut(tween(200))
                         ) {

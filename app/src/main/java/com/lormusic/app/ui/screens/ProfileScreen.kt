@@ -147,7 +147,7 @@ fun ProfileScreen(
                     .fillMaxSize()
                     .statusBarsPadding()
                     .verticalScroll(rememberScrollState())
-                    .padding(start = 20.dp, end = 20.dp, top = 74.dp, bottom = 14.dp)
+                    .padding(start = 20.dp, end = 20.dp, top = 74.dp, bottom = 185.dp)
             ) {
                 Text(
                     text = strings.appIconSectionTitle,
@@ -494,7 +494,6 @@ fun ProfileScreen(
                                     verticalAlignment = Alignment.CenterVertically,
                                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                                 ) {
-                                    Text(strings.betaAutoHideNavBarTitle)
                                     Surface(
                                         shape = RoundedCornerShape(6.dp),
                                         color = MaterialTheme.colorScheme.primaryContainer
@@ -504,9 +503,15 @@ fun ProfileScreen(
                                             style = MaterialTheme.typography.labelSmall,
                                             fontWeight = FontWeight.ExtraBold,
                                             color = MaterialTheme.colorScheme.primary,
+                                            maxLines = 1,
+                                            softWrap = false,
                                             modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
                                         )
                                     }
+                                    Text(
+                                        text = strings.betaAutoHideNavBarTitle,
+                                        style = MaterialTheme.typography.bodyLarge
+                                    )
                                 }
                             },
                             supportingContent = { Text(strings.betaAutoHideNavBarDesc) },
