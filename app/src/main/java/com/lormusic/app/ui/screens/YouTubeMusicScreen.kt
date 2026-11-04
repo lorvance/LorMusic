@@ -17,6 +17,7 @@ import android.webkit.WebViewClient
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -133,6 +134,12 @@ fun YouTubeMusicScreen(
             accountDialogAvatar = loadSongBitmap(context, "yt_avatar_${url.hashCode()}", url, null)
         } else {
             accountDialogAvatar = null
+        }
+    }
+
+    LaunchedEffect(googleAccount) {
+        if (googleAccount != null) {
+            onSyncGoogleLibrary()
         }
     }
 
@@ -553,7 +560,9 @@ private fun extractYoutubeMusicCookies(cookieManager: CookieManager): String {
     val domains = listOf(
         "https://youtube.com",
         "https://www.youtube.com",
-        "https://music.youtube.com"
+        "https://music.youtube.com",
+        "https://accounts.google.com",
+        "https://google.com"
     )
     for (u in domains) {
         val raw = runCatching { cookieManager.getCookie(u) }.getOrNull().orEmpty()
@@ -1796,7 +1805,7 @@ private fun YtRecentGridItem(
                     fontWeight = FontWeight.Bold,
                     color = if (isCurrent) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                 )
                 Text(
                     text = song.artist,
@@ -1889,7 +1898,7 @@ private fun YtRecentSongCard(
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = FontWeight.Bold,
                 maxLines = 1,
-                overflow = TextOverflow.Ellipsis
+                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
             )
             Text(
                 text = song.artist,
@@ -3021,7 +3030,7 @@ private fun YtSongRowWithDownload(
                     fontWeight = FontWeight.Bold,
                     color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                 )
                 Spacer(Modifier.height(2.dp))
                 Text(

@@ -504,6 +504,14 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT, enabled).apply()
     }
 
+    fun getBetaAutoHideNavBar(): Boolean {
+        return prefs.getBoolean(KEY_BETA_AUTO_HIDE_NAVBAR, false)
+    }
+
+    fun saveBetaAutoHideNavBar(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_AUTO_HIDE_NAVBAR, enabled).apply()
+    }
+
     fun getUseAlbumArtGradient(): Boolean {
         return prefs.getBoolean(KEY_ALBUM_ART_GRADIENT, true)
     }
@@ -798,5 +806,6 @@ class PreferencesRepository(context: Context) {
         private const val KEY_UNIFIED_FAVORITES = "unified_favorite_ids"
         private const val KEY_BETA_SEPARATE_HEADER_BUBBLES = "beta_separate_header_bubbles"
         private const val KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT = "beta_dynamic_playback_context"
+        private const val KEY_BETA_AUTO_HIDE_NAVBAR = "beta_auto_hide_navbar"
     }
 }

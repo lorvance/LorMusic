@@ -1,6 +1,7 @@
 package com.lormusic.app.ui.components
 
 import android.view.HapticFeedbackConstants
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -78,7 +79,7 @@ fun SongRow(
                     fontWeight = if (isCurrentSong) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis
+                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                 )
                 Text(
                     text = "${song.artist} • ${song.album} • ${formatDurationShort(song.durationMs)}",

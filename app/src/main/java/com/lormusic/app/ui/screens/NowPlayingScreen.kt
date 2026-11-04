@@ -9,6 +9,7 @@ import androidx.activity.compose.BackHandler
 import androidx.collection.LruCache
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.gestures.detectHorizontalDragGestures
@@ -464,7 +465,7 @@ fun NowPlayingScreen(
                                     style = MaterialTheme.typography.headlineSmall,
                                     fontWeight = FontWeight.ExtraBold,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                                 )
                             }
                             Spacer(Modifier.height(2.dp))
@@ -843,7 +844,7 @@ private fun AddToPlaylistOrFavoritesSheet(
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                     )
                     Text(
                         text = song.artist,
@@ -1272,7 +1273,7 @@ private fun FullScreenLyricsLayout(
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.onSurface,
                         maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
+                        modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                     )
                     Spacer(Modifier.height(2.dp))
                     Text(

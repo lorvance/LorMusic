@@ -8,6 +8,7 @@ import android.webkit.*
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -855,7 +856,7 @@ private fun ScHomeTab(
                                                 style = MaterialTheme.typography.bodyMedium,
                                                 fontWeight = FontWeight.Bold,
                                                 maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                                             )
                                             Text(
                                                 text = song.artist,
@@ -1948,7 +1949,7 @@ private fun ScUserProfileSheet(
                 LazyColumn(modifier = Modifier.heightIn(max = 190.dp)) {
                     items(userLikes.take(4)) { song ->
                         ListItem(
-                            headlineContent = { Text(song.title, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+                            headlineContent = { Text(song.title, maxLines = 1, modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)) },
                             supportingContent = { Text(song.artist, maxLines = 1, overflow = TextOverflow.Ellipsis) },
                             leadingContent = {
                                 SongArtwork(

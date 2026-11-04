@@ -11,6 +11,7 @@ import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
 import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -85,7 +86,8 @@ fun PlaylistsScreen(
     topAlbum: Pair<String, Int>? = null,
     hazeState: HazeState? = null,
     enableBlur: Boolean = true,
-    useLiquidGlass: Boolean = false
+    useLiquidGlass: Boolean = false,
+    onBackToLibrary: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     var selectedPlaylistId by remember { mutableStateOf<String?>(null) }
@@ -394,7 +396,19 @@ fun PlaylistsScreen(
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Spacer(Modifier.size(44.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(44.dp)
+                                .clip(CircleShape)
+                                .then(bubbleModifier(CircleShape))
+                                .clickable {
+                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                    onBackToLibrary()
+                                },
+                            contentAlignment = Alignment.Center
+                        ) {
+                            IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
+                        }
 
                         Box(
                             modifier = Modifier
@@ -692,7 +706,8 @@ private fun PlaylistDetailContent(
     contentBubbleModifier: @Composable (CornerBasedShape) -> Modifier = bubbleModifier,
     hazeState: HazeState? = null,
     enableBlur: Boolean = true,
-    useLiquidGlass: Boolean = false
+    useLiquidGlass: Boolean = false,
+    onBackToLibrary: () -> Unit = {}
 ) {
     BackHandler(onBack = onBack)
 
@@ -882,11 +897,10 @@ private fun PlaylistDetailContent(
             ) {
                 IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
             }
-            Spacer(Modifier.width(8.dp))
-            Spacer(Modifier.weight(1f))
+            Spacer(Modifier.width(10.dp))
             Box(
                 modifier = Modifier
-                    .weight(1f, fill = false)
+                    .weight(1f)
                     .height(44.dp)
                     .clip(RoundedCornerShape(22.dp))
                     .then(bubbleModifier(RoundedCornerShape(22.dp)))
@@ -898,13 +912,12 @@ private fun PlaylistDetailContent(
                     style = MaterialTheme.typography.titleMedium,
                     fontWeight = FontWeight.Bold,
                     maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
                     color = MaterialTheme.colorScheme.onSurface
                 )
             }
-            Spacer(Modifier.weight(1f))
             if (!playlist.isSystem) {
-                Spacer(Modifier.width(8.dp))
+                Spacer(Modifier.width(10.dp))
                 Box(
                     modifier = Modifier
                         .size(44.dp)
@@ -937,7 +950,7 @@ private fun PlaylistDetailContent(
                     )
                 }
             } else {
-                Spacer(Modifier.width(52.dp))
+                Spacer(Modifier.width(44.dp))
             }
         }
     }
@@ -1150,7 +1163,7 @@ private fun PlaylistDetailContent(
                                                 style = MaterialTheme.typography.bodyLarge,
                                                 fontWeight = FontWeight.SemiBold,
                                                 maxLines = 1,
-                                                overflow = TextOverflow.Ellipsis
+                                                modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                                             )
                                             Text(
                                                 text = song.artist,
@@ -1430,7 +1443,7 @@ private fun TrackSourceInfoDialog(
                                     fontWeight = FontWeight.Bold,
                                     color = MaterialTheme.colorScheme.onSurface,
                                     maxLines = 1,
-                                    overflow = TextOverflow.Ellipsis
+                                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
                                 )
                                 Text(
                                     text = song.artist,

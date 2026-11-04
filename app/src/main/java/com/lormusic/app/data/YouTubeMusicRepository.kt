@@ -148,7 +148,12 @@ object YouTubeMusicRepository {
 
     fun hasValidAuthCookie(cookie: String?): Boolean {
         if (cookie.isNullOrBlank()) return false
-        return extractSapisid(cookie) != null
+        if (extractSapisid(cookie) != null) return true
+        val parts = cookie.split(";").map { it.trim() }
+        return parts.any {
+            it.startsWith("SID=") || it.startsWith("__Secure-1PSID=") ||
+            it.startsWith("__Secure-3PSID=") || it.startsWith("LOGIN_INFO=")
+        }
     }
 
     private fun extractSapisid(cookie: String): String? {
@@ -159,6 +164,12 @@ object YouTubeMusicRepository {
             }
             if (part.startsWith("__Secure-3PAPISID=")) {
                 return part.removePrefix("__Secure-3PAPISID=").trim().takeIf { it.isNotEmpty() }
+            }
+            if (part.startsWith("__Secure-1PAPISID=")) {
+                return part.removePrefix("__Secure-1PAPISID=").trim().takeIf { it.isNotEmpty() }
+            }
+            if (part.startsWith("APISID=")) {
+                return part.removePrefix("APISID=").trim().takeIf { it.isNotEmpty() }
             }
         }
         return null

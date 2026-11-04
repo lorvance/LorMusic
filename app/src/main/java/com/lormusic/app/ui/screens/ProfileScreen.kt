@@ -38,7 +38,11 @@ import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
+import com.lormusic.app.ui.components.AboutAutoUpdaterDialog
 import com.lormusic.app.ui.components.AppIconVectorPreview
+import com.lormusic.app.ui.components.PlaybackSpeedAutoUpdaterDialog
+import com.lormusic.app.ui.components.SearchPlacementAutoUpdaterDialog
+import com.lormusic.app.ui.components.ThemeAutoUpdaterDialog
 import com.lormusic.app.ui.components.appBackdropSource
 import com.lormusic.app.ui.components.formatDurationShort
 import com.lormusic.app.ui.components.liquidGlassBubble
@@ -64,6 +68,7 @@ fun ProfileScreen(
     enableBetaUpdates: Boolean = false,
     betaSeparateHeaderBubbles: Boolean = false,
     betaDynamicPlaybackContext: Boolean = true,
+    betaAutoHideNavBar: Boolean = false,
     useAlbumArtGradient: Boolean = true,
     useMyWaveCoverGradient: Boolean = false,
     useDynamicPlayerColors: Boolean = true,
@@ -86,6 +91,7 @@ fun ProfileScreen(
     onToggleBetaUpdates: (Boolean) -> Unit = {},
     onToggleBetaSeparateHeaderBubbles: (Boolean) -> Unit = {},
     onToggleBetaDynamicPlaybackContext: (Boolean) -> Unit = {},
+    onToggleBetaAutoHideNavBar: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
     onToggleMyWaveCoverGradient: (Boolean) -> Unit = {},
     onToggleDynamicPlayerColors: (Boolean) -> Unit = {},
@@ -102,7 +108,8 @@ fun ProfileScreen(
     onOpenTagFix: () -> Unit,
     onExportBackup: () -> String = { "" },
     onImportBackup: (String) -> Boolean = { false },
-    onCheckForUpdates: () -> Unit = {}
+    onCheckForUpdates: () -> Unit = {},
+    onBackToLibrary: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
     val context = LocalContext.current
@@ -132,7 +139,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
-                .then(if ((showLanguageDialog || showSleepDialog || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
+                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showSearchPlacementDialog || showSpeedDialog || showAboutDialog || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
         ) {
             Column(
@@ -482,6 +489,37 @@ fun ProfileScreen(
                         )
                         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
                         ListItem(
+                            headlineContent = {
+                                Row(
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    Text(strings.betaAutoHideNavBarTitle)
+                                    Surface(
+                                        shape = RoundedCornerShape(6.dp),
+                                        color = MaterialTheme.colorScheme.primaryContainer
+                                    ) {
+                                        Text(
+                                            text = "BETA",
+                                            style = MaterialTheme.typography.labelSmall,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            color = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.padding(horizontal = 6.dp, vertical = 2.dp)
+                                        )
+                                    }
+                                }
+                            },
+                            supportingContent = { Text(strings.betaAutoHideNavBarDesc) },
+                            leadingContent = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
+                            trailingContent = {
+                                Switch(
+                                    checked = betaAutoHideNavBar,
+                                    onCheckedChange = onToggleBetaAutoHideNavBar
+                                )
+                            }
+                        )
+                        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                        ListItem(
                             headlineContent = { Text(strings.playbackSpeedTitle) },
                             supportingContent = { Text("${playbackSpeed}x") },
                             leadingContent = { Icon(Icons.Filled.Speed, contentDescription = null) },
@@ -619,7 +657,25 @@ fun ProfileScreen(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Spacer(Modifier.size(44.dp))
+                Box(
+                    modifier = Modifier
+                        .size(44.dp)
+                        .clip(CircleShape)
+                        .then(
+                            Modifier.liquidGlassBubble(
+                                shape = CircleShape,
+                                hazeState = hazeState,
+                                enableBlur = enableBlur && !pureMaterialYou,
+                                isLiquidGlass = useLiquidGlass && !pureMaterialYou
+                            )
+                        )
+                        .clickable {
+                            onBackToLibrary()
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    com.lormusic.app.ui.components.IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
+                }
                 Box(
                     modifier = Modifier
                         .height(44.dp)
@@ -668,121 +724,27 @@ fun ProfileScreen(
         }
     }
     if (showThemeDialog) {
-        AlertDialog(
-            onDismissRequest = { showThemeDialog = false },
-            title = { Text(strings.themeModeTitle) },
-            text = {
-                Column {
-                    ThemeMode.entries.forEach { mode ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onChangeThemeMode(mode)
-                                    showThemeDialog = false
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = themeMode == mode,
-                                onClick = {
-                                    onChangeThemeMode(mode)
-                                    showThemeDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text(mode.getDisplayName(strings))
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showThemeDialog = false }) { Text(strings.close) }
-            }
+        ThemeAutoUpdaterDialog(
+            currentTheme = themeMode,
+            enableBlur = enableBlur,
+            onSelectTheme = { onChangeThemeMode(it) },
+            onDismiss = { showThemeDialog = false }
         )
     }
     if (showSearchPlacementDialog) {
-        AlertDialog(
-            onDismissRequest = { showSearchPlacementDialog = false },
-            title = { Text(strings.searchPlacementTitle) },
-            text = {
-                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                    SearchBarPlacement.entries.forEach { option ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clip(RoundedCornerShape(14.dp))
-                                .clickable {
-                                    onChangeSearchBarPlacement(option)
-                                    showSearchPlacementDialog = false
-                                }
-                                .padding(vertical = 8.dp, horizontal = 4.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = searchBarPlacement == option,
-                                onClick = {
-                                    onChangeSearchBarPlacement(option)
-                                    showSearchPlacementDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Column {
-                                Text(
-                                    text = option.getDisplayName(strings),
-                                    style = MaterialTheme.typography.bodyMedium,
-                                    fontWeight = if (searchBarPlacement == option) FontWeight.Bold else FontWeight.Normal
-                                )
-                                Text(
-                                    text = option.getDisplaySubtitle(strings),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                                )
-                            }
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSearchPlacementDialog = false }) { Text(strings.close) }
-            }
+        SearchPlacementAutoUpdaterDialog(
+            currentPlacement = searchBarPlacement,
+            enableBlur = enableBlur,
+            onSelectPlacement = { onChangeSearchBarPlacement(it) },
+            onDismiss = { showSearchPlacementDialog = false }
         )
     }
     if (showSpeedDialog) {
-        val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-        AlertDialog(
-            onDismissRequest = { showSpeedDialog = false },
-            title = { Text(strings.playbackSpeedTitle) },
-            text = {
-                Column {
-                    speeds.forEach { sp ->
-                        Row(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .clickable {
-                                    onChangePlaybackSpeed(sp)
-                                    showSpeedDialog = false
-                                }
-                                .padding(vertical = 8.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            RadioButton(
-                                selected = playbackSpeed == sp,
-                                onClick = {
-                                    onChangePlaybackSpeed(sp)
-                                    showSpeedDialog = false
-                                }
-                            )
-                            Spacer(Modifier.width(8.dp))
-                            Text("${sp}x")
-                        }
-                    }
-                }
-            },
-            confirmButton = {
-                TextButton(onClick = { showSpeedDialog = false }) { Text(strings.close) }
-            }
+        PlaybackSpeedAutoUpdaterDialog(
+            currentSpeed = playbackSpeed,
+            enableBlur = enableBlur,
+            onSelectSpeed = { onChangePlaybackSpeed(it) },
+            onDismiss = { showSpeedDialog = false }
         )
     }
     if (showSleepDialog) {
@@ -911,52 +873,47 @@ fun ProfileScreen(
         }
     }
     if (showAboutDialog) {
-        AlertDialog(
-            onDismissRequest = { showAboutDialog = false },
-            title = { Text("${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}") },
-            text = {
-                val aboutBody = when (strings) {
-                    com.lormusic.app.model.StringsEn ->
-                        "Music player styled with Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                            "• Redesigned YouTube Music with floating bubbles and 4-row recents scroll\n" +
-                            "• Launch animations: equalizer for Default, ball bounce for Classic, pulse for Minimalism\n" +
-                            "• Strict sequential track playback order when shuffle is off\n" +
-                            "• Liquid Glass (Apple) design on Android 13+\n" +
-                            "• Markdown update changelog and Auto-Updater\n" +
-                            "• Automatic TagFix and Shazam track recognition\n" +
-                            "• Dynamic album art backdrop gradient and direct track downloads"
-                    com.lormusic.app.model.StringsUk ->
-                        "Музичний плеєр у стилі Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                            "• Новий дизайн YouTube Music з плаваючими баблами та 4-рядковим скролом недавніх\n" +
-                            "• Анімації запуску: еквалайзер для стандартної, політ кульки для класичної, підстрибування для мінімалізму\n" +
-                            "• Виправлено випадковий порядок треків при вимкненому перемішуванні\n" +
-                            "• Дизайн Liquid Glass (Apple) для Android 13+\n" +
-                            "• Вікно автоапдейтера з Markdown\n" +
-                            "• Автоматичний TagFix та розпізнавання через Shazam\n" +
-                            "• Динамічний градієнт обкладинки та завантаження треків"
-                    com.lormusic.app.model.StringsPl ->
-                        "Odtwarzacz muzyczny w stylu Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                            "• Integracja z YouTube Music oraz SoundCloud i wspólnymi playlistami\n" +
-                            "• Nowoczesny interfejs z pływającymi bąbelkami i efektami Liquid Glass\n" +
-                            "• Wiele źródeł tekstów piosenek z synchronizacją i tłumaczeniem\n" +
-                            "• Automatyczny TagFix oraz rozpoznawanie utworów przez Shazam\n" +
-                            "• Dynamiczny gradient okładki w odtwarzaczu i bezpośrednie pobieranie"
-                    else ->
-                        "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                            "• Интеграция SoundCloud с чартами, поиском и общими плейлистами с YouTube Music\n" +
-                            "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
-                            "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
-                            "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
-                            "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
-                            "• Редизайн окна автоапдейтера с Markdown\n" +
-                            "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
-                            "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
-                }
-                Text(aboutBody)
-            },
-            confirmButton = {
-                TextButton(onClick = { showAboutDialog = false }) { Text(strings.great) }
-            }
+        val aboutBody = when (strings) {
+            com.lormusic.app.model.StringsEn ->
+                "Music player styled with Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                    "• Redesigned YouTube Music with floating bubbles and 4-row recents scroll\n" +
+                    "• Launch animations: equalizer for Default, ball bounce for Classic, pulse for Minimalism\n" +
+                    "• Strict sequential track playback order when shuffle is off\n" +
+                    "• Liquid Glass (Apple) design on Android 13+\n" +
+                    "• Markdown update changelog and Auto-Updater\n" +
+                    "• Automatic TagFix and Shazam track recognition\n" +
+                    "• Dynamic album art backdrop gradient and direct track downloads"
+            com.lormusic.app.model.StringsUk ->
+                "Музичний плеєр у стилі Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                    "• Новий дизайн YouTube Music з плаваючими баблами та 4-рядковим скролом недавніх\n" +
+                    "• Анімації запуску: еквалайзер для стандартної, політ кульки для класичної, підстрибування для мінімалізму\n" +
+                    "• Виправлено випадковий порядок треків при вимкненому перемішуванні\n" +
+                    "• Дизайн Liquid Glass (Apple) для Android 13+\n" +
+                    "• Вікно автоапдейтера з Markdown\n" +
+                    "• Автоматичний TagFix та розпізнавання через Shazam\n" +
+                    "• Динамічний градієнт обкладинки та завантаження треків"
+            com.lormusic.app.model.StringsPl ->
+                "Odtwarzacz muzyczny w stylu Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                    "• Integracja z YouTube Music oraz SoundCloud i wspólnymi playlistami\n" +
+                    "• Nowoczesny interfejs z pływającymi bąbelkami i efektami Liquid Glass\n" +
+                    "• Wiele źródeł tekstów piosenek z synchronizacją i tłumaczeniem\n" +
+                    "• Automatyczny TagFix oraz rozpoznawanie utworów przez Shazam\n" +
+                    "• Dynamiczny gradient okładki w odtwarzaczu i bezpośrednie pobieranie"
+            else ->
+                "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
+                    "• Интеграция SoundCloud с чартами, поиском и общими плейлистами с YouTube Music\n" +
+                    "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
+                    "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
+                    "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
+                    "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
+                    "• Редизайн окна автоапдейтера с Markdown\n" +
+                    "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
+                    "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
+        }
+        AboutAutoUpdaterDialog(
+            aboutText = aboutBody,
+            enableBlur = enableBlur,
+            onDismiss = { showAboutDialog = false }
         )
     }
     if (easterEggStage == 1) {

@@ -362,6 +362,8 @@ class AppStrings(
     val pressBackAgainToExit: String get() = extra.pressBackAgainToExit
     val betaSeparateHeaderBubblesTitle: String get() = extra.betaSeparateHeaderBubblesTitle
     val betaSeparateHeaderBubblesDesc: String get() = extra.betaSeparateHeaderBubblesDesc
+    val betaAutoHideNavBarTitle: String get() = extra.betaAutoHideNavBarTitle
+    val betaAutoHideNavBarDesc: String get() = extra.betaAutoHideNavBarDesc
     val betaDynamicPlaybackContextTitle: String get() = extra.betaDynamicPlaybackContextTitle
     val betaDynamicPlaybackContextDesc: String get() = extra.betaDynamicPlaybackContextDesc
     val fromAlbum: String get() = extra.fromAlbum
@@ -474,6 +476,8 @@ class ExtraStrings(
     val pressBackAgainToExit: String,
     val betaSeparateHeaderBubblesTitle: String,
     val betaSeparateHeaderBubblesDesc: String,
+    val betaAutoHideNavBarTitle: String,
+    val betaAutoHideNavBarDesc: String,
     val betaDynamicPlaybackContextTitle: String,
     val betaDynamicPlaybackContextDesc: String,
     val fromAlbum: String,
@@ -837,6 +841,8 @@ val StringsRu = AppStrings(
         pressBackAgainToExit = "Нажмите ещё раз назад для выхода",
         betaSeparateHeaderBubblesTitle = "Раздельные пузыри в шапке",
         betaSeparateHeaderBubblesDesc = "Стрелка назад в отдельном пузыре слева, логотип и название сервиса по центру",
+        betaAutoHideNavBarTitle = "Автоскрытие панели навигации",
+        betaAutoHideNavBarDesc = "Скрывать нижнюю панель навигации при прокрутке вниз",
         betaDynamicPlaybackContextTitle = "Контекст воспроизведения",
         betaDynamicPlaybackContextDesc = "Отображать происхождение трека («Из альбома», «Из радио», «Сингл») вместо «Сейчас играет»",
         fromAlbum = "Из альбома",
@@ -1201,6 +1207,8 @@ val StringsEn = AppStrings(
         pressBackAgainToExit = "Press back again to exit",
         betaSeparateHeaderBubblesTitle = "Separate header bubbles",
         betaSeparateHeaderBubblesDesc = "Back arrow in a separate left bubble, service logo and name centered",
+        betaAutoHideNavBarTitle = "Auto-hide navigation bar",
+        betaAutoHideNavBarDesc = "Hide bottom navigation bar when scrolling down",
         betaDynamicPlaybackContextTitle = "Playback context",
         betaDynamicPlaybackContextDesc = "Display track origin (\"From album\", \"From radio\", \"Single\") instead of \"Now playing\"",
         fromAlbum = "From album",
@@ -1565,6 +1573,8 @@ val StringsUk = AppStrings(
         pressBackAgainToExit = "Натисніть ще раз назад для виходу",
         betaSeparateHeaderBubblesTitle = "Окремі бульбашки в шапці",
         betaSeparateHeaderBubblesDesc = "Стрілка назад в окремій бульбашці зліва, логотип та назва сервісу по центру",
+        betaAutoHideNavBarTitle = "Автоприховування панелі навігації",
+        betaAutoHideNavBarDesc = "Приховувати нижню панель навігації при прокручуванні вниз",
         betaDynamicPlaybackContextTitle = "Контекст відтворення",
         betaDynamicPlaybackContextDesc = "Відображати походження треку («З альбому», «З радіо», «Сингл») замість «Зараз грає»",
         fromAlbum = "З альбому",
@@ -1929,6 +1939,8 @@ val StringsPl = AppStrings(
         pressBackAgainToExit = "Naciśnij wstecz jeszcze raz, aby wyjść",
         betaSeparateHeaderBubblesTitle = "Osobne bąbelki w nagłówku",
         betaSeparateHeaderBubblesDesc = "Strzałka wstecz w osobnym bąbelku po lewej, logo i nazwa serwisu na środku",
+        betaAutoHideNavBarTitle = "Ukrywanie paska nawigacji",
+        betaAutoHideNavBarDesc = "Ukryj dolny pasek nawigacji podczas przewijania w dół",
         betaDynamicPlaybackContextTitle = "Kontekst odtwarzania",
         betaDynamicPlaybackContextDesc = "Wyświetlaj pochodzenie utworu („Z albumu”, „Z radia”, „Singiel”) zamiast „Teraz odtwarzane”",
         fromAlbum = "Z albumu",

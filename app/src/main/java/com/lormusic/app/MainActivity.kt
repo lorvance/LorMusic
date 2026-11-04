@@ -26,6 +26,10 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
@@ -170,6 +174,23 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     val isYtMusicMode by playerViewModel.isYtMusicMode
     val isSoundCloudMode by playerViewModel.isSoundCloudMode
+    val betaAutoHideNavBar by playerViewModel.betaAutoHideNavBar
+    var isNavBarHidden by remember { mutableStateOf(false) }
+
+    val navBarNestedScrollConnection = remember(betaAutoHideNavBar) {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                if (betaAutoHideNavBar) {
+                    if (available.y < -8f) {
+                        isNavBarHidden = true
+                    } else if (available.y > 8f) {
+                        isNavBarHidden = false
+                    }
+                }
+                return Offset.Zero
+            }
+        }
+    }
     val activeYtTab by playerViewModel.activeYtTab
     val activeScTab by playerViewModel.activeScTab
     val ytRecommendations by playerViewModel.ytRecommendations
@@ -251,6 +272,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
+                .nestedScroll(navBarNestedScrollConnection)
                 .then(
                     if (showUpdateDialog && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                         Modifier.blur(24.dp)
@@ -488,7 +510,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                             onToggleFavorite = playerViewModel::toggleFavorite,
                                             hazeState = hazeState,
                                             enableBlur = effectiveEnableBlur,
-                                            useLiquidGlass = effectiveUseLiquidGlass
+                                            useLiquidGlass = effectiveUseLiquidGlass,
+                                            onBackToLibrary = { selectedTab = LorTab.LIBRARY }
                                         )
 
                                         LorTab.SETTINGS -> {
@@ -514,6 +537,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
                                                 betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value,
                                                 betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
+                                                betaAutoHideNavBar = betaAutoHideNavBar,
                                                 useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                                 useMyWaveCoverGradient = playerViewModel.useMyWaveCoverGradient.value,
                                                 autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
@@ -535,6 +559,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onToggleBetaUpdates = playerViewModel::setEnableBetaUpdates,
                                                 onToggleBetaSeparateHeaderBubbles = playerViewModel::setBetaSeparateHeaderBubbles,
                                                 onToggleBetaDynamicPlaybackContext = playerViewModel::setBetaDynamicPlaybackContext,
+                                                onToggleBetaAutoHideNavBar = playerViewModel::setBetaAutoHideNavBar,
                                                 onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                                 onToggleMyWaveCoverGradient = playerViewModel::setUseMyWaveCoverGradient,
                                                 onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
@@ -555,7 +580,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onOpenTagFix = { showTagFixSheet = true },
                                                 onExportBackup = playerViewModel::exportBackup,
                                                 onImportBackup = playerViewModel::importBackup,
-                                                onCheckForUpdates = { playerViewModel.checkForUpdates(silent = false) }
+                                                onCheckForUpdates = { playerViewModel.checkForUpdates(silent = false) },
+                                                onBackToLibrary = { selectedTab = LorTab.LIBRARY }
                                             )
                                         }
                                     }
@@ -764,51 +790,57 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             }
                         }
 
-                        if (isYtMusicMode) {
-                            YtMusicBottomNavBar(
-                                selected = activeYtTab,
-                                onSelect = { tab ->
-                                    playerViewModel.selectYtTab(tab)
-                                },
-                                hazeState = hazeState,
-                                enableBlur = effectiveEnableBlur,
-                                useLiquidGlass = effectiveUseLiquidGlass,
-                                showBottomSearchButton = !isYtSearchTop,
-                                showLabels = playerViewModel.showNavBarLabels.value
-                            )
-                        } else if (isSoundCloudMode) {
-                            ScMusicBottomNavBar(
-                                selected = activeScTab,
-                                onSelect = { tab: com.lormusic.app.ui.components.ScTab ->
-                                    playerViewModel.selectScTab(tab)
-                                },
-                                hazeState = hazeState,
-                                enableBlur = effectiveEnableBlur,
-                                useLiquidGlass = effectiveUseLiquidGlass,
-                                showBottomSearchButton = true,
-                                showLabels = playerViewModel.showNavBarLabels.value
-                            )
-                        } else if (selectedArtist == null) {
-                            LorBottomNavBar(
-                                selected = selectedTab,
-                                onSelect = { tab ->
-                                    selectedTab = tab
-                                },
-                                hazeState = hazeState,
-                                enableBlur = effectiveEnableBlur,
-                                useLiquidGlass = effectiveUseLiquidGlass,
-                                showBottomSearchButton = !isLocalSearchTop,
-                                showLabels = playerViewModel.showNavBarLabels.value,
-                                isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
-                                onToggleLocalSearch = {
-                                    if (selectedTab != LorTab.LIBRARY) {
-                                        selectedTab = LorTab.LIBRARY
-                                        isBottomLocalSearchActive = true
-                                    } else {
-                                        isBottomLocalSearchActive = !isBottomLocalSearchActive
+                        AnimatedVisibility(
+                            visible = !betaAutoHideNavBar || !isNavBarHidden,
+                            enter = slideInVertically(tween(260)) { it } + fadeIn(tween(200)),
+                            exit = slideOutVertically(tween(260)) { it } + fadeOut(tween(200))
+                        ) {
+                            if (isYtMusicMode) {
+                                YtMusicBottomNavBar(
+                                    selected = activeYtTab,
+                                    onSelect = { tab ->
+                                        playerViewModel.selectYtTab(tab)
+                                    },
+                                    hazeState = hazeState,
+                                    enableBlur = effectiveEnableBlur,
+                                    useLiquidGlass = effectiveUseLiquidGlass,
+                                    showBottomSearchButton = !isYtSearchTop,
+                                    showLabels = playerViewModel.showNavBarLabels.value
+                                )
+                            } else if (isSoundCloudMode) {
+                                ScMusicBottomNavBar(
+                                    selected = activeScTab,
+                                    onSelect = { tab: com.lormusic.app.ui.components.ScTab ->
+                                        playerViewModel.selectScTab(tab)
+                                    },
+                                    hazeState = hazeState,
+                                    enableBlur = effectiveEnableBlur,
+                                    useLiquidGlass = effectiveUseLiquidGlass,
+                                    showBottomSearchButton = true,
+                                    showLabels = playerViewModel.showNavBarLabels.value
+                                )
+                            } else if (selectedArtist == null) {
+                                LorBottomNavBar(
+                                    selected = selectedTab,
+                                    onSelect = { tab ->
+                                        selectedTab = tab
+                                    },
+                                    hazeState = hazeState,
+                                    enableBlur = effectiveEnableBlur,
+                                    useLiquidGlass = effectiveUseLiquidGlass,
+                                    showBottomSearchButton = !isLocalSearchTop,
+                                    showLabels = playerViewModel.showNavBarLabels.value,
+                                    isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
+                                    onToggleLocalSearch = {
+                                        if (selectedTab != LorTab.LIBRARY) {
+                                            selectedTab = LorTab.LIBRARY
+                                            isBottomLocalSearchActive = true
+                                        } else {
+                                            isBottomLocalSearchActive = !isBottomLocalSearchActive
+                                        }
                                     }
-                                }
-                            )
+                                )
+                            }
                         }
                     }
                 }

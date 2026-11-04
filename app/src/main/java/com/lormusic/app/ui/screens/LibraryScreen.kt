@@ -375,61 +375,68 @@ fun LibraryScreen(
             ) {
                 @Composable
                 fun MoreMenuDropdown() {
-                    DropdownMenu(
-                        expanded = showMoreMenu,
-                        onDismissRequest = { showMoreMenu = false }
+                    MaterialTheme(
+                        shapes = MaterialTheme.shapes.copy(
+                            extraSmall = RoundedCornerShape(22.dp)
+                        )
                     ) {
-                        DropdownMenuItem(
-                            text = { Text(strings.playAll) },
-                            leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-                            onClick = {
-                                showMoreMenu = false
-                                val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
-                                onPlayQueue(filteredSongs, 0, false, ctx)
-                            },
-                            enabled = filteredSongs.isNotEmpty()
-                        )
-                        DropdownMenuItem(
-                            text = {
-                                Text(
-                                    text = strings.shuffleAll,
-                                    color = if (shuffleOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
-                                    fontWeight = if (shuffleOn) FontWeight.Bold else FontWeight.Normal
-                                )
-                            },
-                            leadingIcon = {
-                                Icon(
-                                    imageVector = Icons.Filled.Shuffle,
-                                    contentDescription = null,
-                                    tint = if (shuffleOn) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                                )
-                            },
-                            trailingIcon = if (shuffleOn) {
-                                {
-                                    Icon(
-                                        imageVector = Icons.Filled.Check,
-                                        contentDescription = null,
-                                        tint = MaterialTheme.colorScheme.primary,
-                                        modifier = Modifier.size(18.dp)
+                        DropdownMenu(
+                            expanded = showMoreMenu,
+                            onDismissRequest = { showMoreMenu = false },
+                            shape = RoundedCornerShape(24.dp)
+                        ) {
+                            DropdownMenuItem(
+                                text = { Text(strings.playAll) },
+                                leadingIcon = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
+                                    onPlayQueue(filteredSongs, 0, false, ctx)
+                                },
+                                enabled = filteredSongs.isNotEmpty()
+                            )
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        text = strings.shuffleAll,
+                                        color = if (shuffleOn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
+                                        fontWeight = if (shuffleOn) FontWeight.Bold else FontWeight.Normal
                                     )
-                                }
-                            } else null,
-                            onClick = {
-                                showMoreMenu = false
-                                val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
-                                onPlayQueue(filteredSongs, 0, true, ctx)
-                            },
-                            enabled = filteredSongs.isNotEmpty()
-                        )
-                        DropdownMenuItem(
-                            text = { Text(strings.rescan) },
-                            leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
-                            onClick = {
-                                showMoreMenu = false
-                                onRequestPermissionAndScan()
-                            },
-                            enabled = !isScanningLocal
-                        )
+                                },
+                                leadingIcon = {
+                                    Icon(
+                                        imageVector = Icons.Filled.Shuffle,
+                                        contentDescription = null,
+                                        tint = if (shuffleOn) MaterialTheme.colorScheme.primary else LocalContentColor.current
+                                    )
+                                },
+                                trailingIcon = if (shuffleOn) {
+                                    {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            tint = MaterialTheme.colorScheme.primary,
+                                            modifier = Modifier.size(18.dp)
+                                        )
+                                    }
+                                } else null,
+                                onClick = {
+                                    showMoreMenu = false
+                                    val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null
+                                    onPlayQueue(filteredSongs, 0, true, ctx)
+                                },
+                                enabled = filteredSongs.isNotEmpty()
+                            )
+                            DropdownMenuItem(
+                                text = { Text(strings.rescan) },
+                                leadingIcon = { Icon(Icons.Filled.Refresh, contentDescription = null) },
+                                onClick = {
+                                    showMoreMenu = false
+                                    onRequestPermissionAndScan()
+                                },
+                                enabled = !isScanningLocal
+                            )
+                        }
                     }
                 }
 
@@ -476,23 +483,30 @@ fun LibraryScreen(
                             modifier = Modifier.size(20.dp)
                         )
 
-                        DropdownMenu(
-                            expanded = showSortMenu,
-                            onDismissRequest = { showSortMenu = false }
+                        MaterialTheme(
+                            shapes = MaterialTheme.shapes.copy(
+                                extraSmall = RoundedCornerShape(22.dp)
+                            )
                         ) {
-                            SortOption.entries.forEach { option ->
-                                DropdownMenuItem(
-                                    text = { Text(option.getDisplayName(strings)) },
-                                    leadingIcon = {
-                                        if (selectedSort == option) {
-                                            Icon(Icons.Filled.Check, contentDescription = null)
+                            DropdownMenu(
+                                expanded = showSortMenu,
+                                onDismissRequest = { showSortMenu = false },
+                                shape = RoundedCornerShape(24.dp)
+                            ) {
+                                SortOption.entries.forEach { option ->
+                                    DropdownMenuItem(
+                                        text = { Text(option.getDisplayName(strings)) },
+                                        leadingIcon = {
+                                            if (selectedSort == option) {
+                                                Icon(Icons.Filled.Check, contentDescription = null)
+                                            }
+                                        },
+                                        onClick = {
+                                            onSelectSort(option)
+                                            showSortMenu = false
                                         }
-                                    },
-                                    onClick = {
-                                        onSelectSort(option)
-                                        showSortMenu = false
-                                    }
-                                )
+                                    )
+                                }
                             }
                         }
                     }
@@ -664,25 +678,27 @@ fun LibraryScreen(
                 }
 
                 AnimatedVisibility(visible = isSearchVisible) {
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = searchQuery,
-                        onValueChange = { searchQuery = it },
-                        placeholder = { Text(strings.searchPlaceholder) },
-                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        trailingIcon = {
-                            if (searchQuery.isNotEmpty()) {
-                                IconButton(onClick = { searchQuery = "" }) {
-                                    Icon(Icons.Filled.Clear, contentDescription = strings.clear)
+                    Column {
+                        Spacer(Modifier.height(14.dp))
+                        OutlinedTextField(
+                            value = searchQuery,
+                            onValueChange = { searchQuery = it },
+                            placeholder = { Text(strings.searchPlaceholder) },
+                            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
+                            trailingIcon = {
+                                if (searchQuery.isNotEmpty()) {
+                                    IconButton(onClick = { searchQuery = "" }) {
+                                        Icon(Icons.Filled.Clear, contentDescription = strings.clear)
+                                    }
                                 }
-                            }
-                        },
-                        singleLine = true,
-                        shape = RoundedCornerShape(18.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .then(bubbleModifier(RoundedCornerShape(18.dp)))
-                    )
+                            },
+                            singleLine = true,
+                            shape = RoundedCornerShape(18.dp),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .then(bubbleModifier(RoundedCornerShape(18.dp)))
+                        )
+                    }
                 }
             }
         }

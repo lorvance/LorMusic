@@ -76,6 +76,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
     val betaSeparateHeaderBubbles = mutableStateOf(prefs.getBetaSeparateHeaderBubbles())
     val betaDynamicPlaybackContext = mutableStateOf(prefs.getBetaDynamicPlaybackContext())
+    val betaAutoHideNavBar = mutableStateOf(prefs.getBetaAutoHideNavBar())
     val currentPlaybackContext = mutableStateOf<PlaybackContext?>(null)
     val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
     val useMyWaveCoverGradient = mutableStateOf(prefs.getUseMyWaveCoverGradient())
@@ -259,6 +260,26 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val existingCookie = ytMusicCookie.value
             if (!existingCookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(existingCookie)) {
                 syncGoogleLibrary()
+            } else {
+                val cmCookie = runCatching {
+                    val cm = android.webkit.CookieManager.getInstance()
+                    listOf(
+                        "https://music.youtube.com",
+                        "https://www.youtube.com",
+                        "https://youtube.com",
+                        "https://accounts.google.com"
+                    ).mapNotNull { runCatching { cm.getCookie(it) }.getOrNull() }
+                        .flatMap { it.split(";") }
+                        .map { it.trim() }
+                        .filter { it.isNotEmpty() }
+                        .distinct()
+                        .joinToString("; ")
+                }.getOrNull()
+                if (!cmCookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(cmCookie)) {
+                    ytMusicCookie.value = cmCookie
+                    prefs.saveYtMusicCookie(cmCookie)
+                    syncGoogleLibrary()
+                }
             }
 
             val existingScToken = soundCloudAuthToken.value
@@ -444,13 +465,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun enterYtMusicMode() {
         isYtMusicMode.value = true
         activeYtTab.value = YtMusicTab.HOME
-        if (googleAccount.value != null && YouTubeMusicRepository.hasValidAuthCookie(ytMusicCookie.value)) {
-            if (ytRecommendations.value.isEmpty()) {
-                refreshYtHomeFeed()
-            }
-            if (ytMyWaveSongs.value.isEmpty()) {
-                refreshYtMyWave(null)
-            }
+        if (googleAccount.value != null || YouTubeMusicRepository.hasValidAuthCookie(ytMusicCookie.value)) {
+            syncGoogleLibrary()
         } else {
             ytRecommendations.value = emptyList()
             ytRadioMixes.value = emptyList()
@@ -673,7 +689,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         viewModelScope.launch {
             isLoadingYtFeed.value = true
             val syncData = YouTubeMusicRepository.syncAuthenticatedAccount(cookie)
-            val profile = syncData.profile ?: GoogleAccountProfile(
+            val profile = syncData.profile ?: googleAccount.value ?: GoogleAccountProfile(
                 displayName = when (appLanguage.value) {
                     AppLanguage.EN -> "YouTube Music Account"
                     AppLanguage.UK -> "Обліковий запис YouTube Music"
@@ -772,7 +788,28 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun syncGoogleLibrary() {
-        val cookie = ytMusicCookie.value
+        var cookie = ytMusicCookie.value
+        if (cookie.isNullOrBlank() || !YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
+            val cmCookie = runCatching {
+                val cm = android.webkit.CookieManager.getInstance()
+                listOf(
+                    "https://music.youtube.com",
+                    "https://www.youtube.com",
+                    "https://youtube.com",
+                    "https://accounts.google.com"
+                ).mapNotNull { runCatching { cm.getCookie(it) }.getOrNull() }
+                    .flatMap { it.split(";") }
+                    .map { it.trim() }
+                    .filter { it.isNotEmpty() }
+                    .distinct()
+                    .joinToString("; ")
+            }.getOrNull()
+            if (!cmCookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(cmCookie)) {
+                cookie = cmCookie
+                ytMusicCookie.value = cmCookie
+                prefs.saveYtMusicCookie(cmCookie)
+            }
+        }
         if (!cookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(cookie)) {
             signInWithCookie(cookie)
         } else {
@@ -1881,6 +1918,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     fun setBetaDynamicPlaybackContext(enabled: Boolean) {
         betaDynamicPlaybackContext.value = enabled
         prefs.saveBetaDynamicPlaybackContext(enabled)
+    }
+
+    fun setBetaAutoHideNavBar(enabled: Boolean) {
+        betaAutoHideNavBar.value = enabled
+        prefs.saveBetaAutoHideNavBar(enabled)
     }
 
     fun setPlaybackContext(context: PlaybackContext?) {
