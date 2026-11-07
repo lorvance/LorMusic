@@ -79,7 +79,12 @@ fun SongRow(
                     fontWeight = if (isCurrentSong) FontWeight.Bold else FontWeight.SemiBold,
                     color = if (isCurrentSong) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                     maxLines = 1,
-                    modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE)
+                    modifier = Modifier.basicMarquee(
+                        iterations = Int.MAX_VALUE,
+                        initialDelayMillis = 2000,
+                        repeatDelayMillis = 2500,
+                        velocity = 35.dp
+                    )
                 )
                 Text(
                     text = "${song.artist} • ${song.album} • ${formatDurationShort(song.durationMs)}",
@@ -134,7 +139,9 @@ fun SongActionsBottomSheet(
     onDownloadSong: (() -> Unit)? = null,
     onToggleHidden: (() -> Unit)? = null,
     onDeleteFromDevice: (() -> Unit)? = null,
-    onOpenArtistProfile: ((String) -> Unit)? = null
+    onOpenArtistProfile: ((String) -> Unit)? = null,
+    onOpenEqualizer: (() -> Unit)? = null,
+    onOpenSpeedDialog: (() -> Unit)? = null
 ) {
     var showPlaylistPicker by remember { mutableStateOf(false) }
     var showTrackDetails by remember { mutableStateOf(false) }
@@ -409,6 +416,38 @@ fun SongActionsBottomSheet(
                             showTrackDetails = true
                         }
                     )
+                    if (onOpenEqualizer != null) {
+                        ListItem(
+                            headlineContent = { Text(strings.equalizerTitle) },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Filled.GraphicEq,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                onDismiss()
+                                onOpenEqualizer()
+                            }
+                        )
+                    }
+                    if (onOpenSpeedDialog != null) {
+                        ListItem(
+                            headlineContent = { Text(strings.playbackSpeedTitle) },
+                            leadingContent = {
+                                Icon(
+                                    Icons.Filled.Speed,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.colorScheme.primary
+                                )
+                            },
+                            modifier = Modifier.clickable {
+                                onDismiss()
+                                onOpenSpeedDialog()
+                            }
+                        )
+                    }
                     if (onDeleteFromDevice != null && !song.isRemoteYt && !song.uri.startsWith("http") && !song.uri.startsWith("yt://")) {
                         ListItem(
                             headlineContent = {

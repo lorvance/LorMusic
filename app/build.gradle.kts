@@ -15,8 +15,8 @@ android {
         applicationId = "com.lorvance.lormusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 53
-        versionName = "1.7.1.3"
+        versionCode = 57
+        versionName = "1.7.2"
     }
 
     val keystorePropsFile = rootProject.file("keystore.properties")

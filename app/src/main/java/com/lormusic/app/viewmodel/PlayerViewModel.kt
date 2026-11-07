@@ -35,9 +35,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private val prefs = PreferencesRepository(application)
     private val exoPlayer: ExoPlayer = SharedPlayerHolder.getOrCreate(application)
 
-    private var rawAllSongs: List<Song> = SampleData.songs
+    private var rawAllSongs: List<Song> = emptyList()
     val tagOverrides = mutableStateOf(prefs.getTagOverrides())
-    val allSongs = mutableStateOf<List<Song>>(SampleData.songs)
+    val allSongs = mutableStateOf<List<Song>>(emptyList())
     val localSongsCount = mutableStateOf(0)
     val isScanningLocal = mutableStateOf(false)
     val localFavoriteIds = mutableStateOf(prefs.getLocalFavoriteIds())
@@ -77,6 +77,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val betaSeparateHeaderBubbles = mutableStateOf(prefs.getBetaSeparateHeaderBubbles())
     val betaDynamicPlaybackContext = mutableStateOf(prefs.getBetaDynamicPlaybackContext())
     val betaAutoHideNavBar = mutableStateOf(prefs.getBetaAutoHideNavBar())
+    val betaCategorizedSettings = mutableStateOf(prefs.getBetaCategorizedSettings())
+    val betaHideDividers = mutableStateOf(prefs.getBetaHideDividers())
+    val isOnboardingCompleted = mutableStateOf(prefs.isOnboardingCompleted())
+    val preferredAudioDevice = mutableStateOf<android.media.AudioDeviceInfo?>(null)
     val currentPlaybackContext = mutableStateOf<PlaybackContext?>(null)
     val useAlbumArtGradient = mutableStateOf(prefs.getUseAlbumArtGradient())
     val useMyWaveCoverGradient = mutableStateOf(prefs.getUseMyWaveCoverGradient())
@@ -196,6 +200,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 recordRecentlyPlayed(withTags)
                 recordSongPlay(withTags)
                 loadLyricsFor(withTags)
+                com.lormusic.app.data.EqualizerManager.initAudioSession(exoPlayer.audioSessionId, prefs)
             }
         }
 
@@ -227,19 +232,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     init {
         exoPlayer.addListener(playerListener)
         exoPlayer.setPlaybackSpeed(playbackSpeed.value)
+        com.lormusic.app.data.EqualizerManager.initAudioSession(exoPlayer.audioSessionId, prefs)
         startPlaybackServiceIfNeeded()
 
         viewModelScope.launch {
             val context = getApplication<Application>()
-            val readyDemos = withContext(Dispatchers.IO) {
-                DemoSynthGenerator.ensureDemoTracksReady(context, SampleData.songs)
-            }
             val scannedLocal = withContext(Dispatchers.IO) {
                 LocalMusicScanner.scanDeviceMusic(context)
             }
             localSongsCount.value = scannedLocal.size
             val comparator = AlphaNumericComparator()
-            val combinedRaw = (scannedLocal + readyDemos).sortedWith { a, b ->
+            val combinedRaw = scannedLocal.sortedWith { a, b ->
                 comparator.compare(a.title, b.title)
             }
             rawAllSongs = combinedRaw
@@ -1563,6 +1566,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
+    fun setPreferredAudioDevice(device: android.media.AudioDeviceInfo?) {
+        preferredAudioDevice.value = device
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                exoPlayer.setPreferredAudioDevice(device)
+            }
+        } catch (_: Exception) {}
+    }
+
     fun setPlaybackSpeed(speed: Float) {
         val clamped = speed.coerceIn(0.5f, 2.0f)
         playbackSpeed.value = clamped
@@ -1925,6 +1937,21 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveBetaAutoHideNavBar(enabled)
     }
 
+    fun setBetaCategorizedSettings(enabled: Boolean) {
+        betaCategorizedSettings.value = enabled
+        prefs.saveBetaCategorizedSettings(enabled)
+    }
+
+    fun setBetaHideDividers(enabled: Boolean) {
+        betaHideDividers.value = enabled
+        prefs.saveBetaHideDividers(enabled)
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        isOnboardingCompleted.value = completed
+        prefs.setOnboardingCompleted(completed)
+    }
+
     fun setPlaybackContext(context: PlaybackContext?) {
         currentPlaybackContext.value = context
     }
@@ -1988,7 +2015,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else if (!silent) {
                 if (result is UpdateState.UpToDate) {
                     val currentStrings = resolveStrings(appLanguage.value)
-                    statusMessage.value = currentStrings.latestVersionInstalled
+                    statusMessage.value = "${currentStrings.latestVersionInstalled}: ${BuildConfig.VERSION_NAME} | ${BuildConfig.VERSION_CODE}"
                 } else if (result is UpdateState.Error) {
                     statusMessage.value = result.message
                 }

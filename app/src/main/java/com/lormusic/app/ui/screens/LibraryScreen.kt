@@ -120,7 +120,7 @@ fun LibraryScreen(
     val visibleFilters = remember(hideDemoTracks, hiddenSongIds) {
         LibraryFilter.entries.filter { filter ->
             when (filter) {
-                LibraryFilter.DEMO -> !hideDemoTracks
+                LibraryFilter.DEMO -> false
                 LibraryFilter.HIDDEN -> true
                 else -> true
             }

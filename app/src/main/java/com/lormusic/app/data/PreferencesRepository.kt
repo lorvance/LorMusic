@@ -512,6 +512,75 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_BETA_AUTO_HIDE_NAVBAR, enabled).apply()
     }
 
+    fun getBetaCategorizedSettings(): Boolean {
+        return prefs.getBoolean(KEY_BETA_CATEGORIZED_SETTINGS, true)
+    }
+
+    fun saveBetaCategorizedSettings(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_CATEGORIZED_SETTINGS, enabled).apply()
+    }
+
+    fun getBetaHideDividers(): Boolean {
+        return prefs.getBoolean(KEY_BETA_HIDE_DIVIDERS, false)
+    }
+
+    fun saveBetaHideDividers(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_HIDE_DIVIDERS, enabled).apply()
+    }
+
+    fun isOnboardingCompleted(): Boolean {
+        return prefs.getBoolean(KEY_ONBOARDING_COMPLETED, false)
+    }
+
+    fun setOnboardingCompleted(completed: Boolean) {
+        prefs.edit().putBoolean(KEY_ONBOARDING_COMPLETED, completed).apply()
+    }
+
+    fun getEqualizerEnabled(): Boolean {
+        return prefs.getBoolean(KEY_EQUALIZER_ENABLED, false)
+    }
+
+    fun saveEqualizerEnabled(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EQUALIZER_ENABLED, enabled).apply()
+    }
+
+    fun getEqualizerPreset(): Int {
+        return prefs.getInt(KEY_EQUALIZER_PRESET, 0)
+    }
+
+    fun saveEqualizerPreset(preset: Int) {
+        prefs.edit().putInt(KEY_EQUALIZER_PRESET, preset).apply()
+    }
+
+    fun getEqualizerBands(): List<Int> {
+        val raw = prefs.getString(KEY_EQUALIZER_BANDS, null) ?: return listOf(0, 0, 0, 0, 0)
+        return try {
+            raw.split(",").mapNotNull { it.trim().toIntOrNull() }.ifEmpty { listOf(0, 0, 0, 0, 0) }
+        } catch (_: Exception) {
+            listOf(0, 0, 0, 0, 0)
+        }
+    }
+
+    fun saveEqualizerBands(bands: List<Int>) {
+        prefs.edit().putString(KEY_EQUALIZER_BANDS, bands.joinToString(",")).apply()
+    }
+
+    fun getEqualizerBass(): Int {
+        return prefs.getInt(KEY_EQUALIZER_BASS, 0)
+    }
+
+    fun saveEqualizerBass(bass: Int) {
+        prefs.edit().putInt(KEY_EQUALIZER_BASS, bass.coerceIn(0, 1000)).apply()
+    }
+
+    fun getEqualizerVirtualizer(): Int {
+        return prefs.getInt(KEY_EQUALIZER_VIRTUALIZER, 0)
+    }
+
+    fun saveEqualizerVirtualizer(virtualizer: Int) {
+        prefs.edit().putInt(KEY_EQUALIZER_VIRTUALIZER, virtualizer.coerceIn(0, 1000)).apply()
+    }
+
     fun getUseAlbumArtGradient(): Boolean {
         return prefs.getBoolean(KEY_ALBUM_ART_GRADIENT, true)
     }
@@ -807,5 +876,13 @@ class PreferencesRepository(context: Context) {
         private const val KEY_BETA_SEPARATE_HEADER_BUBBLES = "beta_separate_header_bubbles"
         private const val KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT = "beta_dynamic_playback_context"
         private const val KEY_BETA_AUTO_HIDE_NAVBAR = "beta_auto_hide_navbar"
+        private const val KEY_BETA_CATEGORIZED_SETTINGS = "beta_categorized_settings_v2"
+        private const val KEY_BETA_HIDE_DIVIDERS = "beta_hide_dividers"
+        private const val KEY_EQUALIZER_ENABLED = "equalizer_enabled"
+        private const val KEY_EQUALIZER_PRESET = "equalizer_preset"
+        private const val KEY_EQUALIZER_BANDS = "equalizer_bands_csv"
+        private const val KEY_EQUALIZER_BASS = "equalizer_bass_boost"
+        private const val KEY_EQUALIZER_VIRTUALIZER = "equalizer_virtualizer"
+        private const val KEY_ONBOARDING_COMPLETED = "onboarding_completed_v1"
     }
 }

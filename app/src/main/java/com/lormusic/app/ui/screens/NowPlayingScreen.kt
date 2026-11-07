@@ -110,6 +110,7 @@ fun NowPlayingScreen(
     onOpenTagEditor: () -> Unit,
     onOpenArtistProfile: ((String) -> Unit)? = null,
     onTranslateLyrics: (() -> Unit)? = null,
+    onSelectAudioDevice: ((android.media.AudioDeviceInfo?) -> Unit)? = null,
     onClose: () -> Unit
 ) {
     val view = LocalView.current
@@ -133,6 +134,7 @@ fun NowPlayingScreen(
     var showQueueSheet by remember { mutableStateOf(false) }
     var showSleepDialog by remember { mutableStateOf(false) }
     var showAddToPlaylistSheet by remember { mutableStateOf(false) }
+    var showAudioOutputSheet by remember { mutableStateOf(false) }
 
     val accentColor = MaterialTheme.colorScheme.primary
 
@@ -712,6 +714,37 @@ fun NowPlayingScreen(
 
                     Spacer(Modifier.height(6.dp))
 
+                    val audioDevice = com.lormusic.app.data.rememberAudioOutputDevice(context)
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(16.dp))
+                            .clickable {
+                                view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                showAudioOutputSheet = true
+                            }
+                            .padding(horizontal = 14.dp, vertical = 2.dp)
+                    ) {
+                        Icon(
+                            imageVector = audioDevice.icon,
+                            contentDescription = null,
+                            tint = effectiveAccentColor,
+                            modifier = Modifier.size(16.dp)
+                        )
+                        Spacer(Modifier.width(6.dp))
+                        Text(
+                            text = audioDevice.name,
+                            style = MaterialTheme.typography.labelMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = effectiveAccentColor,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+
+                    Spacer(Modifier.height(4.dp))
+
                     LiveBottomLyricBanner(
                         activeLine = activeLyricLine,
                         isLoadingLyrics = isLoadingLyrics,
@@ -725,6 +758,15 @@ fun NowPlayingScreen(
                 }
             }
         }
+    }
+
+    if (showAudioOutputSheet) {
+        com.lormusic.app.data.AudioOutputPickerSheet(
+            onDismissRequest = { showAudioOutputSheet = false },
+            onSelectDevice = { device ->
+                onSelectAudioDevice?.invoke(device)
+            }
+        )
     }
 
     if (showQueueSheet) {

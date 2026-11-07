@@ -132,6 +132,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     var songForActionsSheet by remember { mutableStateOf<Song?>(null) }
     var songForTagEditor by remember { mutableStateOf<Song?>(null) }
     var showTagFixSheet by remember { mutableStateOf(false) }
+    var showEqualizerSheet by remember { mutableStateOf(false) }
+    var showSpeedDialog by remember { mutableStateOf(false) }
     var isBottomLocalSearchActive by remember { mutableStateOf(false) }
 
     var showLaunchSplash by rememberSaveable { mutableStateOf(true) }
@@ -539,6 +541,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value,
                                                 betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
                                                 betaAutoHideNavBar = betaAutoHideNavBar,
+                                                betaCategorizedSettings = playerViewModel.betaCategorizedSettings.value,
+                                                betaHideDividers = playerViewModel.betaHideDividers.value,
                                                 useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                                 useMyWaveCoverGradient = playerViewModel.useMyWaveCoverGradient.value,
                                                 autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
@@ -561,6 +565,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onToggleBetaSeparateHeaderBubbles = playerViewModel::setBetaSeparateHeaderBubbles,
                                                 onToggleBetaDynamicPlaybackContext = playerViewModel::setBetaDynamicPlaybackContext,
                                                 onToggleBetaAutoHideNavBar = playerViewModel::setBetaAutoHideNavBar,
+                                                onToggleBetaCategorizedSettings = playerViewModel::setBetaCategorizedSettings,
+                                                onToggleBetaHideDividers = playerViewModel::setBetaHideDividers,
                                                 onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                                 onToggleMyWaveCoverGradient = playerViewModel::setUseMyWaveCoverGradient,
                                                 onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
@@ -933,6 +939,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 onOpenSongActions = { songForActionsSheet = song },
                                 onOpenTagEditor = { songForTagEditor = song },
                                 onOpenArtistProfile = { artist -> showNowPlaying = false; playerViewModel.openArtistProfile(artist) },
+                                onSelectAudioDevice = playerViewModel::setPreferredAudioDevice,
                                 onClose = { showNowPlaying = false }
                             )
                         }
@@ -983,7 +990,30 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 },
                 onCreateUnifiedPlaylistWithSong = { name ->
                     playerViewModel.createPlaylist(name, listOf(targetSong), isUnified = true)
+                },
+                onOpenEqualizer = {
+                    songForActionsSheet = null
+                    showEqualizerSheet = true
+                },
+                onOpenSpeedDialog = {
+                    songForActionsSheet = null
+                    showSpeedDialog = true
                 }
+            )
+        }
+
+        if (showEqualizerSheet) {
+            com.lormusic.app.ui.components.EqualizerSheet(
+                onDismiss = { showEqualizerSheet = false }
+            )
+        }
+
+        if (showSpeedDialog) {
+            com.lormusic.app.ui.components.PlaybackSpeedAutoUpdaterDialog(
+                currentSpeed = playbackSpeed,
+                enableBlur = enableBlur,
+                onSelectSpeed = { playerViewModel.setPlaybackSpeed(it) },
+                onDismiss = { showSpeedDialog = false }
             )
         }
 
@@ -1094,6 +1124,36 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 appLanguage = appLanguage,
                 hazeState = hazeState,
                 enableBlur = enableBlur
+            )
+        }
+
+        val isOnboardingCompleted by playerViewModel.isOnboardingCompleted
+        if (!isOnboardingCompleted) {
+            com.lormusic.app.ui.screens.OnboardingScreen(
+                themeMode = themeMode,
+                useDynamicColor = useDynamicColor,
+                pureMaterialYou = pureMaterialYou,
+                enableBlur = enableBlur,
+                useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                showNavBarLabels = playerViewModel.showNavBarLabels.value,
+                searchBarPlacement = searchBarPlacement,
+                useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
+                useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
+                betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
+                onChangeThemeMode = playerViewModel::setThemeMode,
+                onToggleDynamicColor = playerViewModel::setUseDynamicColor,
+                onTogglePureMaterialYou = playerViewModel::setPureMaterialYou,
+                onToggleBlur = playerViewModel::setEnableBlur,
+                onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
+                onToggleShowNavBarLabels = playerViewModel::setShowNavBarLabels,
+                onChangeSearchBarPlacement = playerViewModel::setSearchBarPlacement,
+                onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
+                onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
+                onToggleBetaDynamicPlaybackContext = playerViewModel::setBetaDynamicPlaybackContext,
+                onOpenEqualizer = { showEqualizerSheet = true },
+                onFinishOnboarding = { _ ->
+                    playerViewModel.setOnboardingCompleted(true)
+                }
             )
         }
     }
