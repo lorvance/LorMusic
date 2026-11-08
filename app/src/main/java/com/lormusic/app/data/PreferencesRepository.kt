@@ -17,6 +17,116 @@ class PreferencesRepository(context: Context) {
 
     private val prefs = context.getSharedPreferences("lormusic_prefs", Context.MODE_PRIVATE)
 
+    private val backupSchema = mapOf(
+        KEY_LOCAL_FAVORITES to "StringSet",
+        KEY_FAVORITES to "StringSet",
+        KEY_YT_FAVORITES to "StringSet",
+        KEY_HIDDEN_SONGS to "StringSet",
+        KEY_ENABLE_BLUR to "Boolean",
+        KEY_SEARCH_PLACEMENT to "String",
+        KEY_ENABLE_PLAYER_SWIPE to "Boolean",
+        KEY_HIDE_DEMO_TRACKS to "Boolean",
+        KEY_THEME_MODE to "String",
+        KEY_APP_ICON to "String",
+        KEY_DYNAMIC_COLOR to "Boolean",
+        KEY_SQUIGGLY_SLIDER to "Boolean",
+        KEY_SORT_OPTION to "String",
+        KEY_LIBRARY_FILTER to "String",
+        KEY_PLAYBACK_SPEED to "Float",
+        KEY_LAST_SONG_ID to "String",
+        KEY_RECENTLY_PLAYED to "String",
+        KEY_GOOGLE_NAME to "String",
+        KEY_GOOGLE_EMAIL to "String",
+        KEY_GOOGLE_AVATAR to "String",
+        KEY_CLASSIC_LIBRARY to "Boolean",
+        KEY_CLASSIC_REMOVED_NOTICE_SEEN to "Boolean",
+        KEY_TAG_OVERRIDES to "String",
+        KEY_SAVED_YT_SONGS to "String",
+        KEY_SC_FAVORITES to "StringSet",
+        KEY_UNIFIED_FAVORITES to "StringSet",
+        KEY_SAVED_SC_SONGS to "String",
+        KEY_SC_USER_PROFILE to "String",
+        KEY_CUSTOM_PLAYLISTS to "String",
+        KEY_LIQUID_GLASS to "Boolean",
+        KEY_BETA_UPDATES to "Boolean",
+        KEY_BETA_SEPARATE_HEADER_BUBBLES to "Boolean",
+        KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT to "Boolean",
+        KEY_BETA_AUTO_HIDE_NAVBAR to "Boolean",
+        KEY_BETA_CATEGORIZED_SETTINGS to "Boolean",
+        KEY_BETA_HIDE_DIVIDERS to "Boolean",
+        KEY_ONBOARDING_COMPLETED to "Boolean",
+        KEY_EQUALIZER_ENABLED to "Boolean",
+        KEY_EQUALIZER_PRESET to "Int",
+        KEY_EQUALIZER_BANDS to "String",
+        KEY_EQUALIZER_BASS to "Int",
+        KEY_EQUALIZER_VIRTUALIZER to "Int",
+        KEY_ALBUM_ART_GRADIENT to "Boolean",
+        KEY_MY_WAVE_COVER_GRADIENT to "Boolean",
+        KEY_AUTO_TAGFIX to "Boolean",
+        KEY_RECENTS_VIEW_MODE to "String",
+        KEY_APP_LANGUAGE to "String",
+        KEY_DYNAMIC_PLAYER_COLORS to "Boolean",
+        KEY_PURE_MATERIAL_YOU to "Boolean",
+        KEY_SHOW_NAVBAR_LABELS to "Boolean",
+        KEY_UNFAVORITED_SONGS to "StringSet",
+        KEY_HAS_SEEN_BACKUP_NOTICE_1631 to "Boolean",
+        KEY_SONG_PLAY_COUNTS to "String",
+        KEY_SONG_META_MAP to "String",
+        KEY_ALBUM_PLAY_COUNTS to "String",
+        KEY_TOTAL_LISTENING_MS to "Long",
+        KEY_BETA_EXPANDING_SEARCH to "Boolean",
+    )
+
+    init {
+        // Old imports inferred primitive storage types from JSON numeric magnitude.
+        // Repair each incompatible field independently; never clear the preference file.
+        val editor = prefs.edit()
+        var changed = false
+        prefs.all.forEach { (key, value) ->
+            val type = backupSchema[key] ?: return@forEach
+            when (type) {
+                "Long" -> {
+                    val number = when (value) {
+                        is Long -> value
+                        is Int -> value.toLong()
+                        is String -> value.toLongOrNull()
+                        else -> null
+                    }?.coerceAtLeast(0L)
+                    if (value !is Long || value != number) {
+                        editor.putLong(key, number ?: 0L); changed = true
+                    }
+                }
+                "Int" -> if (value !is Int) {
+                    if (value is Long && value in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) editor.putInt(key, value.toInt())
+                    else editor.remove(key)
+                    changed = true
+                }
+                "Float" -> {
+                    val number = (value as? Number)?.toFloat()?.takeIf { it.isFinite() }?.coerceIn(0.1f, 5f)
+                    if (value !is Float || value != number) {
+                        if (number != null) editor.putFloat(key, number) else editor.remove(key)
+                        changed = true
+                    }
+                }
+                else -> {
+                    val valid = when (type) {
+                        "Boolean" -> value is Boolean
+                        "String" -> value is String
+                        "StringSet" -> value is Set<*> && value.all { it is String }
+                        else -> true
+                    }
+                    if (!valid) { editor.remove(key); changed = true }
+                }
+            }
+        }
+        if (changed) editor.commit()
+    }
+
+    fun getBetaExpandingSearch(): Boolean = prefs.getBoolean(KEY_BETA_EXPANDING_SEARCH, false)
+    fun saveBetaExpandingSearch(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_EXPANDING_SEARCH, enabled).apply()
+    }
+
     fun getLocalFavoriteIds(): Set<String> {
         val stored = prefs.getStringSet(KEY_LOCAL_FAVORITES, null)
         if (stored != null) return stored.toSet()
@@ -698,12 +808,20 @@ class PreferencesRepository(context: Context) {
 
     fun addListeningTimeMs(ms: Long) {
         if (ms <= 0) return
-        val current = prefs.getLong(KEY_TOTAL_LISTENING_MS, 0L)
-        prefs.edit().putLong(KEY_TOTAL_LISTENING_MS, current + ms).apply()
+        val current = getTotalListeningTimeMs()
+        prefs.edit().putLong(KEY_TOTAL_LISTENING_MS, current + ms.coerceAtMost(Long.MAX_VALUE - current)).apply()
     }
 
     fun getTotalListeningTimeMs(): Long {
-        return prefs.getLong(KEY_TOTAL_LISTENING_MS, 0L)
+        val stored = prefs.all[KEY_TOTAL_LISTENING_MS] ?: return 0L
+        val value = when (stored) {
+            is Long -> stored
+            is Int -> stored.toLong()
+            is String -> stored.toLongOrNull() ?: 0L
+            else -> 0L
+        }.coerceAtLeast(0L)
+        if (stored !is Long || stored != value) prefs.edit().putLong(KEY_TOTAL_LISTENING_MS, value).commit()
+        return value
     }
 
     fun getTopPlayedSong(): Triple<String, String, Int>? {
@@ -764,68 +882,121 @@ class PreferencesRepository(context: Context) {
     }
 
     fun exportBackupJson(): String {
-        val root = JSONObject()
-        root.put("app", "LorMusic")
-        root.put("version", "1.6.4")
-        root.put("timestamp", System.currentTimeMillis())
+        getTotalListeningTimeMs() // Repair legacy numeric storage before exporting.
+        val values = prefs.all.filterKeys { it in backupSchema }
+        val root = JSONObject().put("app", "LorMusic")
+            .put("formatVersion", 2)
+            .put("appVersion", com.lormusic.app.BuildConfig.VERSION_NAME)
+            .put("versionCode", com.lormusic.app.BuildConfig.VERSION_CODE)
+            .put("createdAt", java.time.OffsetDateTime.now().toString())
         val data = JSONObject()
-        prefs.all.forEach { (key, value) ->
+        values.forEach { (key, value) ->
+            data.put(key, if (value is Set<*>) JSONArray(value.toList()) else value)
+        }
+        root.put("settings", data)
+        val json = root.toString(2)
+        validateBackup(json)
+        return json
+    }
+
+    /** Validates the entire document without changing any preferences. */
+    fun validateBackup(json: String): String {
+        val root = JSONObject(json)
+        prepareBackup(root)
+        return "LorMusic " + root.optString("appVersion", root.optString("version", "legacy")) +
+            "\n" + root.optString("createdAt", root.optString("timestamp", "")) +
+            "\nФормат: " + root.optInt("formatVersion", 1)
+    }
+
+    private fun prepareBackup(root: JSONObject): Map<String, Any> {
+        require(!root.has("app") || root.get("app") == "LorMusic") { "Это не резервная копия LorMusic" }
+        val version = root.opt("formatVersion") ?: 1
+        require(version is Int && version in 1..2) { "Неподдерживаемая версия формата" }
+        val data = when {
+            version == 2 -> {
+                require(root.getString("app") == "LorMusic") { "Отсутствует название приложения" }
+                root.getJSONObject("settings")
+            }
+            root.has("preferences") -> root.getJSONObject("preferences")
+            else -> root // Compatibility with old plain preferences exports.
+        }
+        val result = linkedMapOf<String, Any>()
+        data.keys().forEach { key ->
+            val type = backupSchema[key] ?: return@forEach // Includes exclusion of credentials.
+            val value = data.get(key)
+            val converted: Any = when (type) {
+                "Boolean" -> { require(value is Boolean) { "Неверный тип: $key" }; value }
+                "String" -> { require(value is String) { "Неверный тип: $key" }; value }
+                "StringSet" -> {
+                    require(value is JSONArray) { "Неверный тип: $key" }
+                    (0 until value.length()).map { i ->
+                        val item = value.get(i)
+                        require(item is String) { "Неверный элемент: $key" }
+                        item
+                    }.toSet()
+                }
+                "Int", "Long" -> {
+                    require(value is Number) { "Неверное число: $key" }
+                    val number = try { java.math.BigDecimal(value.toString()).longValueExact() }
+                        catch (_: ArithmeticException) { throw IllegalArgumentException("Число вне диапазона: $key") }
+                    if (type == "Int") {
+                        require(number in Int.MIN_VALUE.toLong()..Int.MAX_VALUE.toLong()) { "Число вне диапазона: $key" }
+                        number.toInt()
+                    } else {
+                        require(number >= 0) { "Отрицательное время прослушивания" }
+                        number
+                    }
+                }
+                "Float" -> {
+                    require(value is Number) { "Неверное число: $key" }
+                    val number = value.toFloat()
+                    require(number.isFinite() && number in 0.1f..5f) { "Недопустимая скорость воспроизведения" }
+                    number
+                }
+                else -> error("Неизвестный тип")
+            }
+            // Collections stored as JSON strings must also be valid before committing.
+            if (converted is String) {
+                when (key) {
+                    KEY_TAG_OVERRIDES, KEY_SAVED_YT_SONGS, KEY_SAVED_SC_SONGS, KEY_CUSTOM_PLAYLISTS, KEY_RECENTLY_PLAYED -> JSONArray(converted)
+                    KEY_SONG_PLAY_COUNTS, KEY_SONG_META_MAP, KEY_ALBUM_PLAY_COUNTS, KEY_SC_USER_PROFILE -> JSONObject(converted)
+                }
+            }
+            result[key] = converted
+        }
+        require(result.isNotEmpty()) { "В файле нет поддерживаемых настроек LorMusic" }
+        return result
+    }
+
+    fun importBackupJson(jsonString: String): Boolean = try {
+        val values = prepareBackup(JSONObject(jsonString))
+        val previous = prefs.all.filterKeys { it in values }
+        fun applyValues(data: Map<String, Any?>, removed: Set<String> = emptySet()): Boolean {
+        val editor = prefs.edit()
+        removed.forEach { editor.remove(it) }
+        data.forEach { (key, value) ->
             when (value) {
-                is Boolean -> data.put(key, value)
-                is Int -> data.put(key, value)
-                is Long -> data.put(key, value)
-                is Float -> data.put(key, value.toDouble())
-                is String -> data.put(key, value)
+                is Boolean -> editor.putBoolean(key, value)
+                is Int -> editor.putInt(key, value)
+                is Long -> editor.putLong(key, value)
+                is Float -> editor.putFloat(key, value)
+                is String -> editor.putString(key, value)
                 is Set<*> -> {
-                    val arr = JSONArray()
-                    value.forEach { if (it is String) arr.put(it) }
-                    data.put(key, arr)
+                    @Suppress("UNCHECKED_CAST")
+                    editor.putStringSet(key, value as Set<String>)
                 }
             }
         }
-        root.put("preferences", data)
-        return root.toString(2)
-    }
-
-    fun importBackupJson(jsonString: String): Boolean {
-        return try {
-            val root = JSONObject(jsonString)
-            val data = if (root.has("preferences")) root.getJSONObject("preferences") else root
-            val editor = prefs.edit()
-            val keys = data.keys()
-            while (keys.hasNext()) {
-                val key = keys.next()
-                if (data.isNull(key)) continue
-                val value = data.get(key)
-                when (value) {
-                    is Boolean -> editor.putBoolean(key, value)
-                    is Int -> editor.putInt(key, value)
-                    is Long -> editor.putLong(key, value)
-                    is Double -> {
-                        if (key == KEY_PLAYBACK_SPEED) {
-                            editor.putFloat(key, value.toFloat())
-                        } else {
-                            editor.putLong(key, value.toLong())
-                        }
-                    }
-                    is String -> editor.putString(key, value)
-                    is JSONArray -> {
-                        val set = mutableSetOf<String>()
-                        for (i in 0 until value.length()) {
-                            set.add(value.getString(i))
-                        }
-                        editor.putStringSet(key, set)
-                    }
-                }
-            }
-            editor.apply()
-            true
-        } catch (_: Exception) {
+        return editor.commit()
+        }
+        if (applyValues(values)) true else {
+            applyValues(previous, values.keys - previous.keys)
             false
         }
-    }
+    } catch (_: Exception) { false }
 
     companion object {
+        private const val KEY_BETA_EXPANDING_SEARCH = "beta_expanding_search"
         private const val KEY_FAVORITES = "favorite_song_ids"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"
         private const val KEY_ENABLE_BLUR = "enable_backdrop_blur"

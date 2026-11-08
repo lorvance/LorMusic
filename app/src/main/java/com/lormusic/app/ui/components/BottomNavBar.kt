@@ -101,6 +101,7 @@ fun LorBottomNavBar(
     isLocalSearchActive: Boolean = false,
     showLabels: Boolean = false,
     onToggleLocalSearch: () -> Unit = {},
+    applyNavigationInsets: Boolean = true,
     modifier: Modifier = Modifier
 ) {
     val view = LocalView.current
@@ -124,7 +125,7 @@ fun LorBottomNavBar(
     Row(
         modifier = modifier
             .fillMaxWidth()
-            .navigationBarsPadding()
+            .then(if (applyNavigationInsets) Modifier.navigationBarsPadding() else Modifier)
             .padding(horizontal = 14.dp, vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)

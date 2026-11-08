@@ -1,7 +1,17 @@
 package com.lormusic.app.ui.screens
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.core.animateDpAsState
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.platform.LocalSoftwareKeyboardController
+import androidx.compose.runtime.saveable.rememberSaveable
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.Crossfade
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -62,6 +72,8 @@ fun LibraryScreen(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     classicLibraryDesign: Boolean = false,
+    betaExpandingSearch: Boolean = false,
+    onCloseExternalSearch: () -> Unit = {},
     showTopSearchBar: Boolean = true,
     externalSearchActive: Boolean = false,
     selectedFilter: LibraryFilter,
@@ -87,17 +99,35 @@ fun LibraryScreen(
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
-    var isTopSearchExpanded by remember { mutableStateOf(false) }
-    var searchQuery by remember { mutableStateOf("") }
+    var isTopSearchExpanded by rememberSaveable { mutableStateOf(false) }
+    var searchQuery by rememberSaveable { mutableStateOf("") }
 
-    val isSearchVisible = if (showTopSearchBar) isTopSearchExpanded else externalSearchActive
+    val isSearchVisible = if (showTopSearchBar) isTopSearchExpanded else externalSearchActive || (betaExpandingSearch && isTopSearchExpanded)
     LaunchedEffect(isSearchVisible) {
         if (!isSearchVisible) {
             searchQuery = ""
         }
     }
 
+    val searchFocus = remember { FocusRequester() }
+    val keyboard = LocalSoftwareKeyboardController.current
+    fun closeSearch() {
+        isTopSearchExpanded = false
+        onCloseExternalSearch()
+        searchQuery = ""
+        keyboard?.hide()
+    }
+    BackHandler(enabled = isSearchVisible) { closeSearch() }
+    DisposableEffect(Unit) { onDispose { keyboard?.hide() } }
+
     val density = LocalDensity.current
+    val imeVisible = WindowInsets.ime.getBottom(density) > 0
+    var keyboardWasShown by remember { mutableStateOf(false) }
+    LaunchedEffect(imeVisible, isSearchVisible, betaExpandingSearch) {
+        if (!isSearchVisible || !betaExpandingSearch) keyboardWasShown = false
+        else if (imeVisible) keyboardWasShown = true
+        else if (keyboardWasShown) closeSearch()
+    }
     var headerHeightDp by remember { mutableStateOf(175.dp) }
 
     val baseSongsPool = remember(songs, hideDemoTracks) {
@@ -541,19 +571,48 @@ fun LibraryScreen(
                         MoreButtonBubble()
                     }
 
-                    Box(
-                        modifier = Modifier
-                            .height(44.dp)
-                            .clip(RoundedCornerShape(22.dp))
-                            .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                            .padding(horizontal = 20.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text(
-                            text = strings.navLibrary,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold
-                        )
+                    val searchRadius by animateDpAsState(
+                        if (betaExpandingSearch && isSearchVisible) 16.dp else 22.dp,
+                        animationSpec = tween(260), label = "searchBubbleShape")
+                    BoxWithConstraints(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
+                        val bubbleWidth by animateDpAsState(
+                            if (betaExpandingSearch && isSearchVisible) maxWidth else 100.dp.coerceAtMost(maxWidth),
+                            animationSpec = tween(260), label = "searchBubbleWidth")
+                        Box(
+                            modifier = Modifier.then(if (betaExpandingSearch) Modifier.width(bubbleWidth) else Modifier.wrapContentWidth()).height(44.dp)
+                                .clip(RoundedCornerShape(searchRadius))
+                                .then(bubbleModifier(RoundedCornerShape(searchRadius)))
+                                .clickable(enabled = betaExpandingSearch && !isSearchVisible) {
+                                    isTopSearchExpanded = true
+                                }.padding(horizontal = if (betaExpandingSearch) 12.dp else 20.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Crossfade(targetState = betaExpandingSearch && isSearchVisible, label = "searchBubbleContent") { expanded ->
+                            if (expanded) {
+                                LaunchedEffect(Unit) { searchFocus.requestFocus(); keyboard?.show() }
+                                BasicTextField(
+                                    value = searchQuery, onValueChange = { searchQuery = it }, singleLine = true,
+                                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                                    modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
+                                    decorationBox = { inner ->
+                                        Row(verticalAlignment = Alignment.CenterVertically) {
+                                            Box(Modifier.weight(1f)) {
+                                                if (searchQuery.isEmpty()) Text(strings.searchTitle, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+                                                inner()
+                                            }
+                                            IconButton(onClick = { if (searchQuery.isNotEmpty()) searchQuery = "" else closeSearch() }, modifier = Modifier.size(32.dp)) {
+                                                Icon(Icons.Filled.Close, strings.clear, modifier = Modifier.size(18.dp))
+                                            }
+                                        }
+                                    }
+                                )
+                            } else {
+                                Text(strings.navLibrary, style = MaterialTheme.typography.titleMedium,
+                                    fontWeight = FontWeight.ExtraBold, maxLines = 1)
+                            }
+                            }
+                        }
                     }
 
                     if (showTopSearchBar) {
@@ -677,7 +736,7 @@ fun LibraryScreen(
                     }
                 }
 
-                AnimatedVisibility(visible = isSearchVisible) {
+                AnimatedVisibility(visible = isSearchVisible && !betaExpandingSearch) {
                     Column {
                         Spacer(Modifier.height(14.dp))
                         OutlinedTextField(

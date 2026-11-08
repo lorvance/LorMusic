@@ -44,8 +44,6 @@ import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.ui.components.AboutAutoUpdaterDialog
 import com.lormusic.app.ui.components.AppIconVectorPreview
-import com.lormusic.app.ui.components.BackupAutoUpdaterDialog
-import com.lormusic.app.ui.components.RestoreAutoUpdaterDialog
 import com.lormusic.app.ui.components.PlaybackSpeedAutoUpdaterDialog
 import com.lormusic.app.ui.components.SearchPlacementAutoUpdaterDialog
 import com.lormusic.app.ui.components.ThemeAutoUpdaterDialog
@@ -80,6 +78,7 @@ fun ProfileScreen(
     useLiquidGlass: Boolean = false,
     hazeState: HazeState? = null,
     enableBetaUpdates: Boolean = false,
+    betaExpandingSearch: Boolean = false,
     betaSeparateHeaderBubbles: Boolean = false,
     betaDynamicPlaybackContext: Boolean = true,
     betaAutoHideNavBar: Boolean = false,
@@ -105,6 +104,7 @@ fun ProfileScreen(
     onToggleShowNavBarLabels: (Boolean) -> Unit = {},
     onToggleLiquidGlass: (Boolean) -> Unit = {},
     onToggleBetaUpdates: (Boolean) -> Unit = {},
+    onToggleBetaExpandingSearch: (Boolean) -> Unit = {},
     onToggleBetaSeparateHeaderBubbles: (Boolean) -> Unit = {},
     onToggleBetaDynamicPlaybackContext: (Boolean) -> Unit = {},
     onToggleBetaAutoHideNavBar: (Boolean) -> Unit = {},
@@ -144,8 +144,6 @@ fun ProfileScreen(
     var showLiquidGlassWarning by remember { mutableStateOf<String?>(null) }
     val isLiquidGlassSupported = Build.VERSION.SDK_INT >= 33
     var showBackupDialog by remember { mutableStateOf(false) }
-    var showRestoreDialog by remember { mutableStateOf(false) }
-    var restoreText by remember { mutableStateOf("") }
     val iconChoices = remember {
         listOf(
             AppIconOption.MINIMAL,
@@ -442,6 +440,25 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(8.dp))
+                    var previewTab by remember { mutableStateOf(com.lormusic.app.ui.components.LorTab.LIBRARY) }
+                    var previewSearch by remember { mutableStateOf(false) }
+                    val previewHaze = remember { HazeState() }
+                    Text("Предпросмотр", style = MaterialTheme.typography.labelLarge)
+                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))) {
+                        Box(Modifier.matchParentSize().hazeSource(previewHaze).background(
+                            Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surface))))
+                        com.lormusic.app.ui.components.LorBottomNavBar(
+                            selected = previewTab, onSelect = { previewTab = it },
+                            hazeState = previewHaze, enableBlur = enableBlur && !pureMaterialYou,
+                            useLiquidGlass = useLiquidGlass && !pureMaterialYou,
+                            showLabels = showNavBarLabels,
+                            showBottomSearchButton = !searchBarPlacement.localAtTop,
+                            isLocalSearchActive = previewSearch, onToggleLocalSearch = { previewSearch = !previewSearch },
+                            applyNavigationInsets = false
+                        )
+                    }
+                    Spacer(Modifier.height(12.dp))
+
                     Surface(
                         shape = RoundedCornerShape(24.dp),
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
@@ -608,6 +625,13 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     ) {
                         Column {
+                            ListItem(
+                                headlineContent = { BetaHeadline("Расширяемый поиск") },
+                                supportingContent = { Text("Поле поиска плавно появляется внутри верхней панели вместо отдельной строки") },
+                                leadingContent = { Icon(Icons.Filled.Search, null) },
+                                trailingContent = { Switch(checked = betaExpandingSearch, onCheckedChange = onToggleBetaExpandingSearch) }
+                            )
+                            SettingsDivider()
                             ListItem(
                                 headlineContent = { BetaHeadline(strings.betaAutoHideNavBarTitle) },
                                 supportingContent = { Text(strings.betaAutoHideNavBarDesc) },
@@ -1283,49 +1307,9 @@ fun ProfileScreen(
         }
     }
     if (showBackupDialog) {
-        BackupAutoUpdaterDialog(
-            enableBlur = enableBlur,
-            onExport = {
-                val json = onExportBackup()
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                val clip = android.content.ClipData.newPlainText("LorMusic Backup", json)
-                clipboard.setPrimaryClip(clip)
-                android.widget.Toast.makeText(context, strings.backupCopiedToast, android.widget.Toast.LENGTH_LONG).show()
-                try {
-                    val sendIntent = Intent(Intent.ACTION_SEND).apply {
-                        type = "text/plain"
-                        putExtra(Intent.EXTRA_TEXT, json)
-                        putExtra(Intent.EXTRA_SUBJECT, "LorMusic-Settings-Backup.json")
-                    }
-                    context.startActivity(Intent.createChooser(sendIntent, strings.shareBackup))
-                } catch (_: Exception) {}
-                showBackupDialog = false
-            },
-            onOpenRestore = {
-                showBackupDialog = false
-                restoreText = ""
-                showRestoreDialog = true
-            },
+        com.lormusic.app.ui.components.BackupDialogs(
+            onExport = onExportBackup, onImport = onImportBackup,
             onDismiss = { showBackupDialog = false }
-        )
-    }
-    if (showRestoreDialog) {
-        RestoreAutoUpdaterDialog(
-            enableBlur = enableBlur,
-            restoreText = restoreText,
-            onTextChange = { restoreText = it },
-            onPaste = {
-                val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as android.content.ClipboardManager
-                val item = clipboard.primaryClip?.getItemAt(0)?.text?.toString()
-                if (!item.isNullOrBlank()) restoreText = item
-            },
-            onRestore = {
-                if (restoreText.isNotBlank()) {
-                    val ok = onImportBackup(restoreText)
-                    if (ok) showRestoreDialog = false
-                }
-            },
-            onDismiss = { showRestoreDialog = false }
         )
     }
     if (showEqualizerSheet) {

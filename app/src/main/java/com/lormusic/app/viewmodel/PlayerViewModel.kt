@@ -74,6 +74,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val enableBlur = mutableStateOf(prefs.getEnableBlur())
     val useLiquidGlass = mutableStateOf(prefs.getUseLiquidGlass())
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
+    val betaExpandingSearch = mutableStateOf(prefs.getBetaExpandingSearch())
+    fun setBetaExpandingSearch(enabled: Boolean) {
+        prefs.saveBetaExpandingSearch(enabled)
+        betaExpandingSearch.value = enabled
+    }
+
     val betaSeparateHeaderBubbles = mutableStateOf(prefs.getBetaSeparateHeaderBubbles())
     val betaDynamicPlaybackContext = mutableStateOf(prefs.getBetaDynamicPlaybackContext())
     val betaAutoHideNavBar = mutableStateOf(prefs.getBetaAutoHideNavBar())
@@ -181,10 +187,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     private val playerListener = object : Player.Listener {
         override fun onIsPlayingChanged(playing: Boolean) {
+            if (com.lormusic.app.service.ExternalPlaybackSession.active) return
             isPlaying.value = playing
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
+            if (com.lormusic.app.service.ExternalPlaybackSession.active) return
             val mediaId = mediaItem?.mediaId ?: return
             val found = queue.value.find { it.id == mediaId }
                 ?: allSongs.value.find { it.id == mediaId }
@@ -205,6 +213,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         override fun onPlaybackStateChanged(playbackState: Int) {
+            if (com.lormusic.app.service.ExternalPlaybackSession.active) return
             if (playbackState == Player.STATE_READY) {
                 val dur = exoPlayer.duration
                 if (dur > 0) {
@@ -219,6 +228,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
 
         override fun onPlayerError(error: PlaybackException) {
+            if (com.lormusic.app.service.ExternalPlaybackSession.active) return
             statusMessage.value = when (appLanguage.value) {
                 AppLanguage.EN -> "Failed to play track: ${error.localizedMessage ?: "source error"}"
                 AppLanguage.UK -> "Не вдалося відтворити трек: ${error.localizedMessage ?: "помилка джерела"}"
@@ -231,7 +241,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     init {
         exoPlayer.addListener(playerListener)
-        exoPlayer.setPlaybackSpeed(playbackSpeed.value)
+        if (!com.lormusic.app.service.ExternalPlaybackSession.active) exoPlayer.setPlaybackSpeed(playbackSpeed.value)
         com.lormusic.app.data.EqualizerManager.initAudioSession(exoPlayer.audioSessionId, prefs)
         startPlaybackServiceIfNeeded()
 
@@ -316,7 +326,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             var counter = 0
             while (true) {
                 delay(100)
-                if (exoPlayer.isPlaying) {
+                if (exoPlayer.isPlaying && !com.lormusic.app.service.ExternalPlaybackSession.active) {
                     positionMs.value = exoPlayer.currentPosition.coerceAtLeast(0L)
                     val realDur = exoPlayer.duration
                     if (realDur > 0 && realDur != durationMs.value) {
@@ -1411,6 +1421,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setQueueAndPlay(songs: List<Song>, startIndex: Int, shuffle: Boolean = false, context: PlaybackContext? = null) {
         if (songs.isEmpty()) return
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         currentPlaybackContext.value = context
         shuffleOn.value = shuffle
         exoPlayer.shuffleModeEnabled = false
@@ -1453,6 +1464,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun playNextInQueue(song: Song) {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val q = queue.value.toMutableList()
         val current = currentSong.value
         if (current == null || q.isEmpty()) {
@@ -1473,6 +1485,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun togglePlayPause() {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val song = currentSong.value ?: allSongs.value.firstOrNull() ?: return
         if (exoPlayer.mediaItemCount == 0) {
             val q = queue.value.ifEmpty { allSongs.value }
@@ -1494,12 +1507,14 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun seekTo(ms: Long) {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val target = ms.coerceAtLeast(0L)
         exoPlayer.seekTo(target)
         positionMs.value = target
     }
 
     fun skipNext() {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val q = queue.value
         if (q.isEmpty()) return
         val current = currentSong.value
@@ -1520,6 +1535,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun skipPrevious() {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         if (exoPlayer.currentPosition > 3500L) {
             seekTo(0L)
             return
@@ -1538,6 +1554,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun toggleShuffle() {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val newValue = !shuffleOn.value
         shuffleOn.value = newValue
         exoPlayer.shuffleModeEnabled = false
@@ -1553,6 +1570,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun cycleRepeatMode() {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val next = when (repeatMode.value) {
             RepeatMode.OFF -> RepeatMode.ALL
             RepeatMode.ALL -> RepeatMode.ONE
@@ -1576,6 +1594,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setPlaybackSpeed(speed: Float) {
+        com.lormusic.app.service.ExternalPlaybackSession.end(exoPlayer)
         val clamped = speed.coerceIn(0.5f, 2.0f)
         playbackSpeed.value = clamped
         exoPlayer.setPlaybackSpeed(clamped)
@@ -1610,7 +1629,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
                 sleepTimerRemainingSec.value = rem
             }
             sleepTimerRemainingSec.value = null
-            if (exoPlayer.isPlaying) {
+            if (exoPlayer.isPlaying && !com.lormusic.app.service.ExternalPlaybackSession.active) {
                 exoPlayer.pause()
                 isPlaying.value = false
             }
@@ -1712,6 +1731,10 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         classicLibraryDesign.value = prefs.getClassicLibraryDesign()
         useDynamicPlayerColors.value = prefs.getUseDynamicPlayerColors()
         enableBetaUpdates.value = prefs.getEnableBetaUpdates()
+        betaExpandingSearch.value = prefs.getBetaExpandingSearch()
+        betaAutoHideNavBar.value = prefs.getBetaAutoHideNavBar()
+        betaCategorizedSettings.value = prefs.getBetaCategorizedSettings()
+        betaHideDividers.value = prefs.getBetaHideDividers()
         betaSeparateHeaderBubbles.value = prefs.getBetaSeparateHeaderBubbles()
         betaDynamicPlaybackContext.value = prefs.getBetaDynamicPlaybackContext()
         useAlbumArtGradient.value = prefs.getUseAlbumArtGradient()
@@ -1724,10 +1747,18 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         selectedAppIcon.value = prefs.getAppIconOption()
         playbackSpeed.value = prefs.getPlaybackSpeed()
         showNavBarLabels.value = prefs.getShowNavBarLabels()
-        favoriteIds.value = prefs.getFavoriteIds()
+        localFavoriteIds.value = prefs.getLocalFavoriteIds()
+        ytFavoriteIds.value = prefs.getYtFavoriteIds()
+        unifiedFavoriteIds.value = prefs.getUnifiedFavoriteIds()
+        favoriteIds.value = localFavoriteIds.value
+        totalListeningTimeMs.value = prefs.getTotalListeningTimeMs()
+        selectedFilter.value = prefs.getLibraryFilter()
+        selectedSort.value = prefs.getSortOption()
         hiddenSongIds.value = prefs.getHiddenSongIds()
         tagOverrides.value = prefs.getTagOverrides()
         savedYtSongs.value = loadCleanSavedYtSongs()
+        savedScSongs.value = prefs.getSavedScSongs()
+        scFavoriteIds.value = prefs.getScFavoriteIds()
         rebuildPlaylists(allSongs.value)
         rescanLocalMusic()
     }

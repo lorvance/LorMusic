@@ -8,4 +8,10 @@
         <item name="android:windowSplashScreenBackground" tools:targetApi="s">#FF1C1124</item>
         <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/ic_launcher_regular_fg</item>
     </style>
+    <style name="Theme.LorMusic.ExternalAudio" parent="Theme.LorMusic">
+        <item name="android:windowIsTranslucent">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:backgroundDimEnabled">false</item>
+        <item name="android:windowDisablePreview">true</item>
+    </style>
 </resources>
