@@ -5,6 +5,9 @@ import android.content.Intent
 import android.media.MediaMetadataRetriever
 import android.net.Uri
 import android.os.Bundle
+import android.os.Build
+import android.view.WindowManager
+import java.util.function.Consumer
 import android.provider.OpenableColumns
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
@@ -46,6 +49,7 @@ import com.lormusic.app.service.ExternalPlaybackSession
 import com.lormusic.app.service.PlaybackService
 import com.lormusic.app.service.SharedPlayerHolder
 import com.lormusic.app.ui.components.WavyPlayPauseButton
+import com.lormusic.app.ui.components.SquigglySlider
 import com.lormusic.app.ui.theme.LorMusicTheme
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -55,6 +59,39 @@ import kotlinx.coroutines.withContext
 
 class ExternalAudioActivity : ComponentActivity() {
     private val model: ExternalAudioViewModel by viewModels()
+    private var backgroundScrimAlpha by mutableFloatStateOf(0.65f)
+    private var blurListener: Consumer<Boolean>? = null
+
+    private fun updateWindowBackdrop(systemBlurEnabled: Boolean) {
+        val useBlur = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && systemBlurEnabled &&
+            PreferencesRepository(this).getEnableBlur()
+        backgroundScrimAlpha = if (useBlur) 0.20f else 0.65f
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (useBlur) window.addFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            else window.clearFlags(WindowManager.LayoutParams.FLAG_BLUR_BEHIND)
+            window.attributes = window.attributes.apply {
+                blurBehindRadius = if (useBlur) (24 * resources.displayMetrics.density).toInt() else 0
+            }
+        }
+    }
+
+    override fun onStart() {
+        super.onStart()
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            val listener = Consumer<Boolean> { enabled -> updateWindowBackdrop(enabled) }
+            blurListener = listener
+            windowManager.addCrossWindowBlurEnabledListener(mainExecutor, listener)
+            updateWindowBackdrop(windowManager.isCrossWindowBlurEnabled)
+        } else updateWindowBackdrop(false)
+    }
+
+    override fun onStop() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            blurListener?.let { windowManager.removeCrossWindowBlurEnabledListener(it) }
+        }
+        blurListener = null
+        super.onStop()
+    }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -68,7 +105,7 @@ class ExternalAudioActivity : ComponentActivity() {
                 ThemeMode.LIGHT -> false
             }
             LorMusicTheme(darkTheme = dark, dynamicColor = prefs.getUseDynamicColor()) {
-                ExternalAudioCard(model) { model.close(); finish() }
+                ExternalAudioCard(model, prefs.getUseSquigglySlider(), backgroundScrimAlpha) { model.close(); finish() }
             }
         }
     }
@@ -211,14 +248,14 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
 }
 
 @Composable
-private fun ExternalAudioCard(model: ExternalAudioViewModel, onClosed: () -> Unit) {
+private fun ExternalAudioCard(model: ExternalAudioViewModel, useSquigglySlider: Boolean, scrimAlpha: Float, onClosed: () -> Unit) {
     val visible = remember { MutableTransitionState(false).apply { targetState = true } }
     fun close() { visible.targetState = false }
     BackHandler { close() }
     LaunchedEffect(visible.isIdle, visible.currentState) {
         if (visible.isIdle && !visible.currentState && !visible.targetState) onClosed()
     }
-    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.24f))) {
+    Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = scrimAlpha))) {
         Box(Modifier.matchParentSize().clickable { close() })
         AnimatedVisibility(visibleState = visible, modifier = Modifier.align(Alignment.BottomCenter),
             enter = slideInVertically { it } + fadeIn(), exit = slideOutVertically { it } + fadeOut()) {
@@ -238,10 +275,22 @@ private fun ExternalAudioCard(model: ExternalAudioViewModel, onClosed: () -> Uni
                     model.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (model.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
                     var drag by remember { mutableStateOf<Float?>(null) }
-                    Slider(value = drag ?: if (model.duration > 0) model.position.toFloat() / model.duration else 0f,
-                        onValueChange = { drag = it }, onValueChangeFinished = {
-                            drag?.let { model.seek((it * model.duration).toLong()) }; drag = null
-                        }, enabled = model.duration > 0 && model.error == null)
+                    val progress = drag ?: if (model.duration > 0) (model.position.toFloat() / model.duration).coerceIn(0f, 1f) else 0f
+                    val seekEnabled = model.duration > 0 && model.error == null
+                    val finishSeek: () -> Unit = {
+                        drag?.let { model.seek((it * model.duration).toLong()) }
+                        drag = null
+                    }
+                    if (useSquigglySlider) {
+                        SquigglySlider(
+                            value = progress, valueRange = 0f..1f, isPlaying = model.playing,
+                            onValueChange = { drag = it }, onValueChangeFinished = finishSeek,
+                            enabled = seekEnabled
+                        )
+                    } else {
+                        Slider(value = progress, onValueChange = { drag = it },
+                            onValueChangeFinished = finishSeek, enabled = seekEnabled)
+                    }
                     Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                         Text(audioTime(model.position), style = MaterialTheme.typography.labelMedium)
                         Text(if (model.duration > 0) audioTime(model.duration) else "—:—", style = MaterialTheme.typography.labelMedium)

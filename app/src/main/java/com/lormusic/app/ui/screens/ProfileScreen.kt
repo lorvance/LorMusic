@@ -25,6 +25,7 @@ import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -127,6 +128,7 @@ fun ProfileScreen(
     onExportBackup: () -> String = { "" },
     onImportBackup: (String) -> Boolean = { false },
     onCheckForUpdates: () -> Unit = {},
+    onCategoryOpenChange: (Boolean) -> Unit = {},
     onBackToLibrary: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
@@ -151,7 +153,12 @@ fun ProfileScreen(
             AppIconOption.OLD
         )
     }
-    var activeCategory by remember { mutableStateOf<SettingsCategory?>(null) }
+    var activeCategory by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
+    var showNavigationPreview by rememberSaveable { mutableStateOf(prefs.getShowNavigationPreview()) }
+    LaunchedEffect(activeCategory, betaCategorizedSettings) {
+        onCategoryOpenChange(betaCategorizedSettings && activeCategory != null)
+    }
+    DisposableEffect(Unit) { onDispose { onCategoryOpenChange(false) } }
     val scrollState = rememberScrollState()
     LaunchedEffect(activeCategory) {
         scrollState.scrollTo(0)
@@ -166,7 +173,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
-                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showSearchPlacementDialog || showSpeedDialog || showAboutDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
+                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showSpeedDialog || showAboutDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
         ) {
             Column(
@@ -440,21 +447,24 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.primary
                     )
                     Spacer(Modifier.height(8.dp))
-                    var previewTab by remember { mutableStateOf(com.lormusic.app.ui.components.LorTab.LIBRARY) }
-                    var previewSearch by remember { mutableStateOf(false) }
-                    val previewHaze = remember { HazeState() }
-                    Text("Предпросмотр", style = MaterialTheme.typography.labelLarge)
-                    Box(Modifier.fillMaxWidth().clip(RoundedCornerShape(24.dp))) {
-                        Box(Modifier.matchParentSize().hazeSource(previewHaze).background(
-                            Brush.horizontalGradient(listOf(MaterialTheme.colorScheme.primaryContainer, MaterialTheme.colorScheme.surface))))
-                        com.lormusic.app.ui.components.LorBottomNavBar(
-                            selected = previewTab, onSelect = { previewTab = it },
-                            hazeState = previewHaze, enableBlur = enableBlur && !pureMaterialYou,
-                            useLiquidGlass = useLiquidGlass && !pureMaterialYou,
+                    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.SpaceBetween) {
+                        Text("Предпросмотр", style = MaterialTheme.typography.labelLarge)
+                        TextButton(onClick = {
+                            showNavigationPreview = !showNavigationPreview
+                            prefs.saveShowNavigationPreview(showNavigationPreview)
+                        }) {
+                            Icon(if (showNavigationPreview) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null)
+                            Spacer(Modifier.width(4.dp))
+                            Text(if (showNavigationPreview) "Скрыть" else "Показать")
+                        }
+                    }
+                    AnimatedVisibility(visible = showNavigationPreview) {
+                        com.lormusic.app.ui.components.NavigationBarPreview(
+                            enableBlur = enableBlur && !pureMaterialYou && !showSearchPlacementDialog,
+                            useLiquidGlass = useLiquidGlass && !pureMaterialYou && !showSearchPlacementDialog,
                             showLabels = showNavBarLabels,
-                            showBottomSearchButton = !searchBarPlacement.localAtTop,
-                            isLocalSearchActive = previewSearch, onToggleLocalSearch = { previewSearch = !previewSearch },
-                            applyNavigationInsets = false
+                            showSearchButton = !searchBarPlacement.localAtTop
                         )
                     }
                     Spacer(Modifier.height(12.dp))

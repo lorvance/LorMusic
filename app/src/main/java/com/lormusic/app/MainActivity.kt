@@ -127,6 +127,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         }
     }
 
+    var settingsCategoryOpen by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(LorTab.LIBRARY) }
     var showNowPlaying by remember { mutableStateOf(false) }
     var songForActionsSheet by remember { mutableStateOf<Song?>(null) }
@@ -592,6 +593,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onExportBackup = playerViewModel::exportBackup,
                                                 onImportBackup = playerViewModel::importBackup,
                                                 onCheckForUpdates = { playerViewModel.checkForUpdates(silent = false) },
+                                                onCategoryOpenChange = { settingsCategoryOpen = it },
                                                 onBackToLibrary = { selectedTab = LorTab.LIBRARY }
                                             )
                                         }
@@ -703,7 +705,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         )
                     }
 
-                    val isNavBarVisible = !betaAutoHideNavBar || !isNavBarHidden
+                    val inSettingsCategory = selectedTab == LorTab.SETTINGS && settingsCategoryOpen && !isYtMusicMode && !isSoundCloudMode
+                    val isNavBarVisible = !inSettingsCategory && (!betaAutoHideNavBar || !isNavBarHidden)
                     val navBarBottomExtraPadding by animateDpAsState(
                         targetValue = if (!isNavBarVisible) 16.dp else 0.dp,
                         animationSpec = tween(260),

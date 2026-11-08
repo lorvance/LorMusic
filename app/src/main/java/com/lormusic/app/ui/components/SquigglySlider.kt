@@ -34,6 +34,7 @@ fun SquigglySlider(
     onValueChange: (Float) -> Unit,
     onValueChangeFinished: () -> Unit,
     modifier: Modifier = Modifier,
+    enabled: Boolean = true,
     activeColor: Color = MaterialTheme.colorScheme.primary,
     inactiveColor: Color = activeColor.copy(alpha = 0.28f),
     thumbColor: Color = activeColor
@@ -90,7 +91,8 @@ fun SquigglySlider(
         modifier = modifier
             .fillMaxWidth()
             .height(36.dp)
-            .pointerInput(valueRange) {
+            .pointerInput(valueRange, enabled) {
+                if (!enabled) return@pointerInput
                 detectTapGestures { offset ->
                     val fraction = (offset.x / size.width.toFloat()).coerceIn(0f, 1f)
                     val newValue = valueRange.start + fraction * (valueRange.endInclusive - valueRange.start)
@@ -99,7 +101,8 @@ fun SquigglySlider(
                     onValueChangeFinished()
                 }
             }
-            .pointerInput(valueRange) {
+            .pointerInput(valueRange, enabled) {
+                if (!enabled) return@pointerInput
                 detectHorizontalDragGestures(
                     onDragStart = { offset ->
                         isDragging = true

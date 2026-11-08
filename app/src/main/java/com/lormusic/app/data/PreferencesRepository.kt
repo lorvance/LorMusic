@@ -75,6 +75,7 @@ class PreferencesRepository(context: Context) {
         KEY_ALBUM_PLAY_COUNTS to "String",
         KEY_TOTAL_LISTENING_MS to "Long",
         KEY_BETA_EXPANDING_SEARCH to "Boolean",
+        KEY_SHOW_NAVIGATION_PREVIEW to "Boolean",
     )
 
     init {
@@ -120,6 +121,11 @@ class PreferencesRepository(context: Context) {
             }
         }
         if (changed) editor.commit()
+    }
+
+    fun getShowNavigationPreview(): Boolean = prefs.getBoolean(KEY_SHOW_NAVIGATION_PREVIEW, true)
+    fun saveShowNavigationPreview(show: Boolean) {
+        prefs.edit().putBoolean(KEY_SHOW_NAVIGATION_PREVIEW, show).apply()
     }
 
     fun getBetaExpandingSearch(): Boolean = prefs.getBoolean(KEY_BETA_EXPANDING_SEARCH, false)
@@ -996,6 +1002,7 @@ class PreferencesRepository(context: Context) {
     } catch (_: Exception) { false }
 
     companion object {
+        private const val KEY_SHOW_NAVIGATION_PREVIEW = "show_navigation_preview"
         private const val KEY_BETA_EXPANDING_SEARCH = "beta_expanding_search"
         private const val KEY_FAVORITES = "favorite_song_ids"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"

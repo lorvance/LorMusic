@@ -11,5 +11,8 @@ $appClasses = Join-Path $taskBuild 'app\build\tmp\kotlin-classes\debug'
 $cp = "$testClasses;$appClasses;$jsonJar;$kotlinJar;$androidJar"
 & javac -cp $cp -d $testClasses (Join-Path $PSScriptRoot 'android\content\Context.java') (Join-Path $PSScriptRoot 'BackupRegression.java')
 if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
-& java -cp $cp BackupRegression
+$expectedMetadata = Get-Content -LiteralPath (Join-Path $taskBuild 'app\build\outputs\apk\debug\output-metadata.json') -Raw | ConvertFrom-Json
+$expectedVersion = $expectedMetadata.elements[0].versionName
+$expectedBuild = $expectedMetadata.elements[0].versionCode
+& java "-DexpectedVersion=$expectedVersion" "-DexpectedBuild=$expectedBuild" -cp $cp BackupRegression
 exit $LASTEXITCODE

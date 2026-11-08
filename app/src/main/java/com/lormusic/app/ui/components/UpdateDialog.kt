@@ -718,151 +718,35 @@ fun SearchPlacementAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    AlertDialog(
         onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
-        val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
-        val outlineVariant = MaterialTheme.colorScheme.outlineVariant
-        val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(backdropColor)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() },
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
-                    .navigationBarsPadding()
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
-                        else surfaceContainerHigh
-                    )
-                    .border(
-                        1.dp,
-                        if (enableBlur) Color.White.copy(alpha = 0.18f)
-                        else outlineVariant.copy(alpha = 0.35f),
-                        RoundedCornerShape(28.dp)
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {}
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(22.dp)
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+        shape = RoundedCornerShape(28.dp),
+        containerColor = if (enableBlur) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
+        icon = { Icon(Icons.Filled.Search, null) },
+        title = { Text(strings.searchPlacementTitle) },
+        text = {
+            Column(Modifier.fillMaxWidth().heightIn(max = 360.dp)
+                .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                SearchBarPlacement.entries.forEach { option ->
+                    val selected = currentPlacement == option
+                    Surface(
+                        onClick = { onSelectPlacement(option); onDismiss() },
+                        shape = RoundedCornerShape(18.dp),
+                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest,
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Search,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(26.dp)
-                            )
+                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
+                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                            RadioButton(selected = selected, onClick = null)
+                            Text(option.getDisplayName(strings), modifier = Modifier.weight(1f),
+                                style = MaterialTheme.typography.bodyMedium)
                         }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = strings.searchPlacementTitle,
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Column(
-                        modifier = Modifier.fillMaxWidth(),
-                        verticalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        SearchBarPlacement.entries.forEach { option ->
-                            val isSelected = currentPlacement == option
-                            Button(
-                                onClick = {
-                                    onSelectPlacement(option)
-                                    onDismiss()
-                                },
-                                shape = RoundedCornerShape(18.dp),
-                                colors = if (isSelected) {
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.primary,
-                                        contentColor = MaterialTheme.colorScheme.onPrimary
-                                    )
-                                } else {
-                                    ButtonDefaults.buttonColors(
-                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
-                                        contentColor = MaterialTheme.colorScheme.onSurface
-                                    )
-                                },
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .height(48.dp)
-                            ) {
-                                Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(
-                                        text = option.getDisplayName(strings),
-                                        style = MaterialTheme.typography.titleSmall,
-                                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
-                                    )
-                                    if (isSelected) {
-                                        Icon(
-                                            imageVector = Icons.Filled.Check,
-                                            contentDescription = null,
-                                            modifier = Modifier.size(20.dp)
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(14.dp))
-
-                    OutlinedButton(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(48.dp)
-                    ) {
-                        Text(strings.close, style = MaterialTheme.typography.titleSmall)
                     }
                 }
             }
-        }
-    }
+        },
+        confirmButton = { TextButton(onClick = onDismiss) { Text(strings.close) } }
+    )
 }
 
 @Composable
