@@ -16,6 +16,7 @@ import dev.chrisbanes.haze.hazeSource
 /** Its glass only samples the sibling background, never the settings screen containing it. */
 @Composable
 fun NavigationBarPreview(
+    useExpressive: Boolean = false,
     enableBlur: Boolean,
     useLiquidGlass: Boolean,
     showLabels: Boolean,
@@ -34,6 +35,7 @@ fun NavigationBarPreview(
                     .background(MaterialTheme.colorScheme.primaryContainer, CircleShape))
             }
             LorBottomNavBar(
+                useExpressive = useExpressive,
                 selected = tab, onSelect = { tab = it }, hazeState = haze,
                 enableBlur = enableBlur, useLiquidGlass = useLiquidGlass,
                 showLabels = showLabels, showBottomSearchButton = showSearchButton,

@@ -1,5 +1,6 @@
 package com.lormusic.app
 
+import com.lormusic.app.model.betaText
 import android.app.Application
 import android.content.Intent
 import android.media.MediaMetadataRetriever
@@ -105,7 +106,9 @@ class ExternalAudioActivity : ComponentActivity() {
                 ThemeMode.LIGHT -> false
             }
             LorMusicTheme(darkTheme = dark, dynamicColor = prefs.getUseDynamicColor()) {
-                ExternalAudioCard(model, prefs.getUseSquigglySlider(), backgroundScrimAlpha) { model.close(); finish() }
+                CompositionLocalProvider(com.lormusic.app.model.LocalStrings provides com.lormusic.app.model.resolveStrings(prefs.getAppLanguage())) {
+                    ExternalAudioCard(model, prefs.getUseSquigglySlider(), backgroundScrimAlpha) { model.close(); finish() }
+                }
             }
         }
     }
@@ -118,9 +121,11 @@ class ExternalAudioActivity : ComponentActivity() {
 }
 
 class ExternalAudioViewModel(application: Application) : AndroidViewModel(application) {
+    private val localePrefs = PreferencesRepository(application)
+    private val strings get() = com.lormusic.app.model.resolveStrings(localePrefs.getAppLanguage())
     private val player = SharedPlayerHolder.getOrCreate(application)
-    var title by mutableStateOf("Аудиофайл"); private set
-    var artist by mutableStateOf("Внешний аудиофайл"); private set
+    var title by mutableStateOf(strings.betaText("audioFile")); private set
+    var artist by mutableStateOf(strings.betaText("externalFile")); private set
     var error by mutableStateOf<String?>(null); private set
     var position by mutableLongStateOf(0L); private set
     var duration by mutableLongStateOf(0L); private set
@@ -141,7 +146,7 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
             if (ownsSession && !ExternalPlaybackSession.active) {
                 ownsSession = false
                 playing = false
-                error = "Воспроизведение продолжено в основном плеере"
+                error = strings.betaText("mainPlayback")
             }
         }
         override fun onMediaMetadataChanged(metadata: MediaMetadata) {
@@ -152,7 +157,7 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
         override fun onPlayerError(exception: PlaybackException) {
             if (!ownsSession || !ExternalPlaybackSession.active) return
             loading = false
-            error = "Не удалось воспроизвести файл. Проверьте доступ и формат аудио."
+            error = strings.betaText("playFailed")
         }
     }
     init {
@@ -162,7 +167,7 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
                 if (ownsSession && !ExternalPlaybackSession.active) {
                     ownsSession = false
                     playing = false
-                    error = "Воспроизведение продолжено в основном плеере"
+                    error = strings.betaText("mainPlayback")
                 }
                 if (ownsSession && ExternalPlaybackSession.active) {
                     position = player.currentPosition.coerceAtLeast(0)
@@ -186,20 +191,20 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
         if (ownsSession && ExternalPlaybackSession.active) player.pause()
         if (!ExternalPlaybackSession.active) ownsSession = false
         error = null; loading = true; position = 0; duration = 0; artwork = null
-        title = "Аудиофайл"; artist = "Внешний аудиофайл"
+        title = strings.betaText("audioFile"); artist = strings.betaText("externalFile")
         if (uri == null || uri.scheme !in listOf("content", "file")) {
-            error = "Приложение не передало доступный аудиофайл"; loading = false; return
+            error = strings.betaText("noFile"); loading = false; return
         }
         loadJob = viewModelScope.launch {
             val info = runCatching {
                 withContext(Dispatchers.IO) {
                     val resolver = getApplication<Application>().contentResolver
-                    resolver.openAssetFileDescriptor(uri, "r")?.use { } ?: error("Нет доступа к файлу")
-                    var name = uri.lastPathSegment ?: "Аудиофайл"
+                    resolver.openAssetFileDescriptor(uri, "r")?.use { } ?: error(strings.betaText("noAccess"))
+                    var name = uri.lastPathSegment ?: strings.betaText("audioFile")
                     resolver.query(uri, arrayOf(OpenableColumns.DISPLAY_NAME), null, null, null)?.use { cursor ->
                         if (cursor.moveToFirst()) cursor.getString(0)?.takeIf { it.isNotBlank() }?.let { name = it }
                     }
-                    var performer = "Внешний аудиофайл"
+                    var performer = strings.betaText("externalFile")
                     var cover: android.graphics.Bitmap? = null
                     val retriever = MediaMetadataRetriever()
                     try {
@@ -234,7 +239,7 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
                 player.play()
             }.onFailure {
                 if (it is kotlinx.coroutines.CancellationException) throw it
-                loading = false; error = "Файл недоступен или отсутствует разрешение на чтение"
+                loading = false; error = strings.betaText("readDenied")
             }
         }
     }
@@ -249,6 +254,7 @@ class ExternalAudioViewModel(application: Application) : AndroidViewModel(applic
 
 @Composable
 private fun ExternalAudioCard(model: ExternalAudioViewModel, useSquigglySlider: Boolean, scrimAlpha: Float, onClosed: () -> Unit) {
+    val strings = com.lormusic.app.model.LocalStrings.current
     val visible = remember { MutableTransitionState(false).apply { targetState = true } }
     fun close() { visible.targetState = false }
     BackHandler { close() }
@@ -270,7 +276,7 @@ private fun ExternalAudioCard(model: ExternalAudioViewModel, useSquigglySlider: 
                             Text(model.title, maxLines = 2, overflow = TextOverflow.Ellipsis, fontWeight = FontWeight.Bold)
                             Text(model.artist, maxLines = 1, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodySmall)
                         }
-                        IconButton(onClick = { close() }) { Icon(Icons.Filled.Close, "Закрыть проигрыватель") }
+                        IconButton(onClick = { close() }) { Icon(Icons.Filled.Close, strings.betaText("closePlayer")) }
                     }
                     model.error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
                     if (model.loading) LinearProgressIndicator(Modifier.fillMaxWidth())
@@ -296,9 +302,9 @@ private fun ExternalAudioCard(model: ExternalAudioViewModel, useSquigglySlider: 
                         Text(if (model.duration > 0) audioTime(model.duration) else "—:—", style = MaterialTheme.typography.labelMedium)
                     }
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.SpaceEvenly) {
-                        IconButton(onClick = { model.seek(model.position - 30_000) }) { Icon(Icons.Filled.Replay30, "Назад на 30 секунд") }
+                        IconButton(onClick = { model.seek(model.position - 30_000) }) { Icon(Icons.Filled.Replay30, strings.betaText("rewind")) }
                         WavyPlayPauseButton(isPlaying = model.playing, onClick = model::toggle)
-                        IconButton(onClick = { model.seek(model.position + 30_000) }) { Icon(Icons.Filled.Forward30, "Вперёд на 30 секунд") }
+                        IconButton(onClick = { model.seek(model.position + 30_000) }) { Icon(Icons.Filled.Forward30, strings.betaText("forward")) }
                     }
                 }
             }

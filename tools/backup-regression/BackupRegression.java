@@ -61,6 +61,7 @@ public class BackupRegression {
         r.addListeningTimeMs(1000);
         check(r.getTotalListeningTimeMs()==Long.MAX_VALUE,"listening accumulator does not overflow");
         values.put("yt_music_cookie_raw","secret_cookie"); values.put("sc_auth_token_raw","secret_token");
+        r.saveExpressiveNavigation(true);
         r.saveShowNavigationPreview(false);
         r.saveBetaExpandingSearch(true);
         r.savePlaybackSpeed(1.25f);
@@ -70,6 +71,7 @@ public class BackupRegression {
         check(!exported.contains("secret_cookie") && !exported.contains("secret_token") && !exported.contains("auth_token"),"credentials excluded from export");
         check(r.importBackupJson(exported) && r.getPlaybackSpeed()==1.25f && r.getBetaExpandingSearch(),"v2 round trip with float and beta setting");
         check(!r.getShowNavigationPreview() && !backup.getJSONObject("settings").getBoolean("show_navigation_preview"),"preview visibility persists and round trips in backup");
+        check(r.getExpressiveNavigation() && backup.getJSONObject("settings").getBoolean("expressive_navigation"),"Expressive navigation persists and round trips in backup");
         Map<String,Object> before=new LinkedHashMap<>(values);
         check(!r.importBackupJson("{\"total_listening_ms\":100,\"enable_backdrop_blur\":\"wrong\"}") && before.equals(values),"wrong type rejects entire import without partial writes");
         check(!r.importBackupJson("{") && before.equals(values),"invalid JSON preserves settings");

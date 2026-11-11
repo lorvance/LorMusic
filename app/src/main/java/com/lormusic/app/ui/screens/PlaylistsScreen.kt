@@ -265,15 +265,7 @@ fun PlaylistsScreen(
                             }
                         }
 
-                        item(span = { GridItemSpan(2) }, key = "hdr_normal_playlists") {
-                            Text(
-                                text = strings.navPlaylists,
-                                style = MaterialTheme.typography.titleLarge,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.padding(horizontal = 4.dp, vertical = 6.dp)
-                            )
-                        }
+
 
                         items(normalPlaylists, key = { it.id }) { playlist ->
                             PlaylistCard(
@@ -351,110 +343,11 @@ fun PlaylistsScreen(
                             headerHeightDp = with(density) { coords.size.height.toDp() }
                         }
                 ) {
-                    val topScrimColor = MaterialTheme.colorScheme.background
-                    if (enableBlur && hazeState != null) {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .hazeEffect(state = hazeState) {
-                                    blurEnabled = true
-                                    backgroundColor = topScrimColor
-                                    blurRadius = 30.dp
-                                    tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
-                                }
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            topScrimColor.copy(alpha = 0.75f),
-                                            topScrimColor.copy(alpha = 0.35f),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                        )
-                    } else {
-                        Box(
-                            modifier = Modifier
-                                .matchParentSize()
-                                .background(
-                                    Brush.verticalGradient(
-                                        listOf(
-                                            topScrimColor.copy(alpha = 0.96f),
-                                            topScrimColor.copy(alpha = 0.78f),
-                                            topScrimColor.copy(alpha = 0.42f),
-                                            Color.Transparent
-                                        )
-                                    )
-                                )
-                        )
-                    }
-
-                    Row(
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .padding(horizontal = 16.dp, vertical = 10.dp),
-                        horizontalArrangement = Arrangement.SpaceBetween,
-                        verticalAlignment = Alignment.CenterVertically
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .then(bubbleModifier(CircleShape))
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    onBackToLibrary()
-                                },
-                            contentAlignment = Alignment.Center
-                        ) {
-                            IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                                .padding(horizontal = 24.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Text(
-                                text = strings.navPlaylists,
-                                style = MaterialTheme.typography.titleMedium,
-                                fontWeight = FontWeight.ExtraBold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-
-                        Box(
-                            modifier = Modifier
-                                .height(44.dp)
-                                .clip(RoundedCornerShape(22.dp))
-                                .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    showCreateDialog = true
-                                }
-                                .padding(horizontal = 14.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Icon(
-                                    imageVector = Icons.Filled.Add,
-                                    contentDescription = strings.newPlaylist,
-                                    modifier = Modifier.size(20.dp),
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                                Spacer(Modifier.width(6.dp))
-                                Text(
-                                    text = strings.newPlaylist,
-                                    style = MaterialTheme.typography.labelLarge,
-                                    fontWeight = FontWeight.Bold,
-                                    color = MaterialTheme.colorScheme.onSurface
-                                )
-                            }
-                        }
-                    }
+                    com.lormusic.app.ui.components.ExpressiveScreenHeader(
+                        title = strings.navPlaylists, onBack = onBackToLibrary,
+                        onAction = { showCreateDialog = true }, actionIcon = Icons.Filled.Add,
+                        actionLabel = strings.newPlaylist
+                    )
                 }
             }
         }

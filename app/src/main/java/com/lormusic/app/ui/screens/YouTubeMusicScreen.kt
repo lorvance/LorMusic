@@ -8,6 +8,9 @@ import android.os.Handler
 import android.os.Looper
 import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
+import com.lormusic.app.data.mergeYouTubeSessionCookies
+import com.lormusic.app.data.isYouTubeMusicPage
+import com.lormusic.app.model.betaText
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -540,43 +543,17 @@ private const val YTCFG_PROBE_JS = """
 """
 
 private const val YTM_WEB_LOGIN_URL =
-    "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&passive=true&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26hl%3Dru%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
+    "https://accounts.google.com/ServiceLogin?ltmpl=music&service=youtube&uilel=3&continue=https%3A%2F%2Fwww.youtube.com%2Fsignin%3Faction_handle_signin%3Dtrue%26app%3Ddesktop%26next%3Dhttps%253A%252F%252Fmusic.youtube.com%252F"
 
-private fun unquoteJsEvaluation(raw: String?): String? {
-    if (raw.isNullOrBlank() || raw == "null" || raw == "undefined") return null
-    val trimmed = raw.trim()
-    if (trimmed.length >= 2 && trimmed.startsWith("\"") && trimmed.endsWith("\"")) {
-        return trimmed.substring(1, trimmed.length - 1)
-            .replace("\\\"", "\"")
-            .replace("\\\\", "\\")
-            .replace("\\n", "\n")
-            .replace("\\t", "\t")
-    }
-    return trimmed
-}
+private fun unquoteJsEvaluation(raw: String?): String? = runCatching {
+    if (raw.isNullOrBlank()) null else org.json.JSONTokener(raw).nextValue() as? String
+}.getOrNull()
 
-private fun extractYoutubeMusicCookies(cookieManager: CookieManager): String {
-    val map = LinkedHashMap<String, String>()
-    val domains = listOf(
-        "https://youtube.com",
-        "https://www.youtube.com",
-        "https://music.youtube.com",
-        "https://accounts.google.com",
-        "https://google.com"
-    )
-    for (u in domains) {
-        val raw = runCatching { cookieManager.getCookie(u) }.getOrNull().orEmpty()
-        raw.split(';').forEach { part ->
-            val idx = part.indexOf('=')
-            if (idx > 0) {
-                val k = part.substring(0, idx).trim()
-                val v = part.substring(idx + 1).trim()
-                if (k.isNotEmpty() && v.isNotEmpty()) map[k] = v
-            }
-        }
-    }
-    return map.entries.joinToString("; ") { "${it.key}=${it.value}" }
-}
+private fun extractYoutubeMusicCookies(cookieManager: CookieManager): String = mergeYouTubeSessionCookies(
+    cookieManager.getCookie("https://music.youtube.com"),
+    cookieManager.getCookie("https://www.youtube.com"),
+    cookieManager.getCookie("https://youtube.com")
+)
 
 @SuppressLint("SetJavaScriptEnabled")
 @Composable
@@ -613,13 +590,13 @@ private fun YtMusicRealWebLoginDialog(
     }
 
     fun probeYtcfgAndCapture(view: WebView?, attempt: Int = 0) {
-        if (hasCompletedAuth || view == null) return
+        if (hasCompletedAuth || view == null || !isYouTubeMusicPage(view.url)) return
         val cm = CookieManager.getInstance()
         val cookies = extractYoutubeMusicCookies(cm)
         val hasAuth = YouTubeMusicRepository.hasValidAuthCookie(cookies)
 
         view.evaluateJavascript(YTCFG_PROBE_JS) { raw ->
-            if (hasCompletedAuth) return@evaluateJavascript
+            if (hasCompletedAuth || !isYouTubeMusicPage(view.url)) return@evaluateJavascript
             val unquoted = unquoteJsEvaluation(raw)
             val meta = runCatching {
                 if (!unquoted.isNullOrBlank()) JSONObject(unquoted) else null
@@ -628,10 +605,12 @@ private fun YtMusicRealWebLoginDialog(
             val dataSync = meta?.optString("dataSyncId").orEmpty()
             val hasIdentity = dataSync.isNotBlank() || meta?.optString("pageId").orEmpty().isNotBlank()
 
-            if (hasAuth && (loggedIn || hasIdentity || attempt >= 4)) {
+            if (hasAuth && (loggedIn || hasIdentity)) {
                 finishLogin(view, meta)
             } else if (attempt < 14) {
                 mainHandler.postDelayed({ probeYtcfgAndCapture(view, attempt + 1) }, 400L)
+            } else {
+                statusSubtitle = strings.betaText("authFailed")
             }
         }
     }
@@ -748,7 +727,7 @@ private fun YtMusicRealWebLoginDialog(
                                     loadWithOverviewMode = true
                                     useWideViewPort = true
                                     cacheMode = WebSettings.LOAD_DEFAULT
-                                    mixedContentMode = WebSettings.MIXED_CONTENT_ALWAYS_ALLOW
+                                    mixedContentMode = WebSettings.MIXED_CONTENT_NEVER_ALLOW
                                     userAgentString = userAgentString
                                         .replace("; wv", "")
                                         .replace(Regex("""Version/\d+\.\d+\s*"""), "")
@@ -763,23 +742,20 @@ private fun YtMusicRealWebLoginDialog(
                                             u.contains("music.youtube.com") -> strings.syncingWithGoogle
                                             else -> strings.googleSignInSubtitle
                                         }
-                                        val cookies = extractYoutubeMusicCookies(cookieManager)
-                                        if (u.startsWith("https://music.youtube.com") &&
-                                            YouTubeMusicRepository.hasValidAuthCookie(cookies)
-                                        ) {
-                                            probeYtcfgAndCapture(view)
-                                        }
                                     }
 
                                     override fun onPageFinished(view: WebView?, url: String?) {
                                         super.onPageFinished(view, url)
                                         isPageLoading = false
                                         val u = url.orEmpty()
+                                        if (u.contains("deniedsignin") || u.contains("disallowed_useragent")) {
+                                            statusSubtitle = strings.betaText("authBlocked")
+                                        }
                                         val cookies = extractYoutubeMusicCookies(cookieManager)
                                         if (YouTubeMusicRepository.hasValidAuthCookie(cookies)) {
-                                            if (u.startsWith("https://music.youtube.com")) {
+                                            if (isYouTubeMusicPage(u)) {
                                                 probeYtcfgAndCapture(view)
-                                            } else if (!u.contains("accounts.google.com") && !u.contains("/signin")) {
+                                            } else if (android.net.Uri.parse(u).host in listOf("www.youtube.com", "youtube.com") && !u.contains("/signin")) {
                                                 view?.loadUrl("https://music.youtube.com/")
                                             }
                                         }

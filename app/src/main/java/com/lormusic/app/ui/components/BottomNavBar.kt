@@ -102,8 +102,16 @@ fun LorBottomNavBar(
     showLabels: Boolean = false,
     onToggleLocalSearch: () -> Unit = {},
     applyNavigationInsets: Boolean = true,
+    useExpressive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    if (useExpressive) {
+        val strings = com.lormusic.app.model.LocalStrings.current
+        ExpressiveNavigationBar(items = LorTab.entries, selectedItem = selected, onSelect = onSelect,
+            label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
+            searchActive = isLocalSearchActive, onSearch = onToggleLocalSearch, modifier = modifier, applyInsets = applyNavigationInsets )
+        return
+    }
     val view = LocalView.current
     val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current
@@ -380,8 +388,16 @@ fun YtMusicBottomNavBar(
     useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = true,
     showLabels: Boolean = false,
+    useExpressive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    if (useExpressive) {
+        val strings = com.lormusic.app.model.LocalStrings.current
+        ExpressiveNavigationBar(items = YtMusicTab.entries.filter { it != YtMusicTab.SEARCH }, selectedItem = selected, onSelect = onSelect,
+            label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
+            searchActive = selected == YtMusicTab.SEARCH, onSearch = { onSelect(YtMusicTab.SEARCH) }, modifier = modifier )
+        return
+    }
     val view = LocalView.current
     val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current
@@ -664,8 +680,16 @@ fun ScMusicBottomNavBar(
     useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = true,
     showLabels: Boolean = false,
+    useExpressive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    if (useExpressive) {
+        val strings = com.lormusic.app.model.LocalStrings.current
+        ExpressiveNavigationBar(items = ScTab.entries.filter { it != ScTab.SEARCH }, selectedItem = selected, onSelect = onSelect,
+            label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
+            searchActive = selected == ScTab.SEARCH, onSearch = { onSelect(ScTab.SEARCH) }, modifier = modifier )
+        return
+    }
     val view = LocalView.current
     val strings = com.lormusic.app.model.LocalStrings.current
     val density = LocalDensity.current

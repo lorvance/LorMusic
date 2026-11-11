@@ -22,6 +22,7 @@ import com.lormusic.app.BuildConfig
 import com.lormusic.app.data.*
 import com.lormusic.app.model.*
 import com.lormusic.app.service.PlaybackService
+import com.lormusic.app.model.betaText
 import com.lormusic.app.service.SharedPlayerHolder
 import com.lormusic.app.ui.components.YtMusicTab
 import kotlinx.coroutines.Dispatchers
@@ -74,6 +75,11 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val enableBlur = mutableStateOf(prefs.getEnableBlur())
     val useLiquidGlass = mutableStateOf(prefs.getUseLiquidGlass())
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
+    val expressiveNavigation = mutableStateOf(prefs.getExpressiveNavigation())
+    fun setExpressiveNavigation(enabled: Boolean) {
+        prefs.saveExpressiveNavigation(enabled)
+        expressiveNavigation.value = enabled
+    }
     val betaExpandingSearch = mutableStateOf(prefs.getBetaExpandingSearch())
     fun setBetaExpandingSearch(enabled: Boolean) {
         prefs.saveBetaExpandingSearch(enabled)
@@ -240,6 +246,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     init {
+        prefs.getYtWebClientVersion()?.takeIf { it.isNotBlank() }?.let { YouTubeMusicRepository.currentClientVersion = it }
+        YouTubeMusicRepository.currentLanguage = if (appLanguage.value == AppLanguage.SYSTEM) java.util.Locale.getDefault().language else appLanguage.value.code
         exoPlayer.addListener(playerListener)
         if (!com.lormusic.app.service.ExternalPlaybackSession.active) exoPlayer.setPlaybackSpeed(playbackSpeed.value)
         com.lormusic.app.data.EqualizerManager.initAudioSession(exoPlayer.audioSessionId, prefs)
@@ -276,17 +284,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             } else {
                 val cmCookie = runCatching {
                     val cm = android.webkit.CookieManager.getInstance()
-                    listOf(
-                        "https://music.youtube.com",
-                        "https://www.youtube.com",
-                        "https://youtube.com",
-                        "https://accounts.google.com"
-                    ).mapNotNull { runCatching { cm.getCookie(it) }.getOrNull() }
-                        .flatMap { it.split(";") }
-                        .map { it.trim() }
-                        .filter { it.isNotEmpty() }
-                        .distinct()
-                        .joinToString("; ")
+                    com.lormusic.app.data.mergeYouTubeSessionCookies(
+                        cm.getCookie("https://music.youtube.com"), cm.getCookie("https://www.youtube.com"), cm.getCookie("https://youtube.com"))
                 }.getOrNull()
                 if (!cmCookie.isNullOrBlank() && YouTubeMusicRepository.hasValidAuthCookie(cmCookie)) {
                     ytMusicCookie.value = cmCookie
@@ -697,20 +696,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun signInWithCookie(cookie: String) {
-        ytMusicCookie.value = cookie
-        prefs.saveYtMusicCookie(cookie)
         viewModelScope.launch {
             isLoadingYtFeed.value = true
             val syncData = YouTubeMusicRepository.syncAuthenticatedAccount(cookie)
-            val profile = syncData.profile ?: googleAccount.value ?: GoogleAccountProfile(
-                displayName = when (appLanguage.value) {
-                    AppLanguage.EN -> "YouTube Music Account"
-                    AppLanguage.UK -> "Обліковий запис YouTube Music"
-                    AppLanguage.PL -> "Konto YouTube Music"
-                    else -> "Аккаунт YouTube Music"
-                },
-                email = "YouTube Music Sync"
-            )
+            val profile = syncData.profile
+            if (profile == null) {
+                isLoadingYtFeed.value = false
+                YouTubeMusicRepository.updateSessionMetadata(ytMusicCookie.value.orEmpty())
+                statusMessage.value = com.lormusic.app.model.resolveStrings(appLanguage.value)
+                    .betaText("authFailed")
+                return@launch
+            }
+            ytMusicCookie.value = cookie
+            prefs.saveYtMusicCookie(cookie)
+            prefs.saveYtWebClientVersion(YouTubeMusicRepository.currentClientVersion)
             googleAccount.value = profile
             prefs.saveGoogleAccount(profile.displayName, profile.email, profile.avatarUrl)
 
@@ -1731,6 +1730,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         classicLibraryDesign.value = prefs.getClassicLibraryDesign()
         useDynamicPlayerColors.value = prefs.getUseDynamicPlayerColors()
         enableBetaUpdates.value = prefs.getEnableBetaUpdates()
+        expressiveNavigation.value = prefs.getExpressiveNavigation()
         betaExpandingSearch.value = prefs.getBetaExpandingSearch()
         betaAutoHideNavBar.value = prefs.getBetaAutoHideNavBar()
         betaCategorizedSettings.value = prefs.getBetaCategorizedSettings()
@@ -1741,6 +1741,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         useMyWaveCoverGradient.value = prefs.getUseMyWaveCoverGradient()
         autoTagFixEnabled.value = prefs.getAutoTagFixEnabled()
         appLanguage.value = prefs.getAppLanguage()
+        YouTubeMusicRepository.currentLanguage = if (appLanguage.value == AppLanguage.SYSTEM) java.util.Locale.getDefault().language else appLanguage.value.code
         searchBarPlacement.value = prefs.getSearchBarPlacement()
         enablePlayerSwipe.value = prefs.getEnablePlayerSwipe()
         hideDemoTracks.value = prefs.getHideDemoTracks()
@@ -2012,6 +2013,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun setAppLanguage(lang: com.lormusic.app.model.AppLanguage) {
         appLanguage.value = lang
+        YouTubeMusicRepository.currentLanguage = if (lang == AppLanguage.SYSTEM) java.util.Locale.getDefault().language else lang.code
         prefs.saveAppLanguage(lang)
     }
 

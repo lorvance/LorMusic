@@ -90,6 +90,9 @@ object YouTubeMusicRepository {
     var currentVisitorData: String? = null
 
     @Volatile
+    var currentLanguage: String = java.util.Locale.getDefault().language
+
+    @Volatile
     var currentClientVersion: String = "1.20250219.01.00"
 
     @Volatile
@@ -111,6 +114,9 @@ object YouTubeMusicRepository {
         accountAvatar: String? = null
     ) {
         currentAuthCookie = cookie
+        if (!clientVersion.isNullOrBlank() && clientVersion != "null" && clientVersion != "undefined") {
+            currentClientVersion = clientVersion
+        }
         currentPageId = pageId?.takeIf { it.isNotBlank() && it != "null" && it != "undefined" }
         currentDataSyncId = dataSyncId?.takeIf { it.isNotBlank() && it != "null" && it != "undefined" }
         if (!authUser.isNullOrBlank() && authUser != "null" && authUser != "undefined") {
@@ -146,33 +152,15 @@ object YouTubeMusicRepository {
         DISCOVERY("Незнакомое", "новые инди хиты 2025 2026")
     }
 
-    fun hasValidAuthCookie(cookie: String?): Boolean {
-        if (cookie.isNullOrBlank()) return false
-        if (extractSapisid(cookie) != null) return true
-        val parts = cookie.split(";").map { it.trim() }
-        return parts.any {
-            it.startsWith("SID=") || it.startsWith("__Secure-1PSID=") ||
-            it.startsWith("__Secure-3PSID=") || it.startsWith("LOGIN_INFO=")
-        }
-    }
+    fun hasValidAuthCookie(cookie: String?): Boolean = !cookie.isNullOrBlank() && extractSapisid(cookie) != null
 
     private fun extractSapisid(cookie: String): String? {
-        val parts = cookie.split(";").map { it.trim() }
-        for (part in parts) {
-            if (part.startsWith("SAPISID=")) {
-                return part.removePrefix("SAPISID=").trim().takeIf { it.isNotEmpty() }
-            }
-            if (part.startsWith("__Secure-3PAPISID=")) {
-                return part.removePrefix("__Secure-3PAPISID=").trim().takeIf { it.isNotEmpty() }
-            }
-            if (part.startsWith("__Secure-1PAPISID=")) {
-                return part.removePrefix("__Secure-1PAPISID=").trim().takeIf { it.isNotEmpty() }
-            }
-            if (part.startsWith("APISID=")) {
-                return part.removePrefix("APISID=").trim().takeIf { it.isNotEmpty() }
-            }
-        }
-        return null
+        val values = cookie.split(';').mapNotNull { part ->
+            val split = part.indexOf('=')
+            if (split > 0) part.substring(0, split).trim() to part.substring(split + 1).trim() else null
+        }.toMap()
+        return listOf("SAPISID", "__Secure-1PAPISID", "__Secure-3PAPISID")
+            .firstNotNullOfOrNull { values[it]?.takeIf { value -> value.isNotBlank() } }
     }
 
     private fun buildSapisidHashHeader(cookie: String, origin: String = YTM_ORIGIN): String? {
@@ -194,9 +182,9 @@ object YouTubeMusicRepository {
                         "client",
                         JSONObject().apply {
                             put("clientName", "WEB_REMIX")
-                            put("clientVersion", "1.20250219.01.00")
-                            put("hl", "ru")
-                            put("gl", "RU")
+                            put("clientVersion", currentClientVersion)
+                            put("hl", currentLanguage)
+                            put("gl", java.util.Locale.getDefault().country.ifBlank { "US" })
                         }
                     )
                     if (!effectivePageId.isNullOrBlank()) {
@@ -232,7 +220,7 @@ object YouTubeMusicRepository {
                 setRequestProperty("Referer", "$YTM_ORIGIN/")
                 setRequestProperty("X-Goog-AuthUser", currentAuthUser.ifBlank { "0" })
                 setRequestProperty("X-YouTube-Client-Name", "67")
-                setRequestProperty("X-YouTube-Client-Version", "1.20250219.01.00")
+                setRequestProperty("X-YouTube-Client-Version", currentClientVersion)
                 pageIdHeader?.takeIf { it.isNotBlank() }?.let { setRequestProperty("X-Goog-PageId", it) }
                 setRequestProperty(
                     "User-Agent",
@@ -345,14 +333,12 @@ object YouTubeMusicRepository {
         val parsed = runCatching {
             val header = json?.let { findActiveAccountHeaderRecursive(it) } ?: return@runCatching null
 
-            val name = extractRunsText(header.optJSONObject("accountName")).ifBlank {
-                cachedWebViewProfile?.displayName ?: ""
-            }
+            val name = extractRunsText(header.optJSONObject("accountName"))
             if (name.isBlank()) return@runCatching null
 
             val email = extractRunsText(header.optJSONObject("email"))
                 .ifBlank { extractRunsText(header.optJSONObject("channelHandle")) }
-                .ifBlank { cachedWebViewProfile?.email ?: "Синхронизировано с YouTube Music" }
+                .ifBlank { "YouTube Music" }
 
             val photoThumbs = header.optJSONObject("accountPhoto")?.optJSONArray("thumbnails")
             val rawAvatar = if (photoThumbs != null && photoThumbs.length() > 0) {
@@ -360,11 +346,11 @@ object YouTubeMusicRepository {
             } else null
             val avatarUrl = rawAvatar?.let {
                 if (it.startsWith("//")) "https:$it" else it
-            } ?: cachedWebViewProfile?.avatarUrl
+            }
 
             GoogleAccountProfile(displayName = name, email = email, avatarUrl = avatarUrl)
         }.getOrNull()
-        parsed ?: cachedWebViewProfile
+        parsed
     }
 
     suspend fun syncAuthenticatedAccount(cookie: String): YtAccountSyncResult = withContext(Dispatchers.IO) {

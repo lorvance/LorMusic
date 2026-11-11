@@ -527,6 +527,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 }
                                             }
                                             ProfileScreen(
+                                                expressiveNavigation = playerViewModel.expressiveNavigation.value,
+                                                onToggleExpressiveNavigation = playerViewModel::setExpressiveNavigation,
                                                 totalSongsCount = visibleTotalSongs,
                                                 localSongsCount = localSongsCount,
                                                 favoritesCount = favoriteIds.size,
@@ -821,6 +823,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         ) {
                             if (isYtMusicMode) {
                                 YtMusicBottomNavBar(
+                                    useExpressive = playerViewModel.expressiveNavigation.value,
                                     selected = activeYtTab,
                                     onSelect = { tab ->
                                         playerViewModel.selectYtTab(tab)
@@ -833,6 +836,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 )
                             } else if (isSoundCloudMode) {
                                 ScMusicBottomNavBar(
+                                    useExpressive = playerViewModel.expressiveNavigation.value,
                                     selected = activeScTab,
                                     onSelect = { tab: com.lormusic.app.ui.components.ScTab ->
                                         playerViewModel.selectScTab(tab)
@@ -845,6 +849,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 )
                             } else if (selectedArtist == null) {
                                 LorBottomNavBar(
+                                    useExpressive = playerViewModel.expressiveNavigation.value,
                                     selected = selectedTab,
                                     onSelect = { tab ->
                                         selectedTab = tab

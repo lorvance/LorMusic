@@ -39,6 +39,9 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.lormusic.app.ui.components.ExpressiveHeaderBackground
+import com.lormusic.app.ui.components.ExpressiveSearchTitle
+import com.lormusic.app.ui.components.expressiveColors
 import com.lormusic.app.data.AlphaNumericComparator
 import com.lormusic.app.model.LibraryFilter
 import com.lormusic.app.model.LocalStrings
@@ -214,33 +217,10 @@ fun LibraryScreen(
     val topHeaderShape = RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp)
     val smoothFling = rememberSmoothFlingBehavior()
 
+    val chrome = expressiveColors()
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
-        Modifier.liquidGlassBubble(
-            shape = shape,
-            hazeState = hazeState,
-            enableBlur = enableBlur,
-            isLiquidGlass = useLiquidGlass
-        )
-    }
-
-    val headerBlurModifier = if (enableBlur) {
-        Modifier.hazeEffect(state = hazeState) {
-            blurEnabled = true
-            backgroundColor = baseSurface
-            blurRadius = 30.dp
-            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
-        }
-    } else {
-        Modifier.background(
-            Brush.verticalGradient(
-                listOf(
-                    MaterialTheme.colorScheme.background.copy(alpha = 0.96f),
-                    MaterialTheme.colorScheme.background.copy(alpha = 0.78f),
-                    MaterialTheme.colorScheme.background.copy(alpha = 0.42f),
-                    Color.Transparent
-                )
-            )
-        )
+        Modifier.background(chrome.surfaceContainer.copy(alpha = .96f), shape)
+            .border(1.dp, chrome.outlineVariant, shape)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -359,43 +339,7 @@ fun LibraryScreen(
                     headerHeightDp = with(density) { coords.size.height.toDp() }
                 }
         ) {
-            val topScrimColor = MaterialTheme.colorScheme.background
-            if (enableBlur) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .hazeEffect(state = hazeState) {
-                            blurEnabled = true
-                            backgroundColor = topScrimColor
-                            blurRadius = 30.dp
-                            tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
-                        }
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    topScrimColor.copy(alpha = 0.75f),
-                                    topScrimColor.copy(alpha = 0.35f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    topScrimColor.copy(alpha = 0.96f),
-                                    topScrimColor.copy(alpha = 0.78f),
-                                    topScrimColor.copy(alpha = 0.42f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            }
+            ExpressiveHeaderBackground(Modifier.matchParentSize())
 
             Column(
                 modifier = Modifier
@@ -495,21 +439,22 @@ fun LibraryScreen(
 
                 @Composable
                 fun SortButtonBubble() {
+                    val sortShape = RoundedCornerShape(topStart = 26.dp, topEnd = 16.dp, bottomEnd = 26.dp, bottomStart = 16.dp)
                     Box(
                         modifier = Modifier
-                            .size(44.dp)
-                            .clip(CircleShape)
+                            .size(52.dp)
+                            .clip(sortShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 showSortMenu = true
                             }
-                            .then(bubbleModifier(CircleShape)),
+                            .background(chrome.primaryContainer, sortShape),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Sort,
                             contentDescription = strings.sorting,
-                            tint = MaterialTheme.colorScheme.onSurface,
+                            tint = chrome.onPrimaryContainer,
                             modifier = Modifier.size(20.dp)
                         )
 
@@ -542,90 +487,26 @@ fun LibraryScreen(
                     }
                 }
 
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically) {
+                    MoreButtonBubble()
+                }
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    ExpressiveSearchTitle(
+                        title = strings.navLibrary, active = betaExpandingSearch && isSearchVisible,
+                        query = searchQuery, onQuery = { searchQuery = it }, onClose = { closeSearch() },
+                        modifier = Modifier.weight(1f)
+                    )
                     if (showTopSearchBar) {
-                        Box(
-                            modifier = Modifier
-                                .size(44.dp)
-                                .clip(CircleShape)
-                                .clickable {
-                                    view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
-                                    isTopSearchExpanded = !isTopSearchExpanded
-                                    if (!isTopSearchExpanded) searchQuery = ""
-                                }
-                                .then(bubbleModifier(CircleShape)),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
-                                contentDescription = strings.searchTitle,
-                                tint = MaterialTheme.colorScheme.onSurface,
-                                modifier = Modifier.size(20.dp)
-                            )
-                        }
-                    } else {
-                        MoreButtonBubble()
-                    }
-
-                    val searchRadius by animateDpAsState(
-                        if (betaExpandingSearch && isSearchVisible) 16.dp else 22.dp,
-                        animationSpec = tween(260), label = "searchBubbleShape")
-                    BoxWithConstraints(Modifier.weight(1f).padding(horizontal = 8.dp), contentAlignment = Alignment.Center) {
-                        val bubbleWidth by animateDpAsState(
-                            if (betaExpandingSearch && isSearchVisible) maxWidth else 100.dp.coerceAtMost(maxWidth),
-                            animationSpec = tween(260), label = "searchBubbleWidth")
-                        Box(
-                            modifier = Modifier.then(if (betaExpandingSearch) Modifier.width(bubbleWidth) else Modifier.wrapContentWidth()).height(44.dp)
-                                .clip(RoundedCornerShape(searchRadius))
-                                .then(bubbleModifier(RoundedCornerShape(searchRadius)))
-                                .clickable(enabled = betaExpandingSearch && !isSearchVisible) {
-                                    isTopSearchExpanded = true
-                                }.padding(horizontal = if (betaExpandingSearch) 12.dp else 20.dp),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Crossfade(targetState = betaExpandingSearch && isSearchVisible, label = "searchBubbleContent") { expanded ->
-                            if (expanded) {
-                                LaunchedEffect(Unit) { searchFocus.requestFocus(); keyboard?.show() }
-                                BasicTextField(
-                                    value = searchQuery, onValueChange = { searchQuery = it }, singleLine = true,
-                                    textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
-                                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
-                                    modifier = Modifier.fillMaxWidth().focusRequester(searchFocus),
-                                    decorationBox = { inner ->
-                                        Row(verticalAlignment = Alignment.CenterVertically) {
-                                            Box(Modifier.weight(1f)) {
-                                                if (searchQuery.isEmpty()) Text(strings.searchTitle, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-                                                inner()
-                                            }
-                                            IconButton(onClick = { if (searchQuery.isNotEmpty()) searchQuery = "" else closeSearch() }, modifier = Modifier.size(32.dp)) {
-                                                Icon(Icons.Filled.Close, strings.clear, modifier = Modifier.size(18.dp))
-                                            }
-                                        }
-                                    }
-                                )
-                            } else {
-                                Text(strings.navLibrary, style = MaterialTheme.typography.titleMedium,
-                                    fontWeight = FontWeight.ExtraBold, maxLines = 1)
-                            }
-                            }
+                        FilledTonalIconButton(onClick = {
+                            if (isTopSearchExpanded) closeSearch() else isTopSearchExpanded = true
+                        }, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = chrome.surfaceContainerHigh)) {
+                            Icon(if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search, strings.searchTitle)
                         }
                     }
-
-                    if (showTopSearchBar) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            MoreButtonBubble()
-                            SortButtonBubble()
-                        }
-                    } else {
-                        SortButtonBubble()
-                    }
+                    SortButtonBubble()
                 }
 
                 Spacer(Modifier.height(8.dp))

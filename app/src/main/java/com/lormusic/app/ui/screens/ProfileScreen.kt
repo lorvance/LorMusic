@@ -1,5 +1,6 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.model.betaText
 import android.os.Build
 import android.content.Context
 import android.content.Intent
@@ -26,6 +27,8 @@ import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -73,6 +76,8 @@ fun ProfileScreen(
     themeMode: ThemeMode,
     useDynamicColor: Boolean,
     useSquigglySlider: Boolean,
+    expressiveNavigation: Boolean = false,
+    onToggleExpressiveNavigation: (Boolean) -> Unit = {},
     enableBlur: Boolean,
     pureMaterialYou: Boolean = false,
     showNavBarLabels: Boolean = false,
@@ -159,6 +164,8 @@ fun ProfileScreen(
         onCategoryOpenChange(betaCategorizedSettings && activeCategory != null)
     }
     DisposableEffect(Unit) { onDispose { onCategoryOpenChange(false) } }
+    val headerDensity = LocalDensity.current
+    var profileHeaderHeight by remember { mutableStateOf(164.dp) }
     val scrollState = rememberScrollState()
     LaunchedEffect(activeCategory) {
         scrollState.scrollTo(0)
@@ -179,9 +186,8 @@ fun ProfileScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
                     .verticalScroll(scrollState)
-                    .padding(start = 20.dp, end = 20.dp, top = 74.dp, bottom = 185.dp)
+                    .padding(start = 20.dp, end = 20.dp, top = profileHeaderHeight, bottom = 185.dp)
             ) {
                 @Composable
                 fun BetaBadge() {
@@ -330,12 +336,14 @@ fun ProfileScreen(
                         AppIconSelectorContent()
                         Spacer(Modifier.height(20.dp))
                     }
+                    if (!betaCategorizedSettings) {
                     Text(
                         text = strings.settingsCategoryAppearance,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
@@ -440,27 +448,30 @@ fun ProfileScreen(
 
                 @Composable
                 fun NavigationContent() {
+                    if (!betaCategorizedSettings) {
                     Text(
                         text = strings.settingsCategoryNavigation,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text("Предпросмотр", style = MaterialTheme.typography.labelLarge)
+                        Text(strings.betaText("preview"), style = MaterialTheme.typography.labelLarge)
                         TextButton(onClick = {
                             showNavigationPreview = !showNavigationPreview
                             prefs.saveShowNavigationPreview(showNavigationPreview)
                         }) {
                             Icon(if (showNavigationPreview) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null)
                             Spacer(Modifier.width(4.dp))
-                            Text(if (showNavigationPreview) "Скрыть" else "Показать")
+                            Text(if (showNavigationPreview) strings.betaText("hide") else strings.betaText("show"))
                         }
                     }
                     AnimatedVisibility(visible = showNavigationPreview) {
                         com.lormusic.app.ui.components.NavigationBarPreview(
+                            useExpressive = expressiveNavigation,
                             enableBlur = enableBlur && !pureMaterialYou && !showSearchPlacementDialog,
                             useLiquidGlass = useLiquidGlass && !pureMaterialYou && !showSearchPlacementDialog,
                             showLabels = showNavBarLabels,
@@ -474,6 +485,13 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     ) {
                         Column {
+                            ListItem(
+                                headlineContent = { Text(strings.betaText("expressiveNav")) },
+                                supportingContent = { Text(strings.betaText("expressiveNavDesc")) },
+                                leadingContent = { Icon(Icons.Filled.AutoAwesome, null) },
+                                trailingContent = { Switch(checked = expressiveNavigation, onCheckedChange = onToggleExpressiveNavigation) }
+                            )
+                            SettingsDivider()
                             ListItem(
                                 headlineContent = { Text(strings.searchBarPlacementTitle) },
                                 supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
@@ -515,12 +533,14 @@ fun ProfileScreen(
 
                 @Composable
                 fun PlaybackContent() {
+                    if (!betaCategorizedSettings) {
                     Text(
                         text = strings.settingsCategoryPlayback,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
@@ -623,12 +643,14 @@ fun ProfileScreen(
 
                 @Composable
                 fun BetaContent() {
+                    if (!betaCategorizedSettings) {
                     Text(
                         text = strings.settingsCategoryBeta,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
@@ -636,8 +658,8 @@ fun ProfileScreen(
                     ) {
                         Column {
                             ListItem(
-                                headlineContent = { BetaHeadline("Расширяемый поиск") },
-                                supportingContent = { Text("Поле поиска плавно появляется внутри верхней панели вместо отдельной строки") },
+                                headlineContent = { BetaHeadline(strings.betaText("expandingSearch")) },
+                                supportingContent = { Text(strings.betaText("expandingDesc")) },
                                 leadingContent = { Icon(Icons.Filled.Search, null) },
                                 trailingContent = { Switch(checked = betaExpandingSearch, onCheckedChange = onToggleBetaExpandingSearch) }
                             )
@@ -683,12 +705,14 @@ fun ProfileScreen(
 
                 @Composable
                 fun SystemContent() {
+                    if (!betaCategorizedSettings) {
                     Text(
                         text = strings.settingsCategorySystem,
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary
                     )
+                    }
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
@@ -839,141 +863,21 @@ fun ProfileScreen(
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
                 .clipToBounds()
+                .onSizeChanged { size -> profileHeaderHeight = with(headerDensity) { size.height.toDp() } }
         ) {
-            val topScrimColor = MaterialTheme.colorScheme.background
-            val effectiveBlur = enableBlur && !pureMaterialYou && hazeState != null
-            if (effectiveBlur) {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .hazeEffect(state = hazeState!!) {
-                            blurEnabled = true
-                            backgroundColor = topScrimColor
-                            blurRadius = 24.dp
-                            tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
-                        }
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    topScrimColor.copy(alpha = 0.85f),
-                                    topScrimColor.copy(alpha = 0.50f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            } else {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .background(
-                            Brush.verticalGradient(
-                                listOf(
-                                    topScrimColor.copy(alpha = 0.96f),
-                                    topScrimColor.copy(alpha = 0.78f),
-                                    topScrimColor.copy(alpha = 0.42f),
-                                    Color.Transparent
-                                )
-                            )
-                        )
-                )
-            }
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .statusBarsPadding()
-                    .padding(horizontal = 24.dp, vertical = 10.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
-            ) {
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .then(
-                            Modifier.liquidGlassBubble(
-                                shape = CircleShape,
-                                hazeState = hazeState,
-                                enableBlur = enableBlur && !pureMaterialYou,
-                                isLiquidGlass = useLiquidGlass && !pureMaterialYou
-                            )
-                        )
-                        .clickable {
-                            if (betaCategorizedSettings && activeCategory != null) {
-                                activeCategory = null
-                            } else {
-                                onBackToLibrary()
-                            }
-                        },
-                    contentAlignment = Alignment.Center
-                ) {
-                    com.lormusic.app.ui.components.IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
-                }
-                Box(
-                    modifier = Modifier
-                        .height(44.dp)
-                        .clip(RoundedCornerShape(22.dp))
-                        .then(
-                            Modifier.liquidGlassBubble(
-                                shape = RoundedCornerShape(22.dp),
-                                hazeState = hazeState,
-                                enableBlur = enableBlur && !pureMaterialYou,
-                                isLiquidGlass = useLiquidGlass && !pureMaterialYou
-                            )
-                        )
-                        .padding(horizontal = 24.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    val headerTitle = if (betaCategorizedSettings && activeCategory != null) {
-                        when (activeCategory) {
-                            SettingsCategory.APPEARANCE -> strings.settingsCategoryAppearance
-                            SettingsCategory.NAVIGATION -> strings.settingsCategoryNavigation
-                            SettingsCategory.PLAYBACK -> strings.settingsCategoryPlayback
-                            SettingsCategory.BETA -> strings.settingsCategoryBeta
-                            SettingsCategory.SYSTEM -> strings.settingsCategorySystem
-                            null -> strings.settingsTitle
-                        }
-                    } else {
-                        strings.settingsTitle
-                    }
-                    AnimatedContent(
-                        targetState = headerTitle,
-                        transitionSpec = {
-                            fadeIn(animationSpec = tween(200)).togetherWith(fadeOut(animationSpec = tween(150)))
-                        },
-                        label = "headerTitleAnim"
-                    ) { titleText ->
-                        Text(
-                            text = titleText,
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.ExtraBold,
-                            color = MaterialTheme.colorScheme.onSurface
-                        )
-                    }
-                }
-                Box(
-                    modifier = Modifier
-                        .size(44.dp)
-                        .clip(CircleShape)
-                        .then(
-                            Modifier.liquidGlassBubble(
-                                shape = CircleShape,
-                                hazeState = hazeState,
-                                enableBlur = enableBlur && !pureMaterialYou,
-                                isLiquidGlass = useLiquidGlass && !pureMaterialYou
-                            )
-                        )
-                        .clickable { showBackupDialog = true },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(
-                        imageVector = Icons.Filled.MoreVert,
-                        contentDescription = strings.backupTitle,
-                        tint = MaterialTheme.colorScheme.onSurface,
-                        modifier = Modifier.size(22.dp)
-                    )
-                }
-            }
+            val title = if (betaCategorizedSettings && activeCategory != null) when (activeCategory) {
+                SettingsCategory.APPEARANCE -> strings.settingsCategoryAppearance
+                SettingsCategory.NAVIGATION -> strings.settingsCategoryNavigation
+                SettingsCategory.PLAYBACK -> strings.settingsCategoryPlayback
+                SettingsCategory.BETA -> strings.settingsCategoryBeta
+                SettingsCategory.SYSTEM -> strings.settingsCategorySystem
+                null -> strings.navSettings
+            } else strings.navSettings
+            com.lormusic.app.ui.components.ExpressiveScreenHeader(
+                title = title,
+                onBack = { if (betaCategorizedSettings && activeCategory != null) activeCategory = null else onBackToLibrary() },
+                onAction = { showBackupDialog = true }
+            )
         }
     }
     if (showThemeDialog) {

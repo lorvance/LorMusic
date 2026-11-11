@@ -76,6 +76,7 @@ class PreferencesRepository(context: Context) {
         KEY_TOTAL_LISTENING_MS to "Long",
         KEY_BETA_EXPANDING_SEARCH to "Boolean",
         KEY_SHOW_NAVIGATION_PREVIEW to "Boolean",
+        KEY_EXPRESSIVE_NAVIGATION to "Boolean",
     )
 
     init {
@@ -121,6 +122,17 @@ class PreferencesRepository(context: Context) {
             }
         }
         if (changed) editor.commit()
+    }
+
+    // Authentication session metadata deliberately stays outside the backup allowlist.
+    fun getYtWebClientVersion(): String? = prefs.getString("yt_web_client_version", null)
+    fun saveYtWebClientVersion(version: String) {
+        prefs.edit().putString("yt_web_client_version", version).apply()
+    }
+
+    fun getExpressiveNavigation(): Boolean = prefs.getBoolean(KEY_EXPRESSIVE_NAVIGATION, false)
+    fun saveExpressiveNavigation(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_EXPRESSIVE_NAVIGATION, enabled).apply()
     }
 
     fun getShowNavigationPreview(): Boolean = prefs.getBoolean(KEY_SHOW_NAVIGATION_PREVIEW, true)
@@ -1002,6 +1014,7 @@ class PreferencesRepository(context: Context) {
     } catch (_: Exception) { false }
 
     companion object {
+        private const val KEY_EXPRESSIVE_NAVIGATION = "expressive_navigation"
         private const val KEY_SHOW_NAVIGATION_PREVIEW = "show_navigation_preview"
         private const val KEY_BETA_EXPANDING_SEARCH = "beta_expanding_search"
         private const val KEY_FAVORITES = "favorite_song_ids"
