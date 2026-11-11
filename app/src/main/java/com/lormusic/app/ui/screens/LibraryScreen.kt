@@ -75,6 +75,7 @@ fun LibraryScreen(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     classicLibraryDesign: Boolean = false,
+    expressiveHeader: Boolean = false,
     betaExpandingSearch: Boolean = false,
     onCloseExternalSearch: () -> Unit = {},
     showTopSearchBar: Boolean = true,
@@ -219,8 +220,9 @@ fun LibraryScreen(
 
     val chrome = expressiveColors()
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
-        Modifier.background(chrome.surfaceContainer.copy(alpha = .96f), shape)
+        if (expressiveHeader) Modifier.background(chrome.surfaceContainer.copy(alpha = .96f), shape)
             .border(1.dp, chrome.outlineVariant, shape)
+        else Modifier.liquidGlassBubble(shape, hazeState, enableBlur, useLiquidGlass)
     }
 
     Box(modifier = Modifier.fillMaxSize()) {
@@ -243,7 +245,7 @@ fun LibraryScreen(
                         Icon(
                             imageVector = if (selectedFilter == LibraryFilter.HIDDEN) Icons.Filled.VisibilityOff else Icons.Filled.MusicOff,
                             contentDescription = null,
-                            modifier = Modifier.size(52.dp),
+                            modifier = Modifier.size(44.dp),
                             tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.4f)
                         )
                         Spacer(Modifier.height(10.dp))
@@ -339,7 +341,8 @@ fun LibraryScreen(
                     headerHeightDp = with(density) { coords.size.height.toDp() }
                 }
         ) {
-            ExpressiveHeaderBackground(Modifier.matchParentSize())
+            if (expressiveHeader) ExpressiveHeaderBackground(Modifier.matchParentSize())
+            else Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.background.copy(alpha = .96f)))
 
             Column(
                 modifier = Modifier
@@ -443,18 +446,18 @@ fun LibraryScreen(
                     Box(
                         modifier = Modifier
                             .size(52.dp)
-                            .clip(sortShape)
+                            .clip(if (expressiveHeader) sortShape else CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 showSortMenu = true
                             }
-                            .background(chrome.primaryContainer, sortShape),
+                            .then(if (expressiveHeader) Modifier.background(chrome.primaryContainer, sortShape) else bubbleModifier(CircleShape)),
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.Sort,
                             contentDescription = strings.sorting,
-                            tint = chrome.onPrimaryContainer,
+                            tint = if (expressiveHeader) chrome.onPrimaryContainer else MaterialTheme.colorScheme.onSurface,
                             modifier = Modifier.size(20.dp)
                         )
 
@@ -487,22 +490,29 @@ fun LibraryScreen(
                     }
                 }
 
-                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically) {
-                    MoreButtonBubble()
-                }
-                Spacer(Modifier.height(8.dp))
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    ExpressiveSearchTitle(
-                        title = strings.navLibrary, active = betaExpandingSearch && isSearchVisible,
-                        query = searchQuery, onQuery = { searchQuery = it }, onClose = { closeSearch() },
-                        modifier = Modifier.weight(1f)
-                    )
+                    MoreButtonBubble()
+                    if (expressiveHeader) {
+                        ExpressiveSearchTitle(title = strings.navLibrary, active = betaExpandingSearch && isSearchVisible,
+                            query = searchQuery, onQuery = { searchQuery = it }, onClose = { closeSearch() },
+                            modifier = Modifier.weight(1f))
+                    } else {
+                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                            if (betaExpandingSearch && isSearchVisible) {
+                                ExpressiveSearchTitle(title = strings.navLibrary, active = true,
+                                    query = searchQuery, onQuery = { searchQuery = it }, onClose = { closeSearch() },
+                                    modifier = Modifier.fillMaxWidth(), largeTitle = false)
+                            } else {
+                                Box(Modifier.height(44.dp).clip(CircleShape).then(bubbleModifier(CircleShape))
+                                    .padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+                                    Text(strings.navLibrary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                                }
+                            }
+                        }
+                    }
                     if (showTopSearchBar) {
-                        FilledTonalIconButton(onClick = {
-                            if (isTopSearchExpanded) closeSearch() else isTopSearchExpanded = true
-                        }, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = chrome.surfaceContainerHigh)) {
+                        IconButton(onClick = { if (isTopSearchExpanded) closeSearch() else isTopSearchExpanded = true }) {
                             Icon(if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search, strings.searchTitle)
                         }
                     }

@@ -11,6 +11,8 @@ import android.view.ViewGroup
 import com.lormusic.app.data.mergeYouTubeSessionCookies
 import com.lormusic.app.data.isYouTubeMusicPage
 import com.lormusic.app.model.betaText
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.ui.graphics.SolidColor
 import android.webkit.CookieManager
 import android.webkit.WebResourceRequest
 import android.webkit.WebSettings
@@ -2220,6 +2222,7 @@ private fun YtLibrariesTab(
                 } else {
                     Box(
                         modifier = Modifier
+                            .weight(1f)
                             .height(46.dp)
                             .clip(RoundedCornerShape(23.dp))
                             .then(bubbleModifier(RoundedCornerShape(23.dp)))
@@ -2238,39 +2241,19 @@ private fun YtLibrariesTab(
                             )
                             Text(
                                 text = strings.ytLibrariesTitle,
+                                maxLines = 1, overflow = TextOverflow.Ellipsis,
                                 style = MaterialTheme.typography.titleMedium,
                                 fontWeight = FontWeight.ExtraBold
                             )
                         }
                     }
 
-                    Spacer(Modifier.weight(1f))
+                    Spacer(Modifier.width(10.dp))
 
-                    Box(
-                        modifier = Modifier
-                            .height(46.dp)
-                            .clip(RoundedCornerShape(23.dp))
-                            .clickable { showCreateDialog = true }
-                            .then(bubbleModifier(RoundedCornerShape(23.dp)))
-                            .padding(horizontal = 14.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Row(
-                            verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(6.dp)
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Add,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.primary,
-                                modifier = Modifier.size(20.dp)
-                            )
-                            Text(
-                                text = strings.playlistNameLabel,
-                                style = MaterialTheme.typography.labelLarge,
-                                fontWeight = FontWeight.Bold
-                            )
-                        }
+                    Box(Modifier.size(46.dp).clip(CircleShape)
+                        .then(bubbleModifier(CircleShape)).clickable { showCreateDialog = true },
+                        contentAlignment = Alignment.Center) {
+                        Icon(Icons.Filled.Add, strings.newPlaylistDialogTitle, tint = MaterialTheme.colorScheme.primary)
                     }
                 }
             }
@@ -2278,38 +2261,31 @@ private fun YtLibrariesTab(
     }
 
     if (showCreateDialog) {
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text(strings.newLibraryPlaylist) },
-            text = {
-                OutlinedTextField(
-                    value = newPlaylistName,
-                    onValueChange = { newPlaylistName = it },
-                    label = { Text(strings.playlistNameLabel) },
-                    singleLine = true,
-                    shape = RoundedCornerShape(16.dp),
-                    modifier = Modifier.fillMaxWidth()
-                )
-            },
-            confirmButton = {
-                Button(
-                    onClick = {
-                        if (newPlaylistName.isNotBlank()) {
-                            onCreatePlaylist(newPlaylistName.trim(), emptyList())
-                            newPlaylistName = ""
-                            showCreateDialog = false
-                        }
-                    }
-                ) {
-                    Text(strings.create)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
-                    Text(strings.cancel)
+        com.lormusic.app.ui.components.IosPromptDialog(
+            title = strings.newPlaylistDialogTitle,
+            confirmLabel = strings.create, cancelLabel = strings.cancel,
+            confirmEnabled = newPlaylistName.isNotBlank(),
+            onDismiss = { showCreateDialog = false },
+            onConfirm = {
+                if (newPlaylistName.isNotBlank()) {
+                    onCreatePlaylist(newPlaylistName.trim(), emptyList())
+                    newPlaylistName = ""
+                    showCreateDialog = false
                 }
             }
-        )
+        ) {
+            BasicTextField(value = newPlaylistName, onValueChange = { newPlaylistName = it }, singleLine = true,
+                textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                modifier = Modifier.fillMaxWidth().clip(RoundedCornerShape(8.dp))
+                    .background(MaterialTheme.colorScheme.surfaceContainerLowest).padding(horizontal = 12.dp, vertical = 10.dp),
+                decorationBox = { inner ->
+                    Box {
+                        if (newPlaylistName.isEmpty()) Text(strings.playlistNameLabel, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        inner()
+                    }
+                })
+        }
     }
 }
 

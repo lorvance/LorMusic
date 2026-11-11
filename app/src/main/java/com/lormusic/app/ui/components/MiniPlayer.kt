@@ -56,7 +56,7 @@ fun MiniPlayer(
     val view = LocalView.current
     val strings = com.lormusic.app.model.LocalStrings.current
     val shape = RoundedCornerShape(26.dp)
-    val baseSurface = MaterialTheme.colorScheme.surfaceVariant
+    val baseSurface = MaterialTheme.colorScheme.surface
 
     var rawDragX by remember { mutableFloatStateOf(0f) }
     val animatedDragX by animateFloatAsState(
@@ -73,7 +73,7 @@ fun MiniPlayer(
             blurEnabled = true
             backgroundColor = baseSurface
             blurRadius = 30.dp
-            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.56f)))
+            tints = listOf(HazeTint(baseSurface.copy(alpha = 0.42f)))
         }
     } else {
         Modifier.background(baseSurface.copy(alpha = 0.96f))
@@ -113,7 +113,9 @@ fun MiniPlayer(
                 spotColor = Color.Black.copy(alpha = 0.55f)
             )
             .clip(shape)
+            .background(baseSurface.copy(alpha = 0.92f), shape)
             .then(glassMod)
+            .background(baseSurface.copy(alpha = if (isPureMy) 0f else 0.30f), shape)
             .pointerInput(enableSwipe) {
                 if (!enableSwipe) return@pointerInput
                 var totalDrag = 0f

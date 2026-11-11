@@ -51,6 +51,7 @@ public class BackupRegression {
         values.put("equalizer_preset", 2L);
         values.put("playback_speed", 1);
         PreferencesRepository r=repository();
+        check(!r.getExpressiveHeader() && !r.getMaterialArrows(),"legacy header and iOS arrows are default for existing users");
         check(r.getTotalListeningTimeMs()==123 && values.get("total_listening_ms") instanceof Long,"existing Int listening time migrates to Long");
         check(r.getEqualizerPreset()==2 && values.get("equalizer_preset") instanceof Integer,"legacy Long equalizer migrates to Int");
         check(r.getPlaybackSpeed()==1f && values.get("playback_speed") instanceof Float,"legacy integer speed migrates to Float");
@@ -61,6 +62,8 @@ public class BackupRegression {
         r.addListeningTimeMs(1000);
         check(r.getTotalListeningTimeMs()==Long.MAX_VALUE,"listening accumulator does not overflow");
         values.put("yt_music_cookie_raw","secret_cookie"); values.put("sc_auth_token_raw","secret_token");
+        r.saveExpressiveHeader(true);
+        r.saveMaterialArrows(true);
         r.saveExpressiveNavigation(true);
         r.saveShowNavigationPreview(false);
         r.saveBetaExpandingSearch(true);
@@ -72,6 +75,7 @@ public class BackupRegression {
         check(r.importBackupJson(exported) && r.getPlaybackSpeed()==1.25f && r.getBetaExpandingSearch(),"v2 round trip with float and beta setting");
         check(!r.getShowNavigationPreview() && !backup.getJSONObject("settings").getBoolean("show_navigation_preview"),"preview visibility persists and round trips in backup");
         check(r.getExpressiveNavigation() && backup.getJSONObject("settings").getBoolean("expressive_navigation"),"Expressive navigation persists and round trips in backup");
+        check(r.getExpressiveHeader() && r.getMaterialArrows() && backup.getJSONObject("settings").getBoolean("expressive_header") && backup.getJSONObject("settings").getBoolean("material_arrows"),"Material You header and arrow settings round trip in backup");
         Map<String,Object> before=new LinkedHashMap<>(values);
         check(!r.importBackupJson("{\"total_listening_ms\":100,\"enable_backdrop_blur\":\"wrong\"}") && before.equals(values),"wrong type rejects entire import without partial writes");
         check(!r.importBackupJson("{") && before.equals(values),"invalid JSON preserves settings");

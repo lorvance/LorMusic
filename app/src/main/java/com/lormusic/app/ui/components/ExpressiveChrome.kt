@@ -1,6 +1,5 @@
 package com.lormusic.app.ui.components
 
-import android.os.Build
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
 import androidx.compose.foundation.Canvas
@@ -23,9 +22,7 @@ import androidx.compose.ui.focus.FocusRequester
 import androidx.compose.ui.focus.focusRequester
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.SolidColor
-import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.graphics.vector.ImageVector
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalSoftwareKeyboardController
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.role
@@ -38,16 +35,7 @@ import androidx.compose.ui.unit.sp
 import com.lormusic.app.model.LocalStrings
 
 @Composable
-fun expressiveColors(): ColorScheme {
-    val context = LocalContext.current
-    val fallback = MaterialTheme.colorScheme
-    val dark = fallback.background.luminance() < 0.5f
-    return remember(context, dark, fallback) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        } else fallback
-    }
-}
+fun expressiveColors(): ColorScheme = MaterialTheme.colorScheme
 
 @Composable
 fun ExpressiveHeaderBackground(modifier: Modifier = Modifier) {
@@ -72,21 +60,21 @@ fun ExpressiveHeaderBackground(modifier: Modifier = Modifier) {
 @Composable
 fun ExpressiveScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
     actionIcon: ImageVector = Icons.Filled.MoreVert, actionLabel: String = LocalStrings.current.actions,
-    modifier: Modifier = Modifier) {
+    modifier: Modifier = Modifier, applyStatusInsets: Boolean = true) {
     val colors = expressiveColors()
     Box(modifier.fillMaxWidth()) {
         ExpressiveHeaderBackground(Modifier.matchParentSize())
-        Column(Modifier.statusBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp)) {
+        Column(Modifier.then(if (applyStatusInsets) Modifier.statusBarsPadding() else Modifier).padding(horizontal = 16.dp, vertical = 8.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
                 FilledTonalIconButton(onClick = onBack, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = colors.surfaceContainerHigh)) {
-                    Icon(Icons.AutoMirrored.Filled.ArrowBack, LocalStrings.current.back)
+                    IosBackChevron(color = colors.onSurface)
                 }
                 FilledTonalIconButton(onClick = onAction, colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = colors.primaryContainer, contentColor = colors.onPrimaryContainer)) {
                     Icon(actionIcon, actionLabel)
                 }
             }
-            Spacer(Modifier.height(10.dp))
-            Text(title, fontSize = 38.sp, lineHeight = 44.sp, fontWeight = FontWeight.Bold,
+            Spacer(Modifier.height(6.dp))
+            Text(title, fontSize = 28.sp, lineHeight = 34.sp, fontWeight = FontWeight.Bold,
                 color = colors.onSurface, maxLines = 2, overflow = TextOverflow.Ellipsis)
             Spacer(Modifier.height(8.dp))
         }
@@ -102,9 +90,9 @@ fun ExpressiveSearchTitle(title: String, active: Boolean, query: String, onQuery
     val progress by animateFloatAsState(if (active) 1f else 0f, tween(280, easing = FastOutSlowInEasing), label = "headerSearchMorph")
     val focus = remember { FocusRequester() }
     val keyboard = LocalSoftwareKeyboardController.current
-    Box(modifier.height(if (largeTitle) 72.dp else 48.dp), contentAlignment = Alignment.CenterStart) {
+    Box(modifier.height(if (largeTitle) 52.dp else 44.dp), contentAlignment = Alignment.CenterStart) {
         if (active) {
-            Box(Modifier.fillMaxWidth(progress.coerceAtLeast(.1f)).height(56.dp)
+            Box(Modifier.fillMaxWidth(progress.coerceAtLeast(.1f)).height(46.dp)
                 .clip(RoundedCornerShape(28.dp)).background(colors.surfaceContainerHigh)
                 .border(1.dp, colors.outlineVariant, RoundedCornerShape(28.dp)).padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
                 if (progress > .9f) {
@@ -126,7 +114,7 @@ fun ExpressiveSearchTitle(title: String, active: Boolean, query: String, onQuery
                 }
             }
         } else if (progress < .25f) {
-            Text(title, color = colors.onSurface, fontSize = if (largeTitle) 48.sp else 20.sp,
+            Text(title, color = colors.onSurface, fontSize = if (largeTitle) 32.sp else 20.sp,
                 fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
         }
     }
@@ -140,8 +128,8 @@ fun <T> ExpressiveNavigationBar(items: List<T>, selectedItem: T, onSelect: (T) -
     Row(modifier.fillMaxWidth().then(if (applyInsets) Modifier.navigationBarsPadding() else Modifier)
         .padding(horizontal = 14.dp, vertical = 6.dp), verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.weight(1f).height(68.dp).clip(CircleShape).background(colors.surfaceContainer)
-            .border(1.dp, colors.outlineVariant.copy(alpha = .55f), CircleShape).padding(8.dp),
+        Row(Modifier.weight(1f).height(56.dp).clip(CircleShape).background(colors.surfaceContainer)
+            .border(1.dp, colors.outlineVariant.copy(alpha = .55f), CircleShape).padding(6.dp),
             verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             items.forEach { item ->
                 val active = selectedItem == item
@@ -153,19 +141,19 @@ fun <T> ExpressiveNavigationBar(items: List<T>, selectedItem: T, onSelect: (T) -
                     .clickable { onSelect(item) }.padding(horizontal = 8.dp),
                     horizontalArrangement = Arrangement.Center, verticalAlignment = Alignment.CenterVertically) {
                     Icon(icon(item), contentDescription = label(item), tint = if (active) colors.onPrimaryContainer else colors.onSurfaceVariant,
-                        modifier = Modifier.size(25.dp))
+                        modifier = Modifier.size(22.dp))
                     AnimatedVisibility(active, enter = expandHorizontally(tween(260)) + fadeIn(tween(160, 90)),
                         exit = shrinkHorizontally(tween(220)) + fadeOut(tween(100))) {
                         Text(label(item), Modifier.padding(start = 8.dp), color = colors.onPrimaryContainer,
-                            style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                            style = MaterialTheme.typography.labelMedium, fontWeight = FontWeight.Bold, maxLines = 1, overflow = TextOverflow.Ellipsis)
                     }
                 }
             }
         }
-        if (showSearch) FilledTonalIconButton(onClick = onSearch, modifier = Modifier.size(60.dp),
+        if (showSearch) FilledTonalIconButton(onClick = onSearch, modifier = Modifier.size(48.dp),
             colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = if (searchActive) colors.primaryContainer else colors.surfaceContainer,
                 contentColor = if (searchActive) colors.onPrimaryContainer else colors.onSurface)) {
-            Icon(Icons.Filled.Search, LocalStrings.current.searchTitle, Modifier.size(28.dp))
+            Icon(Icons.Filled.Search, LocalStrings.current.searchTitle, Modifier.size(24.dp))
         }
     }
 }

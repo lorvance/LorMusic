@@ -35,6 +35,8 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.layout.onSizeChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.text.font.FontWeight
@@ -127,6 +129,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         }
     }
 
+    val bottomDensity = LocalDensity.current
+    var bottomControlsHeight by remember { mutableStateOf(0.dp) }
     var settingsCategoryOpen by remember { mutableStateOf(false) }
     var selectedTab by remember { mutableStateOf(LorTab.LIBRARY) }
     var showNowPlaying by remember { mutableStateOf(false) }
@@ -181,19 +185,24 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     val betaAutoHideNavBar by playerViewModel.betaAutoHideNavBar
     var isNavBarHidden by remember { mutableStateOf(false) }
 
-    val navBarNestedScrollConnection = remember(betaAutoHideNavBar) {
+    val hideDistance = with(bottomDensity) { 32.dp.toPx() }
+    val showDistance = with(bottomDensity) { 18.dp.toPx() }
+    val navBarNestedScrollConnection = remember(betaAutoHideNavBar, hideDistance, showDistance, selectedTab, isYtMusicMode, isSoundCloudMode, settingsCategoryOpen, playerViewModel.selectedArtistProfile.value) {
         object : NestedScrollConnection {
+            private var distance = 0f
             override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
-                if (betaAutoHideNavBar) {
-                    if (available.y < -8f) {
-                        isNavBarHidden = true
-                    } else if (available.y > 8f) {
-                        isNavBarHidden = false
-                    }
+                if (betaAutoHideNavBar && source == NestedScrollSource.UserInput) {
+                    if ((available.y > 0 && distance < 0) || (available.y < 0 && distance > 0)) distance = 0f
+                    distance += available.y
+                    if (distance < -hideDistance) { isNavBarHidden = true; distance = 0f }
+                    else if (distance > showDistance) { isNavBarHidden = false; distance = 0f }
                 }
                 return Offset.Zero
             }
         }
+    }
+    LaunchedEffect(selectedTab, isYtMusicMode, isSoundCloudMode, settingsCategoryOpen, playerViewModel.selectedArtistProfile.value) {
+        isNavBarHidden = false
     }
     val activeYtTab by playerViewModel.activeYtTab
     val activeScTab by playerViewModel.activeScTab
@@ -271,6 +280,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         LocalAppBackdrop provides appBackdrop,
         LocalLiquidGlassEnabled provides isGlassActive,
         LocalPureMaterialYou provides pureMaterialYou,
+        LocalMaterialArrows provides playerViewModel.materialArrows.value,
         LocalStrings provides currentStrings
     ) {
         Surface(
@@ -408,6 +418,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     val playerProgress = (positionMs.toFloat() / effectiveDur.toFloat()).coerceIn(0f, 1f)
 
                                     ArtistProfileDialog(
+                                        miniPlayerHazeState = hazeState,
                                         artistName = currentArtist,
                                         allArtistSongs = artistSongs,
                                         topTracks = topTracks,
@@ -455,6 +466,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 ) { tab ->
                                     when (tab) {
                                         LorTab.LIBRARY -> LibraryScreen(
+                                            expressiveHeader = playerViewModel.expressiveHeader.value,
                                             songs = allSongs,
                                             currentSong = currentSong,
                                             isPlaying = isPlaying,
@@ -493,6 +505,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         )
 
                                         LorTab.PLAYLISTS -> PlaylistsScreen(
+                                            expressiveHeader = playerViewModel.expressiveHeader.value,
                                             playlists = playlists,
                                             allSongs = allSongs.filter { !hiddenSongIds.contains(it.id) },
                                             currentSong = currentSong,
@@ -527,6 +540,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 }
                                             }
                                             ProfileScreen(
+                                                expressiveHeader = playerViewModel.expressiveHeader.value,
+                                                materialArrows = playerViewModel.materialArrows.value,
+                                                onToggleExpressiveHeader = playerViewModel::setExpressiveHeader,
+                                                onToggleMaterialArrows = playerViewModel::setMaterialArrows,
                                                 expressiveNavigation = playerViewModel.expressiveNavigation.value,
                                                 onToggleExpressiveNavigation = playerViewModel::setExpressiveNavigation,
                                                 totalSongsCount = visibleTotalSongs,
@@ -610,8 +627,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     modifier = Modifier
                         .align(Alignment.BottomCenter)
                         .fillMaxWidth()
-                        .navigationBarsPadding()
-                        .padding(bottom = if (currentSong != null) 140.dp else 75.dp)
+                        .padding(bottom = bottomControlsHeight + 8.dp)
                 ) {
                     SnackbarHost(
                         hostState = snackbarHostState,
@@ -708,16 +724,17 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     }
 
                     val inSettingsCategory = selectedTab == LorTab.SETTINGS && settingsCategoryOpen && !isYtMusicMode && !isSoundCloudMode
-                    val isNavBarVisible = !inSettingsCategory && (!betaAutoHideNavBar || !isNavBarHidden)
+                    val isNavBarVisible = selectedArtist == null && !inSettingsCategory && (!betaAutoHideNavBar || !isNavBarHidden)
                     val navBarBottomExtraPadding by animateDpAsState(
                         targetValue = if (!isNavBarVisible) 16.dp else 0.dp,
-                        animationSpec = tween(260),
+                        animationSpec = tween(360, easing = FastOutSlowInEasing),
                         label = "navBarBottomExtraPadding"
                     )
 
                     Column(
                         modifier = Modifier
                             .fillMaxWidth()
+                            .onSizeChanged { size -> bottomControlsHeight = with(bottomDensity) { size.height.toDp() } }
                             .navigationBarsPadding()
                             .padding(bottom = if (selectedArtist != null) 16.dp else navBarBottomExtraPadding)
                     ) {
@@ -818,8 +835,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
                         AnimatedVisibility(
                             visible = isNavBarVisible,
-                            enter = slideInVertically(tween(260)) { it } + fadeIn(tween(200)),
-                            exit = slideOutVertically(tween(260)) { it } + fadeOut(tween(200))
+                            enter = expandVertically(tween(360, easing = FastOutSlowInEasing), expandFrom = Alignment.Top, clip = false) +
+                                slideInVertically(tween(360, easing = FastOutSlowInEasing)) { it / 3 } + fadeIn(tween(260)),
+                            exit = shrinkVertically(tween(360, easing = FastOutSlowInEasing), shrinkTowards = Alignment.Top, clip = false) +
+                                slideOutVertically(tween(360, easing = FastOutSlowInEasing)) { it / 3 } + fadeOut(tween(240))
                         ) {
                             if (isYtMusicMode) {
                                 YtMusicBottomNavBar(
@@ -847,7 +866,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     showBottomSearchButton = true,
                                     showLabels = playerViewModel.showNavBarLabels.value
                                 )
-                            } else if (selectedArtist == null) {
+                            } else {
                                 LorBottomNavBar(
                                     useExpressive = playerViewModel.expressiveNavigation.value,
                                     selected = selectedTab,

@@ -77,6 +77,8 @@ class PreferencesRepository(context: Context) {
         KEY_BETA_EXPANDING_SEARCH to "Boolean",
         KEY_SHOW_NAVIGATION_PREVIEW to "Boolean",
         KEY_EXPRESSIVE_NAVIGATION to "Boolean",
+        KEY_EXPRESSIVE_HEADER to "Boolean",
+        KEY_MATERIAL_ARROWS to "Boolean",
     )
 
     init {
@@ -129,6 +131,11 @@ class PreferencesRepository(context: Context) {
     fun saveYtWebClientVersion(version: String) {
         prefs.edit().putString("yt_web_client_version", version).apply()
     }
+
+    fun getExpressiveHeader(): Boolean = prefs.getBoolean(KEY_EXPRESSIVE_HEADER, false)
+    fun saveExpressiveHeader(enabled: Boolean) { prefs.edit().putBoolean(KEY_EXPRESSIVE_HEADER, enabled).apply() }
+    fun getMaterialArrows(): Boolean = prefs.getBoolean(KEY_MATERIAL_ARROWS, false)
+    fun saveMaterialArrows(enabled: Boolean) { prefs.edit().putBoolean(KEY_MATERIAL_ARROWS, enabled).apply() }
 
     fun getExpressiveNavigation(): Boolean = prefs.getBoolean(KEY_EXPRESSIVE_NAVIGATION, false)
     fun saveExpressiveNavigation(enabled: Boolean) {
@@ -1014,6 +1021,8 @@ class PreferencesRepository(context: Context) {
     } catch (_: Exception) { false }
 
     companion object {
+        private const val KEY_EXPRESSIVE_HEADER = "expressive_header"
+        private const val KEY_MATERIAL_ARROWS = "material_arrows"
         private const val KEY_EXPRESSIVE_NAVIGATION = "expressive_navigation"
         private const val KEY_SHOW_NAVIGATION_PREVIEW = "show_navigation_preview"
         private const val KEY_BETA_EXPANDING_SEARCH = "beta_expanding_search"

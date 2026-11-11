@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -47,6 +48,10 @@ fun IosBackChevron(
     modifier: Modifier = Modifier,
     color: Color = MaterialTheme.colorScheme.onSurface
 ) {
+    if (LocalMaterialArrows.current) {
+        Icon(Icons.AutoMirrored.Filled.ArrowBack, LocalStrings.current.back, modifier.size(24.dp), tint = color)
+        return
+    }
     Canvas(modifier = modifier.size(width = 11.dp, height = 18.dp)) {
         val strokeWidth = 2.5.dp.toPx()
         val path = Path().apply {
@@ -140,6 +145,7 @@ fun ArtistProfileDialog(
     isFavorite: (String) -> Boolean,
     progress: Float = 0f,
     initialAvatarUrl: String? = null,
+    miniPlayerHazeState: HazeState? = null,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     onDismiss: () -> Unit,
@@ -219,6 +225,7 @@ fun ArtistProfileDialog(
                             modifier = Modifier
                                 .fillMaxSize()
                                 .background(MaterialTheme.colorScheme.background)
+                                .then(if (miniPlayerHazeState != null) Modifier.hazeSource(miniPlayerHazeState) else Modifier)
                                 .hazeSource(state = albumHazeState)
                                 .appBackdropSource()
                         ) {
@@ -571,7 +578,9 @@ fun ArtistProfileDialog(
                     }
                 } else {
                     LazyColumn(
-                        modifier = Modifier.fillMaxSize(),
+                        modifier = Modifier.fillMaxSize()
+                            .then(if (miniPlayerHazeState != null) Modifier.hazeSource(miniPlayerHazeState) else Modifier)
+                            .appBackdropSource(),
                         contentPadding = PaddingValues(
                             bottom = if (currentSong != null) 180.dp else 40.dp
                         )

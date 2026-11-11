@@ -62,6 +62,7 @@ import dev.chrisbanes.haze.hazeSource
 enum class SettingsCategory {
     APPEARANCE,
     NAVIGATION,
+    MATERIAL_YOU,
     PLAYBACK,
     BETA,
     SYSTEM
@@ -76,6 +77,10 @@ fun ProfileScreen(
     themeMode: ThemeMode,
     useDynamicColor: Boolean,
     useSquigglySlider: Boolean,
+    expressiveHeader: Boolean = false,
+    materialArrows: Boolean = false,
+    onToggleExpressiveHeader: (Boolean) -> Unit = {},
+    onToggleMaterialArrows: (Boolean) -> Unit = {},
     expressiveNavigation: Boolean = false,
     onToggleExpressiveNavigation: (Boolean) -> Unit = {},
     enableBlur: Boolean,
@@ -358,30 +363,6 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
-                                headlineContent = { Text(strings.materialYouTitle) },
-                                supportingContent = { Text(strings.materialYouDesc) },
-                                leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = useDynamicColor,
-                                        onCheckedChange = onToggleDynamicColor
-                                    )
-                                }
-                            )
-                            SettingsDivider()
-                            ListItem(
-                                headlineContent = { Text(strings.pureMaterialYouTitle) },
-                                supportingContent = { Text(strings.pureMaterialYouDesc) },
-                                leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = pureMaterialYou,
-                                        onCheckedChange = onTogglePureMaterialYou
-                                    )
-                                }
-                            )
-                            SettingsDivider()
-                            ListItem(
                                 headlineContent = { Text(strings.blurEffectTitle) },
                                 supportingContent = { Text(strings.blurEffectDesc) },
                                 leadingContent = { Icon(Icons.Filled.BlurOn, contentDescription = null) },
@@ -447,6 +428,63 @@ fun ProfileScreen(
                 }
 
                 @Composable
+                fun MaterialYouContent() {
+                    if (!betaCategorizedSettings) Text(strings.betaText("materialDesign"),
+                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
+                        color = MaterialTheme.colorScheme.primary)
+                    Spacer(Modifier.height(8.dp))
+                    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)) {
+                        Column {
+                            ListItem(
+                                headlineContent = { Text(strings.materialYouTitle) },
+                                supportingContent = { Text(strings.materialYouDesc) },
+                                leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = useDynamicColor,
+                                        onCheckedChange = onToggleDynamicColor
+                                    )
+                                }
+                            )
+                            SettingsDivider()
+                            ListItem(
+                                headlineContent = { Text(strings.pureMaterialYouTitle) },
+                                supportingContent = { Text(strings.pureMaterialYouDesc) },
+                                leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = pureMaterialYou,
+                                        onCheckedChange = onTogglePureMaterialYou
+                                    )
+                                }
+                            )
+                            SettingsDivider()
+
+                            ListItem(
+                                headlineContent = { Text(strings.betaText("expressiveHeader")) },
+                                supportingContent = { Text(strings.betaText("expressiveHeaderDesc")) },
+                                leadingContent = { Icon(Icons.Filled.ViewHeadline, null) },
+                                trailingContent = { Switch(checked = expressiveHeader, onCheckedChange = onToggleExpressiveHeader) }
+                            )
+                            SettingsDivider()
+                            ListItem(
+                                headlineContent = { Text(strings.betaText("expressiveNav")) },
+                                supportingContent = { Text(strings.betaText("expressiveNavDesc")) },
+                                leadingContent = { Icon(Icons.Filled.AutoAwesome, null) },
+                                trailingContent = { Switch(checked = expressiveNavigation, onCheckedChange = onToggleExpressiveNavigation) }
+                            )
+                            SettingsDivider()
+                            ListItem(
+                                headlineContent = { Text(strings.betaText("materialArrows")) },
+                                supportingContent = { Text(strings.betaText("materialArrowsDesc")) },
+                                leadingContent = { com.lormusic.app.ui.components.IosBackChevron() },
+                                trailingContent = { Switch(checked = materialArrows, onCheckedChange = onToggleMaterialArrows) }
+                            )
+                        }
+                    }
+                }
+
+                @Composable
                 fun NavigationContent() {
                     if (!betaCategorizedSettings) {
                     Text(
@@ -485,13 +523,7 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
                     ) {
                         Column {
-                            ListItem(
-                                headlineContent = { Text(strings.betaText("expressiveNav")) },
-                                supportingContent = { Text(strings.betaText("expressiveNavDesc")) },
-                                leadingContent = { Icon(Icons.Filled.AutoAwesome, null) },
-                                trailingContent = { Switch(checked = expressiveNavigation, onCheckedChange = onToggleExpressiveNavigation) }
-                            )
-                            SettingsDivider()
+
                             ListItem(
                                 headlineContent = { Text(strings.searchBarPlacementTitle) },
                                 supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
@@ -796,6 +828,14 @@ fun ProfileScreen(
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                            headlineContent = { Text(strings.betaText("materialDesign"), fontWeight = FontWeight.SemiBold) },
+                                            supportingContent = { Text(strings.betaText("materialDesignDesc")) },
+                                            leadingContent = { Icon(Icons.Filled.ColorLens, null) },
+                                            trailingContent = { Icon(Icons.Filled.ChevronRight, null) },
+                                            modifier = Modifier.clickable { activeCategory = SettingsCategory.MATERIAL_YOU }
+                                        )
+                                        SettingsDivider()
+                                        ListItem(
                                             headlineContent = { Text(strings.settingsCategoryNavigation, fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.settingsCategoryNavigationDesc) },
                                             leadingContent = { Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
@@ -833,6 +873,7 @@ fun ProfileScreen(
                             Column {
                                 when (category) {
                                     SettingsCategory.APPEARANCE -> AppearanceContent(includeIconSelector = true)
+                                    SettingsCategory.MATERIAL_YOU -> MaterialYouContent()
                                     SettingsCategory.NAVIGATION -> NavigationContent()
                                     SettingsCategory.PLAYBACK -> PlaybackContent()
                                     SettingsCategory.BETA -> BetaContent()
@@ -845,6 +886,8 @@ fun ProfileScreen(
                     AppIconSelectorContent()
                     Spacer(Modifier.height(20.dp))
                     AppearanceContent(includeIconSelector = false)
+                    Spacer(Modifier.height(20.dp))
+                    MaterialYouContent()
                     Spacer(Modifier.height(20.dp))
                     NavigationContent()
                     Spacer(Modifier.height(20.dp))
@@ -867,17 +910,27 @@ fun ProfileScreen(
         ) {
             val title = if (betaCategorizedSettings && activeCategory != null) when (activeCategory) {
                 SettingsCategory.APPEARANCE -> strings.settingsCategoryAppearance
+                SettingsCategory.MATERIAL_YOU -> strings.betaText("materialDesign")
                 SettingsCategory.NAVIGATION -> strings.settingsCategoryNavigation
                 SettingsCategory.PLAYBACK -> strings.settingsCategoryPlayback
                 SettingsCategory.BETA -> strings.settingsCategoryBeta
                 SettingsCategory.SYSTEM -> strings.settingsCategorySystem
                 null -> strings.navSettings
             } else strings.navSettings
-            com.lormusic.app.ui.components.ExpressiveScreenHeader(
-                title = title,
-                onBack = { if (betaCategorizedSettings && activeCategory != null) activeCategory = null else onBackToLibrary() },
-                onAction = { showBackupDialog = true }
-            )
+            if (expressiveHeader) {
+                com.lormusic.app.ui.components.ExpressiveScreenHeader(
+                    title = title,
+                    onBack = { if (betaCategorizedSettings && activeCategory != null) activeCategory = null else onBackToLibrary() },
+                    onAction = { showBackupDialog = true }
+                )
+            } else {
+                com.lormusic.app.ui.components.LegacyScreenHeader(
+                    title = title,
+                    onBack = { if (betaCategorizedSettings && activeCategory != null) activeCategory = null else onBackToLibrary() },
+                    onAction = { showBackupDialog = true },
+                    hazeState = hazeState, enableBlur = enableBlur, useLiquidGlass = useLiquidGlass
+                )
+            }
         }
     }
     if (showThemeDialog) {

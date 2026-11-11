@@ -86,6 +86,7 @@ fun PlaylistsScreen(
     topAlbum: Pair<String, Int>? = null,
     hazeState: HazeState? = null,
     enableBlur: Boolean = true,
+    expressiveHeader: Boolean = false,
     useLiquidGlass: Boolean = false,
     onBackToLibrary: () -> Unit = {}
 ) {
@@ -343,11 +344,20 @@ fun PlaylistsScreen(
                             headerHeightDp = with(density) { coords.size.height.toDp() }
                         }
                 ) {
-                    com.lormusic.app.ui.components.ExpressiveScreenHeader(
-                        title = strings.navPlaylists, onBack = onBackToLibrary,
-                        onAction = { showCreateDialog = true }, actionIcon = Icons.Filled.Add,
-                        actionLabel = strings.newPlaylist
-                    )
+                    if (expressiveHeader) {
+                        com.lormusic.app.ui.components.ExpressiveScreenHeader(
+                            title = strings.navPlaylists, onBack = onBackToLibrary,
+                            onAction = { showCreateDialog = true }, actionIcon = Icons.Filled.Add,
+                            actionLabel = strings.newPlaylist, applyStatusInsets = false
+                        )
+                    } else {
+                        com.lormusic.app.ui.components.LegacyScreenHeader(
+                            title = strings.navPlaylists, onBack = onBackToLibrary,
+                            onAction = { showCreateDialog = true }, actionIcon = Icons.Filled.Add,
+                            actionLabel = strings.newPlaylist, applyStatusInsets = false,
+                            hazeState = hazeState, enableBlur = enableBlur, useLiquidGlass = useLiquidGlass
+                        )
+                    }
                 }
             }
         }
@@ -358,10 +368,17 @@ fun PlaylistsScreen(
         var isUnified by remember { mutableStateOf(false) }
         val selectedSongIds = remember { mutableStateListOf<String>() }
 
-        AlertDialog(
-            onDismissRequest = { showCreateDialog = false },
-            title = { Text(strings.newPlaylistDialogTitle) },
-            text = {
+        com.lormusic.app.ui.components.IosPromptDialog(
+            title = strings.newPlaylistDialogTitle, confirmLabel = strings.create, cancelLabel = strings.cancel,
+            confirmEnabled = name.isNotBlank(), onDismiss = { showCreateDialog = false },
+            onConfirm = {
+                val initial = allSongs.filter { selectedSongIds.contains(it.id) }
+                if (isUnified && onCreateUnifiedPlaylist != null) onCreateUnifiedPlaylist(name.trim(), initial)
+                else onCreatePlaylist(name.trim(), initial)
+                showCreateDialog = false
+            }
+        ) {
+
                 Column(modifier = Modifier.fillMaxWidth()) {
                     OutlinedTextField(
                         value = name,
@@ -426,29 +443,8 @@ fun PlaylistsScreen(
                         }
                     }
                 }
-            },
-            confirmButton = {
-                Button(
-                    enabled = name.isNotBlank(),
-                    onClick = {
-                        val initial = allSongs.filter { selectedSongIds.contains(it.id) }
-                        if (isUnified && onCreateUnifiedPlaylist != null) {
-                            onCreateUnifiedPlaylist(name, initial)
-                        } else {
-                            onCreatePlaylist(name, initial)
-                        }
-                        showCreateDialog = false
-                    }
-                ) {
-                    Text(strings.create)
-                }
-            },
-            dismissButton = {
-                TextButton(onClick = { showCreateDialog = false }) {
-                    Text(strings.cancel)
-                }
-            }
-        )
+
+        }
     }
 
     if (showUnifiedInfoDialog) {

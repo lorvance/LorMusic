@@ -2,6 +2,12 @@ package com.lormusic.app.model
 
 /** All beta UI strings follow the selected in-app language, including System. */
 private val betaTranslations = mapOf(
+    "materialDesign" to listOf("Material You дизайн", "Material You design", "Дизайн Material You", "Wygląd Material You"),
+    "materialDesignDesc" to listOf("Шапка, навигация, цвета и стрелки", "Header, navigation, colors, and arrows", "Заголовок, навігація, кольори та стрілки", "Nagłówek, nawigacja, kolory i strzałki"),
+    "expressiveHeader" to listOf("Шапка Material 3 Expressive", "Material 3 Expressive header", "Заголовок Material 3 Expressive", "Nagłówek Material 3 Expressive"),
+    "expressiveHeaderDesc" to listOf("Компактная шапка с цветами Material You без размытия", "Compact Material You header without blur", "Компактний заголовок із кольорами Material You без розмиття", "Kompaktowy nagłówek w kolorach Material You bez rozmycia"),
+    "materialArrows" to listOf("Стрелки Material You", "Material You back arrows", "Стрілки Material You", "Strzałki wstecz Material You"),
+    "materialArrowsDesc" to listOf("Использовать стрелки Material вместо стандартных шевронов iOS", "Use Material arrows instead of the default iOS chevrons", "Використовувати стрілки Material замість стандартних шевронів iOS", "Używaj strzałek Material zamiast domyślnych szewronów iOS"),
     "format" to listOf("Формат", "Format", "Формат", "Format"),
     "preview" to listOf("Предпросмотр", "Preview", "Попередній перегляд", "Podgląd"),
     "hide" to listOf("Скрыть", "Hide", "Сховати", "Ukryj"),
