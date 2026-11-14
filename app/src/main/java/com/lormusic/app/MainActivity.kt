@@ -70,6 +70,7 @@ class MainActivity : ComponentActivity() {
         enableEdgeToEdge()
         setContent {
             val themeMode by playerViewModel.themeMode
+            val accentColor by playerViewModel.accentColor
             val useDynamicColor by playerViewModel.useDynamicColor
             val darkTheme = when (themeMode) {
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
@@ -79,7 +80,8 @@ class MainActivity : ComponentActivity() {
 
             LorMusicTheme(
                 darkTheme = darkTheme,
-                dynamicColor = useDynamicColor
+                dynamicColor = useDynamicColor,
+                accentColor = accentColor
             ) {
                 LorMusicMainContent(playerViewModel)
             }
@@ -248,7 +250,11 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
             drawContent()
         }
     }
-    val appBackdrop = rememberLayerBackdrop(onDraw = paintBackdrop)
+    // A fresh page source prevents the previous section's retained layer
+    // from being reused while switching to Settings.
+    val appBackdrop = key(selectedTab, isYtMusicMode, isSoundCloudMode, selectedArtist) {
+        rememberLayerBackdrop(onDraw = paintBackdrop)
+    }
     val useLiquidGlass = playerViewModel.useLiquidGlass.value
     val effectiveEnableBlur = enableBlur && !pureMaterialYou
     val effectiveUseLiquidGlass = useLiquidGlass && !pureMaterialYou
@@ -279,6 +285,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     CompositionLocalProvider(
         LocalAppBackdrop provides appBackdrop,
         LocalLiquidGlassEnabled provides isGlassActive,
+        LocalLiquidGlassTransparency provides playerViewModel.glassTransparency.value,
         LocalPureMaterialYou provides pureMaterialYou,
         LocalMaterialArrows provides playerViewModel.materialArrows.value,
         LocalStrings provides currentStrings
@@ -450,7 +457,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 AnimatedContent(
                                     targetState = selectedTab,
                                     transitionSpec = {
-                                        val forward = targetState.ordinal >= initialState.ordinal
+                                        val navOrder = playerViewModel.navTabOrder.value
+                                        val forward = navOrder.indexOf(targetState) >= navOrder.indexOf(initialState)
                                         val enterSlide = slideInHorizontally(
                                             animationSpec = tween(260, easing = FastOutSlowInEasing),
                                             initialOffsetX = { if (forward) it / 8 else -it / 8 }
@@ -546,17 +554,22 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onToggleMaterialArrows = playerViewModel::setMaterialArrows,
                                                 expressiveNavigation = playerViewModel.expressiveNavigation.value,
                                                 onToggleExpressiveNavigation = playerViewModel::setExpressiveNavigation,
+                                                navTabOrder = playerViewModel.navTabOrder.value,
+                                                onUpdateNavTabOrder = playerViewModel::setNavTabOrder,
                                                 totalSongsCount = visibleTotalSongs,
                                                 localSongsCount = localSongsCount,
                                                 favoritesCount = favoriteIds.size,
                                                 playlistsCount = playlists.size,
                                                 themeMode = themeMode,
+                                                accentColor = playerViewModel.accentColor.value,
                                                 useDynamicColor = useDynamicColor,
                                                 useSquigglySlider = useSquigglySlider,
                                                 enableBlur = enableBlur,
                                                 pureMaterialYou = pureMaterialYou,
                                                 showNavBarLabels = playerViewModel.showNavBarLabels.value,
                                                 useLiquidGlass = playerViewModel.useLiquidGlass.value,
+                                                glassTransparency = playerViewModel.glassTransparency.value,
+                                                onGlassTransparencyChange = playerViewModel::setGlassTransparency,
                                                 hazeState = hazeState,
                                                 useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
                                                 enableBetaUpdates = playerViewModel.enableBetaUpdates.value,
@@ -577,6 +590,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 playbackSpeed = playbackSpeed,
                                                 sleepTimerRemainingSec = sleepTimerRemainingSec,
                                                 onChangeThemeMode = playerViewModel::setThemeMode,
+                                                onChangeAccentColor = playerViewModel::setAccentColor,
                                                 onToggleDynamicColor = playerViewModel::setUseDynamicColor,
                                                 onToggleSquigglySlider = playerViewModel::setUseSquigglySlider,
                                                 onToggleBlur = playerViewModel::setEnableBlur,
@@ -693,7 +707,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 .hazeEffect(state = hazeState) {
                                     blurEnabled = true
                                     backgroundColor = bottomScrimColor
-                                    blurRadius = 24.dp
+                                    blurRadius = 36.dp
                                     tints = listOf(HazeTint(bottomScrimColor.copy(alpha = 0.65f)))
                                 }
                                 .background(
@@ -736,7 +750,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             .fillMaxWidth()
                             .onSizeChanged { size -> bottomControlsHeight = with(bottomDensity) { size.height.toDp() } }
                             .navigationBarsPadding()
-                            .padding(bottom = if (selectedArtist != null) 16.dp else navBarBottomExtraPadding)
+                            .padding(bottom = if (selectedArtist != null) 6.dp else navBarBottomExtraPadding)
                     ) {
                         AnimatedVisibility(
                             visible = downloadingSongIds.isNotEmpty(),
@@ -869,6 +883,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             } else {
                                 LorBottomNavBar(
                                     useExpressive = playerViewModel.expressiveNavigation.value,
+                                    tabOrder = playerViewModel.navTabOrder.value,
                                     selected = selectedTab,
                                     onSelect = { tab ->
                                         selectedTab = tab

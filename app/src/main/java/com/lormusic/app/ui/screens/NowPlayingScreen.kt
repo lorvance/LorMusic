@@ -432,6 +432,7 @@ fun NowPlayingScreen(
                                     rotationZ = (animatedCoverDragX * 0.025f).coerceIn(-6f, 6f)
                                 }
                                 .scale(coverScale)
+                                .clip(RoundedCornerShape(30.dp))
                                 .clickable {
                                     view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                     showLyrics = true

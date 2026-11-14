@@ -70,10 +70,17 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     private var sleepTimerJob: Job? = null
 
     val themeMode = mutableStateOf(prefs.getThemeMode())
+    val accentColor = mutableStateOf(prefs.getAccentColor())
     val useDynamicColor = mutableStateOf(prefs.getUseDynamicColor())
     val useSquigglySlider = mutableStateOf(prefs.getUseSquigglySlider())
     val enableBlur = mutableStateOf(prefs.getEnableBlur())
     val useLiquidGlass = mutableStateOf(prefs.getUseLiquidGlass())
+    val glassTransparency = mutableStateOf(prefs.getGlassTransparency())
+    fun setGlassTransparency(percent: Int) {
+        val bounded = percent.coerceIn(0, 100)
+        glassTransparency.value = bounded
+        prefs.saveGlassTransparency(bounded)
+    }
     val enableBetaUpdates = mutableStateOf(prefs.getEnableBetaUpdates())
     val expressiveHeader = mutableStateOf(prefs.getExpressiveHeader())
     fun setExpressiveHeader(enabled: Boolean) { prefs.saveExpressiveHeader(enabled); expressiveHeader.value = enabled }
@@ -84,10 +91,16 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveExpressiveNavigation(enabled)
         expressiveNavigation.value = enabled
     }
+    val navTabOrder = mutableStateOf(prefs.getNavTabOrder())
+    fun setNavTabOrder(order: List<com.lormusic.app.ui.components.LorTab>) {
+        val normalized = com.lormusic.app.ui.components.normalizeLorTabOrder(order)
+        navTabOrder.value = normalized
+        prefs.saveNavTabOrder(normalized)
+    }
     val betaExpandingSearch = mutableStateOf(prefs.getBetaExpandingSearch())
     fun setBetaExpandingSearch(enabled: Boolean) {
         prefs.saveBetaExpandingSearch(enabled)
-        betaExpandingSearch.value = enabled
+        betaExpandingSearch.value = true
     }
 
     val betaSeparateHeaderBubbles = mutableStateOf(prefs.getBetaSeparateHeaderBubbles())
@@ -1650,6 +1663,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveThemeMode(mode)
     }
 
+    fun setAccentColor(color: AppAccentColor) {
+        accentColor.value = color
+        prefs.saveAccentColor(color)
+        if (useDynamicColor.value) {
+            useDynamicColor.value = false
+            prefs.saveUseDynamicColor(false)
+        }
+    }
+
     fun setUseDynamicColor(enabled: Boolean) {
         useDynamicColor.value = enabled
         prefs.saveUseDynamicColor(enabled)
@@ -1726,17 +1748,20 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
 
     fun reloadAllPreferences() {
         themeMode.value = prefs.getThemeMode()
+        accentColor.value = prefs.getAccentColor()
         useDynamicColor.value = prefs.getUseDynamicColor()
         useSquigglySlider.value = prefs.getUseSquigglySlider()
         enableBlur.value = prefs.getEnableBlur()
         pureMaterialYou.value = prefs.getPureMaterialYou()
         useLiquidGlass.value = prefs.getUseLiquidGlass()
+        glassTransparency.value = prefs.getGlassTransparency()
         classicLibraryDesign.value = prefs.getClassicLibraryDesign()
         useDynamicPlayerColors.value = prefs.getUseDynamicPlayerColors()
         enableBetaUpdates.value = prefs.getEnableBetaUpdates()
         expressiveHeader.value = prefs.getExpressiveHeader()
         materialArrows.value = prefs.getMaterialArrows()
         expressiveNavigation.value = prefs.getExpressiveNavigation()
+        navTabOrder.value = prefs.getNavTabOrder()
         betaExpandingSearch.value = prefs.getBetaExpandingSearch()
         betaAutoHideNavBar.value = prefs.getBetaAutoHideNavBar()
         betaCategorizedSettings.value = prefs.getBetaCategorizedSettings()

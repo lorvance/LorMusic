@@ -1,6 +1,18 @@
 package com.lormusic.app.ui.components
 
 import android.view.HapticFeedbackConstants
+import com.lormusic.app.model.betaText
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.lerp
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.outlined.*
+
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.basicMarquee
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
@@ -11,6 +23,7 @@ import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.PlaylistAdd
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
@@ -153,41 +166,51 @@ fun SongActionsBottomSheet(
     val scShareUrl = remember(song) { SoundCloudRepository.getShareUrl(song) }
     val shareUrl = ytShareUrl ?: scShareUrl
 
+    val scheme = MaterialTheme.colorScheme
+    val darkSheet = scheme.surface.luminance() < .5f
+    val sheetColor = lerp(scheme.surface, scheme.primary, if (darkSheet) .025f else .015f)
+    val cardColor = lerp(scheme.surfaceContainerLow, scheme.primary, if (darkSheet) .10f else .06f)
+    val neutralIcon = scheme.onSurface
+    val cardOutline = scheme.primary.copy(alpha = .16f)
+
     ModalBottomSheet(
+        containerColor = sheetColor,
+        contentColor = scheme.onSurface,
         onDismissRequest = onDismiss,
+        sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp)
     ) {
         Column(
             modifier = Modifier
                 .fillMaxWidth()
                 .navigationBarsPadding()
+                .verticalScroll(rememberScrollState())
                 .padding(bottom = 16.dp)
         ) {
             Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 20.dp, vertical = 8.dp),
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp, vertical = 12.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                SongArtwork(
-                    seed = song.coverColorSeed,
-                    albumArtUri = song.albumArtUri,
-                    songUri = song.uri,
-                    cornerRadius = 14.dp,
-                    modifier = Modifier.size(56.dp)
-                )
-                Spacer(Modifier.width(14.dp))
-                Column(modifier = Modifier.weight(1f)) {
-                    Text(song.title, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-                    Text(
-                        "${song.artist} • ${song.album}",
-                        style = MaterialTheme.typography.bodyMedium,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                    )
+                SongArtwork(seed = song.coverColorSeed, albumArtUri = song.albumArtUri,
+                    songUri = song.uri, cornerRadius = 18.dp, modifier = Modifier.size(72.dp))
+                Spacer(Modifier.width(16.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(song.title, style = MaterialTheme.typography.titleLarge,
+                        fontWeight = FontWeight.Bold, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Spacer(Modifier.height(3.dp))
+                    Text("${song.artist} • ${song.album}", style = MaterialTheme.typography.bodyMedium,
+                        color = scheme.onSurfaceVariant, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                }
+                if (!showPlaylistPicker && !showTrackDetails && !showDeleteConfirm) {
+                    Spacer(Modifier.width(12.dp))
+                    FilledIconButton(onClick = { onPlayNow(); onDismiss() }, modifier = Modifier.size(52.dp),
+                        colors = IconButtonDefaults.filledIconButtonColors(containerColor = scheme.primary,
+                            contentColor = scheme.onPrimary)) {
+                        Icon(Icons.Filled.PlayArrow, strings.playNow, Modifier.size(30.dp))
+                    }
                 }
             }
-
-            HorizontalDivider(modifier = Modifier.padding(vertical = 8.dp))
+            Spacer(Modifier.height(12.dp))
 
             when {
                 showDeleteConfirm -> {
@@ -264,213 +287,96 @@ fun SongActionsBottomSheet(
                 }
 
                 !showPlaylistPicker -> {
-                    ListItem(
-                        headlineContent = { Text(strings.playNow) },
-                        leadingContent = { Icon(Icons.Filled.PlayArrow, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            onPlayNow()
-                            onDismiss()
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text(strings.playNextInQueue) },
-                        leadingContent = { Icon(Icons.Filled.QueuePlayNext, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            onPlayNext()
-                            onDismiss()
-                        }
-                    )
-                    if (onOpenArtistProfile != null && song.artist.isNotBlank()) {
-                        ListItem(
-                            headlineContent = { Text("${strings.artistProfile}: ${song.artist}") },
-                            leadingContent = { Icon(Icons.Filled.Person, contentDescription = null) },
-                            modifier = Modifier.clickable {
-                                onDismiss()
-                                onOpenArtistProfile(song.artist)
-                            }
+                    val isInUnifiedFav = playlists.find { it.id == "sys_unified_favorites" }
+                        ?.songs?.any { it.id == song.id } == true
+                    @Composable
+                    fun QuickActions(twoColumns: Boolean) {
+                        val actions: List<Triple<ImageVector, String, () -> Unit>> = listOf(
+                            Triple(Icons.Outlined.QueuePlayNext, strings.betaText("songQueue"), { onPlayNext(); onDismiss() }),
+                            Triple(Icons.AutoMirrored.Filled.PlaylistAdd, strings.betaText("songPlaylist"), { showPlaylistPicker = true }),
+                            Triple(if (isFavorite) Icons.Filled.Favorite else Icons.Outlined.FavoriteBorder,
+                                strings.betaText(if (isFavorite) "songUnlike" else "songLike"), { onToggleFavorite(); onDismiss() }),
+                            Triple(Icons.Outlined.AutoAwesome, strings.betaText(if (isInUnifiedFav) "songUnifiedRemove" else "songUnified"),
+                                { onAddToPlaylist("sys_unified_favorites"); onDismiss() })
                         )
-                    }
-                    if (onOpenTagEditor != null) {
-                        ListItem(
-                            headlineContent = { Text(strings.editTagsAndCover) },
-                            supportingContent = { Text(strings.editTagsSubtitle) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Filled.EditNote,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                onDismiss()
-                                onOpenTagEditor()
-                            }
-                        )
-                    }
-                    if (onDownloadSong != null && (song.isRemoteYt || song.isRemoteSc || song.id.startsWith("sc_") || song.uri.startsWith("http") || song.uri.startsWith("yt://") || song.uri.startsWith("sc://"))) {
-                        ListItem(
-                            headlineContent = { Text(strings.downloadToPhone) },
-                            supportingContent = { Text(strings.downloadSubtitle) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Filled.Download,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                onDownloadSong()
-                                onDismiss()
-                            }
-                        )
-                    }
-                    if (shareUrl != null) {
-                        ListItem(
-                            headlineContent = { Text(strings.shareSong) },
-                            supportingContent = { Text("${strings.share}: $shareUrl") },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Filled.Share,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                if (scShareUrl != null) {
-                                    SoundCloudRepository.shareSongLink(context, song)
-                                } else {
-                                    YouTubeMusicRepository.shareSongLink(context, song)
+                        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                            actions.chunked(if (twoColumns) 2 else 4).forEach { row ->
+                                Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                                    row.forEach { (icon, label, action) ->
+                                        Surface(onClick = action, shape = RoundedCornerShape(24.dp), color = cardColor,
+                                            border = androidx.compose.foundation.BorderStroke(1.dp, cardOutline),
+                                            modifier = Modifier.weight(1f).fillMaxHeight()) {
+                                            Column(Modifier.heightIn(min = 92.dp).padding(horizontal = 5.dp, vertical = 14.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally,
+                                                verticalArrangement = Arrangement.Center) {
+                                                Icon(icon, null, Modifier.size(28.dp), tint = neutralIcon)
+                                                Spacer(Modifier.height(10.dp))
+                                                Text(label, style = MaterialTheme.typography.labelMedium, textAlign = TextAlign.Center,
+                                                    maxLines = 2, overflow = TextOverflow.Ellipsis)
+                                            }
+                                        }
+                                    }
                                 }
-                                onDismiss()
                             }
-                        )
-                    }
-                    ListItem(
-                        headlineContent = {
-                            Text(if (isFavorite) strings.removeFromFavorites else strings.addToFavorites)
-                        },
-                        leadingContent = {
-                            Icon(
-                                imageVector = if (isFavorite) Icons.Filled.Favorite else Icons.Filled.FavoriteBorder,
-                                contentDescription = null,
-                                tint = if (isFavorite) MaterialTheme.colorScheme.secondary else LocalContentColor.current
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            onToggleFavorite()
-                            onDismiss()
                         }
-                    )
-                    val unifiedPl = playlists.find { it.id == "sys_unified_favorites" }
-                    val isInUnifiedFav = unifiedPl?.songs?.any { it.id == song.id } == true
-                    ListItem(
-                        headlineContent = {
-                            Text(if (isInUnifiedFav) strings.scRemoveFromUnifiedFavorites else strings.scAddToUnifiedFavorites)
-                        },
-                        leadingContent = {
-                            Icon(
-                                imageVector = Icons.Filled.AutoAwesome,
-                                contentDescription = null,
-                                tint = if (isInUnifiedFav) MaterialTheme.colorScheme.primary else LocalContentColor.current
-                            )
-                        },
-                        modifier = Modifier.clickable {
-                            onAddToPlaylist("sys_unified_favorites")
-                            onDismiss()
-                        }
-                    )
-                    ListItem(
-                        headlineContent = { Text(strings.addToPlaylistAction) },
-                        leadingContent = { Icon(Icons.AutoMirrored.Filled.PlaylistAdd, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showPlaylistPicker = true
-                        }
-                    )
-                    if (onToggleHidden != null) {
-                        ListItem(
-                            headlineContent = {
-                                Text(if (isHidden) strings.unhideFromStream else strings.hideFromStream)
-                            },
-                            supportingContent = {
-                                Text(
-                                    if (isHidden) strings.unhideSubtitle
-                                    else strings.hideSubtitle
-                                )
-                            },
-                            leadingContent = {
-                                Icon(
-                                    imageVector = if (isHidden) Icons.Filled.Visibility else Icons.Filled.VisibilityOff,
-                                    contentDescription = null
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                onToggleHidden()
-                                onDismiss()
-                            }
-                        )
                     }
-                    ListItem(
-                        headlineContent = { Text(strings.trackDetailsAction) },
-                        leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
-                        modifier = Modifier.clickable {
-                            showTrackDetails = true
+                    Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(16.dp)) {
+                        val largeText = LocalDensity.current.fontScale > 1.2f
+                        BoxWithConstraints { QuickActions(twoColumns = maxWidth < 310.dp || largeText) }
+                        if ((onOpenArtistProfile != null && song.artist.isNotBlank()) || onOpenTagEditor != null) {
+                            SongActionCard(cardColor, cardOutline) {
+                                if (onOpenArtistProfile != null && song.artist.isNotBlank()) {
+                                    SongActionRow(strings.artistProfile, song.artist, Icons.Outlined.Person, neutralIcon,
+                                        chevron = true, onClick = { onDismiss(); onOpenArtistProfile(song.artist) })
+                                }
+                                if (onOpenTagEditor != null) {
+                                    if (onOpenArtistProfile != null && song.artist.isNotBlank()) SongActionDivider(cardOutline)
+                                    SongActionRow(strings.editTagsAndCover, strings.editTagsSubtitle, Icons.Outlined.Sell, neutralIcon,
+                                        chevron = true, onClick = { onDismiss(); onOpenTagEditor() })
+                                }
+                            }
                         }
-                    )
-                    if (onOpenEqualizer != null) {
-                        ListItem(
-                            headlineContent = { Text(strings.equalizerTitle) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Filled.GraphicEq,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                onDismiss()
-                                onOpenEqualizer()
+                        SongActionCard(cardColor, cardOutline) {
+                            if (onToggleHidden != null) {
+                                SongActionRow(if (isHidden) strings.unhideFromStream else strings.hideFromStream,
+                                    if (isHidden) strings.unhideSubtitle else strings.hideSubtitle,
+                                    if (isHidden) Icons.Outlined.Visibility else Icons.Outlined.VisibilityOff, neutralIcon,
+                                    onClick = { onToggleHidden(); onDismiss() })
+                                SongActionDivider(cardOutline)
                             }
-                        )
-                    }
-                    if (onOpenSpeedDialog != null) {
-                        ListItem(
-                            headlineContent = { Text(strings.playbackSpeedTitle) },
-                            leadingContent = {
-                                Icon(
-                                    Icons.Filled.Speed,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.primary
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                onDismiss()
-                                onOpenSpeedDialog()
+                            SongActionRow(strings.trackDetailsAction, icon = Icons.Outlined.Info, tint = neutralIcon,
+                                chevron = true, onClick = { showTrackDetails = true })
+                            if (onOpenEqualizer != null) {
+                                SongActionDivider(cardOutline)
+                                SongActionRow(strings.equalizerTitle, icon = Icons.Outlined.GraphicEq, tint = neutralIcon,
+                                    onClick = { onDismiss(); onOpenEqualizer() })
                             }
-                        )
-                    }
-                    if (onDeleteFromDevice != null && !song.isRemoteYt && !song.uri.startsWith("http") && !song.uri.startsWith("yt://")) {
-                        ListItem(
-                            headlineContent = {
-                                Text(
-                                    text = strings.deleteFromDevice,
-                                    color = MaterialTheme.colorScheme.error,
-                                    fontWeight = FontWeight.SemiBold
-                                )
-                            },
-                            supportingContent = {
-                                Text(strings.deleteFromDeviceSubtitle)
-                            },
-                            leadingContent = {
-                                Icon(
-                                    imageVector = Icons.Filled.DeleteForever,
-                                    contentDescription = null,
-                                    tint = MaterialTheme.colorScheme.error
-                                )
-                            },
-                            modifier = Modifier.clickable {
-                                showDeleteConfirm = true
+                            if (onOpenSpeedDialog != null) {
+                                SongActionDivider(cardOutline)
+                                SongActionRow(strings.playbackSpeedTitle, icon = Icons.Outlined.Speed, tint = neutralIcon,
+                                    onClick = { onDismiss(); onOpenSpeedDialog() })
                             }
-                        )
+                            if (onDownloadSong != null && (song.isRemoteYt || song.isRemoteSc || song.uri.startsWith("http") || song.uri.startsWith("yt://") || song.uri.startsWith("sc://"))) {
+                                SongActionDivider(cardOutline)
+                                SongActionRow(strings.downloadToPhone, strings.downloadSubtitle, Icons.Outlined.Download, neutralIcon,
+                                    onClick = { onDownloadSong(); onDismiss() })
+                            }
+                            if (shareUrl != null) {
+                                SongActionDivider(cardOutline)
+                                SongActionRow(strings.shareSong, icon = Icons.Outlined.Share, tint = neutralIcon,
+                                    onClick = {
+                                        if (scShareUrl != null) SoundCloudRepository.shareSongLink(context, song)
+                                        else YouTubeMusicRepository.shareSongLink(context, song)
+                                        onDismiss()
+                                    })
+                            }
+                        }
+                        if (onDeleteFromDevice != null && !song.isRemoteYt && !song.isRemoteSc && !song.uri.startsWith("http") && !song.uri.startsWith("yt://") && !song.uri.startsWith("sc://")) {
+                            SongActionCard(scheme.error.copy(alpha = .10f), scheme.error.copy(alpha = .16f)) {
+                                SongActionRow(strings.deleteFromDevice, strings.deleteFromDeviceSubtitle, Icons.Outlined.Delete,
+                                    scheme.error, onClick = { showDeleteConfirm = true })
+                            }
+                        }
                     }
                 }
 
@@ -521,7 +427,7 @@ fun SongActionsBottomSheet(
                                                 Icon(
                                                     imageVector = Icons.Filled.AutoAwesome,
                                                     contentDescription = null,
-                                                    tint = MaterialTheme.colorScheme.primary,
+                                                    tint = neutralIcon,
                                                     modifier = Modifier.size(22.dp)
                                                 )
                                             }
@@ -597,4 +503,40 @@ fun formatDurationShort(ms: Long): String {
     val min = totalSec / 60
     val sec = totalSec % 60
     return "%d:%02d".format(min, sec)
+}
+
+@Composable
+private fun SongActionCard(color: Color, outline: Color, content: @Composable ColumnScope.() -> Unit) {
+    Surface(shape = RoundedCornerShape(24.dp), color = color,
+        border = androidx.compose.foundation.BorderStroke(1.dp, outline), modifier = Modifier.fillMaxWidth()) {
+        Column(content = content)
+    }
+}
+
+@Composable
+private fun SongActionDivider(color: Color) {
+    HorizontalDivider(Modifier.padding(start = 64.dp, end = 18.dp), color = color)
+}
+
+@Composable
+private fun SongActionRow(title: String, subtitle: String? = null, icon: ImageVector,
+    tint: Color, chevron: Boolean = false, onClick: () -> Unit) {
+    Row(Modifier.fillMaxWidth().clickable(onClick = onClick).heightIn(min = 64.dp)
+        .padding(horizontal = 18.dp, vertical = 14.dp), verticalAlignment = Alignment.CenterVertically) {
+        Icon(icon, null, Modifier.size(26.dp), tint = tint)
+        Spacer(Modifier.width(18.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge,
+                color = if (icon == Icons.Outlined.Delete) tint else LocalContentColor.current)
+            if (subtitle != null) {
+                Spacer(Modifier.height(3.dp))
+                Text(subtitle, style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+        }
+        if (chevron) {
+            Spacer(Modifier.width(10.dp))
+            Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, null, Modifier.size(24.dp), tint = tint.copy(alpha = .65f))
+        }
+    }
 }

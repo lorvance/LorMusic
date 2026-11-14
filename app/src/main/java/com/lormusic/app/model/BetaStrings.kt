@@ -2,6 +2,15 @@ package com.lormusic.app.model
 
 /** All beta UI strings follow the selected in-app language, including System. */
 private val betaTranslations = mapOf(
+    "glassTransparency" to listOf("Прозрачность Liquid Glass", "Liquid Glass transparency", "Прозорість Liquid Glass", "Przezroczystość Liquid Glass"),
+    "glassTransparencyDesc" to listOf("Меньше — сильнее размытие. Больше — прозрачнее стекло. Применяется при включённом Liquid Glass.", "Lower values increase blur. Higher values make the glass clearer. Applies when Liquid Glass is enabled.", "Менше — сильніше розмиття. Більше — прозоріше скло. Застосовується, коли Liquid Glass увімкнено.", "Niższa wartość zwiększa rozmycie. Wyższa sprawia, że szkło jest bardziej przezroczyste. Działa po włączeniu Liquid Glass."),
+    "glassDefault" to listOf("По умолчанию: 65%", "Default: 65%", "Типово: 65%", "Domyślnie: 65%"),
+    "songQueue" to listOf("В очередь", "Queue next", "У чергу", "Do kolejki"),
+    "songPlaylist" to listOf("В плейлист", "Playlist", "У плейлист", "Do playlisty"),
+    "songLike" to listOf("Нравится", "Like", "Подобається", "Lubię"),
+    "songUnlike" to listOf("Не нравится", "Unlike", "Не подобається", "Nie lubię"),
+    "songUnified" to listOf("В избранное", "Favorites", "В обране", "Ulubione"),
+    "songUnifiedRemove" to listOf("Из избранного", "Unfavorite", "З обраного", "Usuń z ulubionych"),
     "materialDesign" to listOf("Material You дизайн", "Material You design", "Дизайн Material You", "Wygląd Material You"),
     "materialDesignDesc" to listOf("Шапка, навигация, цвета и стрелки", "Header, navigation, colors, and arrows", "Заголовок, навігація, кольори та стрілки", "Nagłówek, nawigacja, kolory i strzałki"),
     "expressiveHeader" to listOf("Шапка Material 3 Expressive", "Material 3 Expressive header", "Заголовок Material 3 Expressive", "Nagłówek Material 3 Expressive"),
@@ -49,6 +58,11 @@ private val betaTranslations = mapOf(
     "closePlayer" to listOf("Закрыть проигрыватель", "Close player", "Закрити програвач", "Zamknij odtwarzacz"),
     "rewind" to listOf("Назад на 30 секунд", "Rewind 30 seconds", "Назад на 30 секунд", "Cofnij o 30 sekund"),
     "forward" to listOf("Вперёд на 30 секунд", "Forward 30 seconds", "Вперед на 30 секунд", "Przewiń o 30 sekund"),
+    "accentColor" to listOf("Акцентный цвет", "Accent color", "Акцентний колір", "Kolor akcentu"),
+    "addSelectedTracks" to listOf("Добавить", "Add", "Додати", "Dodaj"),
+    "navTabOrder" to listOf("Порядок кнопок на панели", "Navbar button order", "Порядок кнопок на панелі", "Kolejność przycisków paska"),
+    "navTabOrderDesc" to listOf("Зажмите кнопку и перетащите на нужное место", "Hold a tab and drag it to reorder", "Утримуйте кнопку та перетягніть її", "Przytrzymaj kartę i przeciągnij ją"),
+    "resetOrder" to listOf("Сбросить", "Reset", "Скинути", "Resetuj"),
     "authFailed" to listOf("Не удалось подтвердить вход. Google может блокировать встроенный браузер. Существующий аккаунт не изменён.", "Could not verify sign-in. Google may block embedded browsers. Your existing account was not changed.", "Не вдалося підтвердити вхід. Google може блокувати вбудований браузер. Наявний обліковий запис не змінено.", "Nie udało się potwierdzić logowania. Google może blokować przeglądarki wbudowane. Istniejące konto nie zostało zmienione."),
     "authBlocked" to listOf("Google ограничивает вход во встроенных браузерах. Для официального входа требуется OAuth-настройка LorMusic.", "Google restricts sign-in in embedded browsers. Official sign-in requires LorMusic OAuth configuration.", "Google обмежує вхід у вбудованих браузерах. Для офіційного входу потрібне налаштування OAuth LorMusic.", "Google ogranicza logowanie w przeglądarkach wbudowanych. Oficjalne logowanie wymaga konfiguracji OAuth LorMusic."),
 )

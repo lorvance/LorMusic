@@ -1454,7 +1454,7 @@ private fun YtHomeTab(
                         .hazeEffect(state = hazeState) {
                             blurEnabled = true
                             backgroundColor = topScrimColor
-                            blurRadius = 24.dp
+                            blurRadius = 36.dp
                             tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
                         }
                         .background(
@@ -2100,7 +2100,7 @@ private fun YtLibrariesTab(
                         .hazeEffect(state = hazeState) {
                             blurEnabled = true
                             backgroundColor = topScrimColor
-                            blurRadius = 24.dp
+                            blurRadius = 36.dp
                             tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
                         }
                         .background(
@@ -2878,7 +2878,8 @@ private fun YtSearchTab(
                 query = it
                 onSearch(it)
             },
-            placeholder = { Text(strings.ytSearchPlaceholder) },
+            placeholder = { Text(strings.ytSearchPlaceholder, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
             trailingIcon = {
                 if (isSearching) {

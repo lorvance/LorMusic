@@ -1,5 +1,7 @@
 package com.lormusic.app.ui.components
 
+import com.lormusic.app.ui.components.PhysicsSwitch as Switch
+
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background

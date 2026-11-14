@@ -6,6 +6,10 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
+import androidx.compose.foundation.Canvas
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -26,11 +30,14 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.text.PlatformTextStyle
@@ -43,6 +50,12 @@ import androidx.compose.ui.unit.sp
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
+import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
+import com.lormusic.app.ui.components.backdrop.drawBackdrop
+import com.lormusic.app.ui.components.backdrop.effects.lens
+import com.lormusic.app.ui.components.backdrop.highlight.Highlight
+import com.lormusic.app.ui.components.backdrop.drawPlainBackdrop
+import com.lormusic.app.ui.components.backdrop.effects.blur
 
 enum class LorTab(val route: String, val label: String, val filled: ImageVector, val outline: ImageVector) {
     LIBRARY("library", "Tracks", Icons.Filled.MusicNote, Icons.Outlined.MusicNote),
@@ -56,6 +69,23 @@ enum class LorTab(val route: String, val label: String, val filled: ImageVector,
             SETTINGS -> strings.navSettings
         }
     }
+}
+
+val DEFAULT_LOR_TAB_ORDER: List<LorTab> = listOf(LorTab.PLAYLISTS, LorTab.LIBRARY, LorTab.SETTINGS)
+
+fun normalizeLorTabOrder(order: List<LorTab>): List<LorTab> {
+    val unique = order.distinct()
+    val missing = DEFAULT_LOR_TAB_ORDER.filterNot { unique.contains(it) }
+    return (unique + missing).take(LorTab.entries.size)
+}
+
+fun parseLorTabOrder(raw: String?): List<LorTab> {
+    if (raw.isNullOrBlank()) return DEFAULT_LOR_TAB_ORDER
+    val parsed = raw.split(",").mapNotNull { token ->
+        val trimmed = token.trim()
+        LorTab.entries.find { it.route.equals(trimmed, ignoreCase = true) || it.name.equals(trimmed, ignoreCase = true) }
+    }
+    return normalizeLorTabOrder(parsed)
 }
 
 enum class YtMusicTab(val label: String, val filled: ImageVector, val outline: ImageVector) {
@@ -95,6 +125,7 @@ fun LorBottomNavBar(
     selected: LorTab,
     onSelect: (LorTab) -> Unit,
     hazeState: HazeState,
+    tabOrder: List<LorTab> = DEFAULT_LOR_TAB_ORDER,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     showBottomSearchButton: Boolean = false,
@@ -105,9 +136,10 @@ fun LorBottomNavBar(
     useExpressive: Boolean = false,
     modifier: Modifier = Modifier
 ) {
+    val tabs = remember(tabOrder) { normalizeLorTabOrder(tabOrder) }
     if (useExpressive) {
         val strings = com.lormusic.app.model.LocalStrings.current
-        ExpressiveNavigationBar(items = LorTab.entries, selectedItem = selected, onSelect = onSelect,
+        ExpressiveNavigationBar(items = tabs, selectedItem = selected, onSelect = onSelect,
             label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
             searchActive = isLocalSearchActive, onSearch = onToggleLocalSearch, modifier = modifier, applyInsets = applyNavigationInsets )
         return
@@ -120,7 +152,8 @@ fun LorBottomNavBar(
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
     val isPureMy = LocalPureMaterialYou.current
-    val tabs = LorTab.entries
+    val liquidMotion = useLiquidGlass && isLiquidGlassSupported() && !isPureMy
+    val navSurface = rememberLayerBackdrop()
 
     var innerWidthPx by remember { mutableIntStateOf(0) }
     var isDraggingNav by remember { mutableStateOf(false) }
@@ -129,6 +162,19 @@ fun LorBottomNavBar(
 
     val selectedIndex = tabs.indexOf(selected).coerceAtLeast(0)
     val activeIndex = if (isDraggingNav && hoveredIndex in tabs.indices) hoveredIndex else selectedIndex
+    val motionScope = rememberCoroutineScope()
+    val glassMotion = remember(tabs) { GlassPillMotion(motionScope, selectedIndex) }
+    LaunchedEffect(selectedIndex, liquidMotion) {
+        if (liquidMotion) glassMotion.animateTo(selectedIndex) else glassMotion.snapTo(selectedIndex)
+    }
+    LaunchedEffect(isDraggingNav, liquidMotion) {
+        if (isDraggingNav && liquidMotion) glassMotion.startDrag() else glassMotion.release(selectedIndex)
+    }
+    LaunchedEffect(dragFingerX, innerWidthPx, isDraggingNav) {
+        if (isDraggingNav && innerWidthPx > 0) {
+            glassMotion.dragTo((dragFingerX / (innerWidthPx.toFloat() / tabs.size) - .5f).coerceIn(0f, tabs.lastIndex.toFloat()))
+        }
+    }
 
     Row(
         modifier = modifier
@@ -145,50 +191,23 @@ fun LorBottomNavBar(
                 .shadow(
                     elevation = 20.dp,
                     shape = capsuleShape,
+                    clip = false,
                     ambientColor = Color.Black.copy(alpha = 0.6f),
                     spotColor = Color.Black.copy(alpha = 0.6f)
                 )
-                .clip(capsuleShape)
-                .then(
-                    if (isPureMy) {
-                        Modifier
-                            .background(MaterialTheme.colorScheme.surfaceContainer, capsuleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), capsuleShape)
-                    } else if (useLiquidGlass && isLiquidGlassSupported()) {
-                        Modifier.liquidGlass(capsuleShape, hazeState = hazeState, enableBlur = enableBlur)
-                    } else {
-                        val baseMod = if (enableBlur) {
-                            Modifier.hazeEffect(state = hazeState) {
-                                blurEnabled = true
-                                backgroundColor = baseSurface
-                                blurRadius = 30.dp
-                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
-                            }
-                        } else {
-                            Modifier.background(baseSurface.copy(alpha = 0.96f))
-                        }
-                        baseMod.border(
-                            width = 1.dp,
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.22f),
-                                    Color.White.copy(alpha = 0.05f)
-                                )
-                            ),
-                            shape = capsuleShape
-                        )
-                    }
-                )
+                .then(if (liquidMotion) Modifier else Modifier.clip(capsuleShape))
                 .padding(innerInset)
                 .onSizeChanged { innerWidthPx = it.width }
-                .pointerInput(tabs, innerWidthPx) {
+                .pointerInput(tabs, innerWidthPx, liquidMotion) {
                     if (innerWidthPx <= 0) return@pointerInput
                     awaitEachGesture {
+                        try {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val slotWidth = (innerWidthPx.toFloat() / tabs.size).coerceAtLeast(1f)
                         var currentIdx = (down.position.x / slotWidth).toInt().coerceIn(0, tabs.lastIndex)
                         dragFingerX = down.position.x.coerceIn(0f, innerWidthPx.toFloat())
                         hoveredIndex = currentIdx
+                        if (liquidMotion) isDraggingNav = true
                         var movedSignificantly = false
                         val startX = down.position.x
 
@@ -224,9 +243,61 @@ fun LorBottomNavBar(
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             }
                         }
+                        } finally {
+                            isDraggingNav = false
+                            hoveredIndex = -1
+                        }
                     }
                 }
         ) {
+
+            // Keep the surface in its own layer so the lifted lens can grow past it.
+            Box(Modifier.matchParentSize().layout { measurable, constraints ->
+                val inset = innerInset.roundToPx()
+                val child = measurable.measure(Constraints.fixed(
+                    constraints.maxWidth + inset * 2, constraints.maxHeight + inset * 2))
+                layout(constraints.maxWidth, constraints.maxHeight) { child.place(-inset, -inset) }
+            }
+                .clip(capsuleShape)
+                .then(
+                    if (isPureMy) {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer, capsuleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), capsuleShape)
+                    } else if (liquidMotion && isLiquidGlassSupported()) {
+                        Modifier.liquidGlass(capsuleShape, hazeState = hazeState, enableBlur = enableBlur, exportedBackdrop = navSurface)
+                    } else {
+                        val previewBackdrop = LocalPreviewBackdrop.current
+                        val baseMod = if (enableBlur && previewBackdrop != null) {
+                            Modifier.drawPlainBackdrop(
+                                backdrop = previewBackdrop,
+                                shape = { capsuleShape },
+                                effects = { blur(42.dp.toPx()) },
+                                onDrawSurface = { drawRect(baseSurface.copy(alpha = 0.52f)) }
+                            )
+                        } else if (enableBlur) {
+                            Modifier.hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = baseSurface
+                                blurRadius = 46.dp
+                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
+                            }
+                        } else {
+                            Modifier.background(baseSurface.copy(alpha = 0.96f))
+                        }
+                        baseMod.border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.22f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            ),
+                            shape = capsuleShape
+                        )
+                    }
+                )
+            )
 
             if (innerWidthPx > 0) {
                 val slotWidthPx = innerWidthPx.toFloat() / tabs.size
@@ -240,40 +311,60 @@ fun LorBottomNavBar(
                 val animatedOffsetX by animateDpAsState(
                     targetValue = targetOffsetX,
                     animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = if (isDraggingNav) Spring.StiffnessHigh else Spring.StiffnessMediumLow
+                        dampingRatio = 0.72f,
+                        stiffness = 320f
                     ),
                     label = "slidingPillOffset"
                 )
-                val pillScale by animateFloatAsState(
-                    targetValue = if (isDraggingNav) 1.03f else 1.0f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                    label = "slidingPillScale"
-                )
+                glassMotion.stepDp = with(density) { slotWidthPx.toDp().value }
+                val lag = (kotlin.math.abs(targetLeftPx - with(density) { animatedOffsetX.toPx() }) / slotWidthPx).coerceIn(0f, 1f)
+                val glassPosition = with(density) { (glassMotion.position * slotWidthPx).toDp() }
 
-                Box(
+                if (!liquidMotion) {
+                    val selectionColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isDraggingNav) .34f else .22f)
+                    Canvas(Modifier.matchParentSize()) {
+                        val width = slotWidthPx * (1f + .16f * lag)
+                        val height = size.height * (1f - .08f * lag)
+                        drawRoundRect(
+                            color = selectionColor,
+                            topLeft = Offset(animatedOffsetX.toPx() - (width - slotWidthPx) / 2f,
+                                (size.height - height) / 2f),
+                            size = Size(width, height),
+                            cornerRadius = CornerRadius(height / 2f)
+                        )
+                    }
+                } else Box(
                     modifier = Modifier
-                        .offset(x = animatedOffsetX)
+                        .offset(x = glassPosition)
                         .width(pillWidthDp)
                         .fillMaxHeight()
-                        .scale(pillScale)
-                        .clip(CircleShape)
-                        .background(
-                            if (isDraggingNav) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
-                            } else {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                        .graphicsLayer {
+                            if (liquidMotion) {
+                                scaleX = (1f + .11f * glassMotion.liftX) * (1f + glassMotion.deviation)
+                                scaleY = (1f + 11.dp.toPx() / size.height * glassMotion.liftY) * (1f - glassMotion.deviation)
                             }
-                        )
+                        }
                         .then(
-                            if (isDraggingNav) {
-                                Modifier.border(
-                                    width = 1.2.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
-                                    shape = CircleShape
+                            if (liquidMotion) {
+                                Modifier.drawBackdrop(
+                                    backdrop = navSurface,
+                                    shape = { CircleShape },
+                                    effects = {
+                                        lens(refractionHeight = 18.dp.toPx() * glassMotion.glassPresence,
+                                            refractionAmount = 28.dp.toPx() * glassMotion.material,
+                                            chromaticAberration = true)
+                                    },
+                                    highlight = { Highlight.Default.copy(alpha = glassMotion.material * glassMotion.glassPresence) },
+                                    shadow = { null }
                                 )
                             } else Modifier
                         )
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha =
+                                if (liquidMotion) .22f * (1f - .7f * glassMotion.material)
+                                else if (isDraggingNav) .34f else .22f), CircleShape
+                        )
+
                 )
             }
 
@@ -323,14 +414,22 @@ fun LorBottomNavBar(
                             Modifier
                                 .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), CircleShape)
-                        } else if (useLiquidGlass && isLiquidGlassSupported()) {
+                        } else if (liquidMotion && isLiquidGlassSupported()) {
                             Modifier.liquidGlass(CircleShape, hazeState = hazeState, enableBlur = enableBlur)
                         } else {
-                            val baseMod = if (enableBlur) {
+                            val previewBackdrop = LocalPreviewBackdrop.current
+                            val baseMod = if (enableBlur && previewBackdrop != null) {
+                                Modifier.drawPlainBackdrop(
+                                    backdrop = previewBackdrop,
+                                    shape = { CircleShape },
+                                    effects = { blur(42.dp.toPx()) },
+                                    onDrawSurface = { drawRect(baseSurface.copy(alpha = 0.54f)) }
+                                )
+                            } else if (enableBlur) {
                                 Modifier.hazeEffect(state = hazeState) {
                                     blurEnabled = true
                                     backgroundColor = baseSurface
-                                    blurRadius = 30.dp
+                                    blurRadius = 46.dp
                                     tints = listOf(HazeTint(baseSurface.copy(alpha = 0.54f)))
                                 }
                             } else {
@@ -406,6 +505,8 @@ fun YtMusicBottomNavBar(
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
     val isPureMy = LocalPureMaterialYou.current
+    val liquidMotion = useLiquidGlass && isLiquidGlassSupported() && !isPureMy
+    val navSurface = rememberLayerBackdrop()
     val mainTabs = remember {
         listOf(
             YtMusicTab.HOME,
@@ -421,6 +522,20 @@ fun YtMusicBottomNavBar(
 
     val selectedIndex = mainTabs.indexOf(selected)
     val activeIndex = if (isDraggingNav && hoveredIndex in mainTabs.indices) hoveredIndex else selectedIndex
+    val motionScope = rememberCoroutineScope()
+    val glassMotion = remember(mainTabs) { GlassPillMotion(motionScope, selectedIndex.coerceAtLeast(0)) }
+    LaunchedEffect(selectedIndex, liquidMotion) {
+        if (liquidMotion) glassMotion.animateTo(selectedIndex.coerceAtLeast(0)) else glassMotion.snapTo(selectedIndex.coerceAtLeast(0))
+    }
+    LaunchedEffect(isDraggingNav, liquidMotion) {
+        if (isDraggingNav && liquidMotion) glassMotion.startDrag() else glassMotion.release(selectedIndex.coerceAtLeast(0))
+    }
+    LaunchedEffect(dragFingerX, innerWidthPx, isDraggingNav) {
+        if (isDraggingNav && innerWidthPx > 0) {
+            glassMotion.dragTo((dragFingerX / (innerWidthPx.toFloat() / mainTabs.size) - .5f).coerceIn(0f, mainTabs.lastIndex.toFloat()))
+        }
+    }
+
 
     Row(
         modifier = modifier
@@ -437,50 +552,23 @@ fun YtMusicBottomNavBar(
                 .shadow(
                     elevation = 20.dp,
                     shape = capsuleShape,
+                    clip = false,
                     ambientColor = Color.Black.copy(alpha = 0.6f),
                     spotColor = Color.Black.copy(alpha = 0.6f)
                 )
-                .clip(capsuleShape)
-                .then(
-                    if (isPureMy) {
-                        Modifier
-                            .background(MaterialTheme.colorScheme.surfaceContainer, capsuleShape)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), capsuleShape)
-                    } else if (useLiquidGlass && isLiquidGlassSupported()) {
-                        Modifier.liquidGlass(capsuleShape, hazeState = hazeState, enableBlur = enableBlur)
-                    } else {
-                        val baseMod = if (enableBlur) {
-                            Modifier.hazeEffect(state = hazeState) {
-                                blurEnabled = true
-                                backgroundColor = baseSurface
-                                blurRadius = 30.dp
-                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
-                            }
-                        } else {
-                            Modifier.background(baseSurface.copy(alpha = 0.96f))
-                        }
-                        baseMod.border(
-                            width = 1.dp,
-                            brush = Brush.verticalGradient(
-                                listOf(
-                                    Color.White.copy(alpha = 0.22f),
-                                    Color.White.copy(alpha = 0.05f)
-                                )
-                            ),
-                            shape = capsuleShape
-                        )
-                    }
-                )
+                .then(if (liquidMotion) Modifier else Modifier.clip(capsuleShape))
                 .padding(innerInset)
                 .onSizeChanged { innerWidthPx = it.width }
-                .pointerInput(mainTabs, innerWidthPx) {
+                .pointerInput(mainTabs, innerWidthPx, liquidMotion) {
                     if (innerWidthPx <= 0) return@pointerInput
                     awaitEachGesture {
+                        try {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val slotWidth = (innerWidthPx.toFloat() / mainTabs.size).coerceAtLeast(1f)
                         var currentIdx = (down.position.x / slotWidth).toInt().coerceIn(0, mainTabs.lastIndex)
                         dragFingerX = down.position.x.coerceIn(0f, innerWidthPx.toFloat())
                         hoveredIndex = currentIdx
+                        if (liquidMotion) isDraggingNav = true
                         var movedSignificantly = false
                         val startX = down.position.x
 
@@ -516,9 +604,61 @@ fun YtMusicBottomNavBar(
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             }
                         }
+                        } finally {
+                            isDraggingNav = false
+                            hoveredIndex = -1
+                        }
                     }
                 }
         ) {
+            // Keep the surface in its own layer so the lifted lens can grow past it.
+            Box(Modifier.matchParentSize().layout { measurable, constraints ->
+                val inset = innerInset.roundToPx()
+                val child = measurable.measure(Constraints.fixed(
+                    constraints.maxWidth + inset * 2, constraints.maxHeight + inset * 2))
+                layout(constraints.maxWidth, constraints.maxHeight) { child.place(-inset, -inset) }
+            }
+                .clip(capsuleShape)
+                .then(
+                    if (isPureMy) {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer, capsuleShape)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), capsuleShape)
+                    } else if (liquidMotion && isLiquidGlassSupported()) {
+                        Modifier.liquidGlass(capsuleShape, hazeState = hazeState, enableBlur = enableBlur, exportedBackdrop = navSurface)
+                    } else {
+                        val previewBackdrop = LocalPreviewBackdrop.current
+                        val baseMod = if (enableBlur && previewBackdrop != null) {
+                            Modifier.drawPlainBackdrop(
+                                backdrop = previewBackdrop,
+                                shape = { capsuleShape },
+                                effects = { blur(42.dp.toPx()) },
+                                onDrawSurface = { drawRect(baseSurface.copy(alpha = 0.52f)) }
+                            )
+                        } else if (enableBlur) {
+                            Modifier.hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = baseSurface
+                                blurRadius = 46.dp
+                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.52f)))
+                            }
+                        } else {
+                            Modifier.background(baseSurface.copy(alpha = 0.96f))
+                        }
+                        baseMod.border(
+                            width = 1.dp,
+                            brush = Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = 0.22f),
+                                    Color.White.copy(alpha = 0.05f)
+                                )
+                            ),
+                            shape = capsuleShape
+                        )
+                    }
+                )
+            )
+
             if (innerWidthPx > 0 && activeIndex in mainTabs.indices) {
                 val slotWidthPx = innerWidthPx.toFloat() / mainTabs.size
                 val targetLeftPx = if (isDraggingNav) {
@@ -531,40 +671,60 @@ fun YtMusicBottomNavBar(
                 val animatedOffsetX by animateDpAsState(
                     targetValue = targetOffsetX,
                     animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = if (isDraggingNav) Spring.StiffnessHigh else Spring.StiffnessMediumLow
+                        dampingRatio = 0.72f,
+                        stiffness = 320f
                     ),
                     label = "ytSlidingPillOffset"
                 )
-                val pillScale by animateFloatAsState(
-                    targetValue = if (isDraggingNav) 1.03f else 1.0f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                    label = "ytSlidingPillScale"
-                )
+                glassMotion.stepDp = with(density) { slotWidthPx.toDp().value }
+                val lag = (kotlin.math.abs(targetLeftPx - with(density) { animatedOffsetX.toPx() }) / slotWidthPx).coerceIn(0f, 1f)
+                val glassPosition = with(density) { (glassMotion.position * slotWidthPx).toDp() }
 
-                Box(
+                if (!liquidMotion) {
+                    val selectionColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isDraggingNav) .34f else .22f)
+                    Canvas(Modifier.matchParentSize()) {
+                        val width = slotWidthPx * (1f + .16f * lag)
+                        val height = size.height * (1f - .08f * lag)
+                        drawRoundRect(
+                            color = selectionColor,
+                            topLeft = Offset(animatedOffsetX.toPx() - (width - slotWidthPx) / 2f,
+                                (size.height - height) / 2f),
+                            size = Size(width, height),
+                            cornerRadius = CornerRadius(height / 2f)
+                        )
+                    }
+                } else Box(
                     modifier = Modifier
-                        .offset(x = animatedOffsetX)
+                        .offset(x = glassPosition)
                         .width(pillWidthDp)
                         .fillMaxHeight()
-                        .scale(pillScale)
-                        .clip(CircleShape)
-                        .background(
-                            if (isDraggingNav) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
-                            } else {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                        .graphicsLayer {
+                            if (liquidMotion) {
+                                scaleX = (1f + .11f * glassMotion.liftX) * (1f + glassMotion.deviation)
+                                scaleY = (1f + 11.dp.toPx() / size.height * glassMotion.liftY) * (1f - glassMotion.deviation)
                             }
-                        )
+                        }
                         .then(
-                            if (isDraggingNav) {
-                                Modifier.border(
-                                    width = 1.2.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
-                                    shape = CircleShape
+                            if (liquidMotion) {
+                                Modifier.drawBackdrop(
+                                    backdrop = navSurface,
+                                    shape = { CircleShape },
+                                    effects = {
+                                        lens(refractionHeight = 18.dp.toPx() * glassMotion.glassPresence,
+                                            refractionAmount = 28.dp.toPx() * glassMotion.material,
+                                            chromaticAberration = true)
+                                    },
+                                    highlight = { Highlight.Default.copy(alpha = glassMotion.material * glassMotion.glassPresence) },
+                                    shadow = { null }
                                 )
                             } else Modifier
                         )
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha =
+                                if (liquidMotion) .22f * (1f - .7f * glassMotion.material)
+                                else if (isDraggingNav) .34f else .22f), CircleShape
+                        )
+
                 )
             }
 
@@ -615,14 +775,22 @@ fun YtMusicBottomNavBar(
                             Modifier
                                 .background(MaterialTheme.colorScheme.surfaceContainer, CircleShape)
                                 .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.45f), CircleShape)
-                        } else if (useLiquidGlass && isLiquidGlassSupported()) {
+                        } else if (liquidMotion && isLiquidGlassSupported()) {
                             Modifier.liquidGlass(CircleShape, hazeState = hazeState, enableBlur = enableBlur)
                         } else {
-                            val baseMod = if (enableBlur) {
+                            val previewBackdrop = LocalPreviewBackdrop.current
+                            val baseMod = if (enableBlur && previewBackdrop != null) {
+                                Modifier.drawPlainBackdrop(
+                                    backdrop = previewBackdrop,
+                                    shape = { CircleShape },
+                                    effects = { blur(42.dp.toPx()) },
+                                    onDrawSurface = { drawRect(baseSurface.copy(alpha = 0.54f)) }
+                                )
+                            } else if (enableBlur) {
                                 Modifier.hazeEffect(state = hazeState) {
                                     blurEnabled = true
                                     backgroundColor = baseSurface
-                                    blurRadius = 30.dp
+                                    blurRadius = 46.dp
                                     tints = listOf(HazeTint(baseSurface.copy(alpha = 0.54f)))
                                 }
                             } else {
@@ -698,6 +866,8 @@ fun ScMusicBottomNavBar(
     val capsuleShape = CircleShape
     val baseSurface = MaterialTheme.colorScheme.surface
     val isPureMy = LocalPureMaterialYou.current
+    val liquidMotion = useLiquidGlass && isLiquidGlassSupported() && !isPureMy
+    val navSurface = rememberLayerBackdrop()
     val mainTabs = remember {
         listOf(
             ScTab.HOME,
@@ -713,6 +883,20 @@ fun ScMusicBottomNavBar(
 
     val selectedIndex = mainTabs.indexOf(selected)
     val activeIndex = if (isDraggingNav && hoveredIndex in mainTabs.indices) hoveredIndex else selectedIndex
+    val motionScope = rememberCoroutineScope()
+    val glassMotion = remember(mainTabs) { GlassPillMotion(motionScope, selectedIndex.coerceAtLeast(0)) }
+    LaunchedEffect(selectedIndex, liquidMotion) {
+        if (liquidMotion) glassMotion.animateTo(selectedIndex.coerceAtLeast(0)) else glassMotion.snapTo(selectedIndex.coerceAtLeast(0))
+    }
+    LaunchedEffect(isDraggingNav, liquidMotion) {
+        if (isDraggingNav && liquidMotion) glassMotion.startDrag() else glassMotion.release(selectedIndex.coerceAtLeast(0))
+    }
+    LaunchedEffect(dragFingerX, innerWidthPx, isDraggingNav) {
+        if (isDraggingNav && innerWidthPx > 0) {
+            glassMotion.dragTo((dragFingerX / (innerWidthPx.toFloat() / mainTabs.size) - .5f).coerceIn(0f, mainTabs.lastIndex.toFloat()))
+        }
+    }
+
 
     Row(
         modifier = modifier
@@ -726,34 +910,19 @@ fun ScMusicBottomNavBar(
             modifier = Modifier
                 .weight(1f)
                 .height(navBarHeight)
-                .clip(capsuleShape)
-                .then(
-                    if (enableBlur) {
-                        Modifier
-                            .hazeEffect(state = hazeState) {
-                                blurEnabled = true
-                                backgroundColor = baseSurface.copy(alpha = 0.55f)
-                                blurRadius = 24.dp
-                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.55f)))
-                            }
-                            .background(baseSurface.copy(alpha = 0.72f))
-                            .border(1.dp, Color.White.copy(alpha = 0.12f), capsuleShape)
-                    } else {
-                        Modifier
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
-                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), capsuleShape)
-                    }
-                )
+                .then(if (liquidMotion) Modifier else Modifier.clip(capsuleShape))
                 .padding(innerInset)
                 .onSizeChanged { innerWidthPx = it.width }
-                .pointerInput(mainTabs, innerWidthPx) {
+                .pointerInput(mainTabs, innerWidthPx, liquidMotion) {
                     if (innerWidthPx <= 0) return@pointerInput
                     awaitEachGesture {
+                        try {
                         val down = awaitFirstDown(requireUnconsumed = false)
                         val slotWidth = (innerWidthPx.toFloat() / mainTabs.size).coerceAtLeast(1f)
                         var currentIdx = (down.position.x / slotWidth).toInt().coerceIn(0, mainTabs.lastIndex)
                         dragFingerX = down.position.x.coerceIn(0f, innerWidthPx.toFloat())
                         hoveredIndex = currentIdx
+                        if (liquidMotion) isDraggingNav = true
                         var movedSignificantly = false
                         val startX = down.position.x
 
@@ -789,10 +958,41 @@ fun ScMusicBottomNavBar(
                                 view.performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK)
                             }
                         }
+                        } finally {
+                            isDraggingNav = false
+                            hoveredIndex = -1
+                        }
                     }
                 },
             contentAlignment = Alignment.CenterStart
         ) {
+            // Keep the surface in its own layer so the lifted lens can grow past it.
+            Box(Modifier.matchParentSize().layout { measurable, constraints ->
+                val inset = innerInset.roundToPx()
+                val child = measurable.measure(Constraints.fixed(
+                    constraints.maxWidth + inset * 2, constraints.maxHeight + inset * 2))
+                layout(constraints.maxWidth, constraints.maxHeight) { child.place(-inset, -inset) }
+            }
+                .clip(capsuleShape)
+                .then(
+                    if (enableBlur) {
+                        Modifier
+                            .hazeEffect(state = hazeState) {
+                                blurEnabled = true
+                                backgroundColor = baseSurface.copy(alpha = 0.55f)
+                                blurRadius = 40.dp
+                                tints = listOf(HazeTint(baseSurface.copy(alpha = 0.55f)))
+                            }
+                            .background(baseSurface.copy(alpha = 0.72f))
+                            .border(1.dp, Color.White.copy(alpha = 0.12f), capsuleShape)
+                    } else {
+                        Modifier
+                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .border(1.dp, MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f), capsuleShape)
+                    }
+                )
+            )
+
             if (innerWidthPx > 0 && activeIndex in mainTabs.indices) {
                 val slotWidthPx = innerWidthPx.toFloat() / mainTabs.size
                 val targetLeftPx = if (isDraggingNav) {
@@ -805,40 +1005,60 @@ fun ScMusicBottomNavBar(
                 val animatedOffsetX by animateDpAsState(
                     targetValue = targetOffsetX,
                     animationSpec = spring(
-                        dampingRatio = Spring.DampingRatioLowBouncy,
-                        stiffness = if (isDraggingNav) Spring.StiffnessHigh else Spring.StiffnessMediumLow
+                        dampingRatio = 0.72f,
+                        stiffness = 320f
                     ),
                     label = "scSlidingPillOffset"
                 )
-                val pillScale by animateFloatAsState(
-                    targetValue = if (isDraggingNav) 1.03f else 1.0f,
-                    animationSpec = spring(stiffness = Spring.StiffnessMedium),
-                    label = "scSlidingPillScale"
-                )
+                glassMotion.stepDp = with(density) { slotWidthPx.toDp().value }
+                val lag = (kotlin.math.abs(targetLeftPx - with(density) { animatedOffsetX.toPx() }) / slotWidthPx).coerceIn(0f, 1f)
+                val glassPosition = with(density) { (glassMotion.position * slotWidthPx).toDp() }
 
-                Box(
+                if (!liquidMotion) {
+                    val selectionColor = MaterialTheme.colorScheme.primary.copy(alpha = if (isDraggingNav) .34f else .22f)
+                    Canvas(Modifier.matchParentSize()) {
+                        val width = slotWidthPx * (1f + .16f * lag)
+                        val height = size.height * (1f - .08f * lag)
+                        drawRoundRect(
+                            color = selectionColor,
+                            topLeft = Offset(animatedOffsetX.toPx() - (width - slotWidthPx) / 2f,
+                                (size.height - height) / 2f),
+                            size = Size(width, height),
+                            cornerRadius = CornerRadius(height / 2f)
+                        )
+                    }
+                } else Box(
                     modifier = Modifier
-                        .offset(x = animatedOffsetX)
+                        .offset(x = glassPosition)
                         .width(pillWidthDp)
                         .fillMaxHeight()
-                        .scale(pillScale)
-                        .clip(CircleShape)
-                        .background(
-                            if (isDraggingNav) {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.34f)
-                            } else {
-                                MaterialTheme.colorScheme.primary.copy(alpha = 0.22f)
+                        .graphicsLayer {
+                            if (liquidMotion) {
+                                scaleX = (1f + .11f * glassMotion.liftX) * (1f + glassMotion.deviation)
+                                scaleY = (1f + 11.dp.toPx() / size.height * glassMotion.liftY) * (1f - glassMotion.deviation)
                             }
-                        )
+                        }
                         .then(
-                            if (isDraggingNav) {
-                                Modifier.border(
-                                    width = 1.2.dp,
-                                    color = MaterialTheme.colorScheme.primary.copy(alpha = 0.65f),
-                                    shape = CircleShape
+                            if (liquidMotion) {
+                                Modifier.drawBackdrop(
+                                    backdrop = navSurface,
+                                    shape = { CircleShape },
+                                    effects = {
+                                        lens(refractionHeight = 18.dp.toPx() * glassMotion.glassPresence,
+                                            refractionAmount = 28.dp.toPx() * glassMotion.material,
+                                            chromaticAberration = true)
+                                    },
+                                    highlight = { Highlight.Default.copy(alpha = glassMotion.material * glassMotion.glassPresence) },
+                                    shadow = { null }
                                 )
                             } else Modifier
                         )
+                        .background(
+                            MaterialTheme.colorScheme.primary.copy(alpha =
+                                if (liquidMotion) .22f * (1f - .7f * glassMotion.material)
+                                else if (isDraggingNav) .34f else .22f), CircleShape
+                        )
+
                 )
             }
 
@@ -878,7 +1098,7 @@ fun ScMusicBottomNavBar(
                                 .hazeEffect(state = hazeState) {
                                     blurEnabled = true
                                     backgroundColor = baseSurface.copy(alpha = 0.55f)
-                                    blurRadius = 24.dp
+                                    blurRadius = 40.dp
                                     tints = listOf(HazeTint(baseSurface.copy(alpha = 0.55f)))
                                 }
                                 .background(if (searchSelected) MaterialTheme.colorScheme.primary else baseSurface.copy(alpha = 0.72f))

@@ -1,5 +1,7 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.PhysicsSwitch as Switch
+
 import com.lormusic.app.model.betaText
 import android.os.Build
 import android.content.Context
@@ -10,6 +12,8 @@ import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.foundation.background
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -22,6 +26,8 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.automirrored.filled.Label
 import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
@@ -32,10 +38,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.zIndex
 import androidx.compose.ui.draw.blur
 import androidx.compose.ui.draw.clipToBounds
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.compositeOver
+import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -75,6 +85,7 @@ fun ProfileScreen(
     favoritesCount: Int,
     playlistsCount: Int,
     themeMode: ThemeMode,
+    accentColor: com.lormusic.app.model.AppAccentColor = com.lormusic.app.model.AppAccentColor.PIXEL_BLUE,
     useDynamicColor: Boolean,
     useSquigglySlider: Boolean,
     expressiveHeader: Boolean = false,
@@ -83,13 +94,17 @@ fun ProfileScreen(
     onToggleMaterialArrows: (Boolean) -> Unit = {},
     expressiveNavigation: Boolean = false,
     onToggleExpressiveNavigation: (Boolean) -> Unit = {},
+    navTabOrder: List<com.lormusic.app.ui.components.LorTab> = com.lormusic.app.ui.components.DEFAULT_LOR_TAB_ORDER,
+    onUpdateNavTabOrder: (List<com.lormusic.app.ui.components.LorTab>) -> Unit = {},
     enableBlur: Boolean,
     pureMaterialYou: Boolean = false,
     showNavBarLabels: Boolean = false,
     useLiquidGlass: Boolean = false,
+    glassTransparency: Int = 65,
+    onGlassTransparencyChange: (Int) -> Unit = {},
     hazeState: HazeState? = null,
     enableBetaUpdates: Boolean = false,
-    betaExpandingSearch: Boolean = false,
+    betaExpandingSearch: Boolean = true,
     betaSeparateHeaderBubbles: Boolean = false,
     betaDynamicPlaybackContext: Boolean = true,
     betaAutoHideNavBar: Boolean = false,
@@ -108,6 +123,7 @@ fun ProfileScreen(
     playbackSpeed: Float,
     sleepTimerRemainingSec: Int?,
     onChangeThemeMode: (ThemeMode) -> Unit,
+    onChangeAccentColor: (com.lormusic.app.model.AppAccentColor) -> Unit = {},
     onToggleDynamicColor: (Boolean) -> Unit,
     onToggleSquigglySlider: (Boolean) -> Unit,
     onToggleBlur: (Boolean) -> Unit,
@@ -147,6 +163,7 @@ fun ProfileScreen(
     var aboutClickCount by remember { mutableIntStateOf(0) }
     var easterEggStage by remember { mutableIntStateOf(0) }
     var showThemeDialog by remember { mutableStateOf(false) }
+    var showAccentColorDialog by remember { mutableStateOf(false) }
     var showSearchPlacementDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showSleepDialog by remember { mutableStateOf(false) }
@@ -185,7 +202,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
-                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showSpeedDialog || showAboutDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
+                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showAccentColorDialog || showSpeedDialog || showAboutDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
         ) {
             Column(
@@ -273,7 +290,7 @@ fun ProfileScreen(
                     Spacer(Modifier.height(10.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.surfaceContainerLow,
                         modifier = Modifier.fillMaxWidth()
                     ) {
                         Column(
@@ -352,10 +369,11 @@ fun ProfileScreen(
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.themeModeTitle) },
                                 supportingContent = { Text(themeMode.getDisplayName(strings)) },
                                 leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null) },
@@ -363,6 +381,27 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                headlineContent = { Text(strings.betaText("accentColor")) },
+                                supportingContent = {
+                                    Text(
+                                        if (useDynamicColor) strings.materialYouTitle
+                                        else accentColor.getDisplayName(strings)
+                                    )
+                                },
+                                leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
+                                trailingContent = {
+                                    if (useDynamicColor) {
+                                        com.lormusic.app.ui.components.DynamicWallpaperSwatchPreview()
+                                    } else {
+                                        com.lormusic.app.ui.components.AccentColorSwatchPreview(accent = accentColor)
+                                    }
+                                },
+                                modifier = Modifier.clickable { showAccentColorDialog = true }
+                            )
+                            SettingsDivider()
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.blurEffectTitle) },
                                 supportingContent = { Text(strings.blurEffectDesc) },
                                 leadingContent = { Icon(Icons.Filled.BlurOn, contentDescription = null) },
@@ -375,6 +414,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.liquidGlassTitle) },
                                 supportingContent = {
                                     Text(
@@ -401,6 +441,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.dynamicCoverGradientTitle) },
                                 supportingContent = { Text(strings.dynamicCoverGradientDesc) },
                                 leadingContent = { Icon(Icons.Filled.Gradient, contentDescription = null) },
@@ -413,6 +454,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(text = waveGradTitle) },
                                 supportingContent = { Text(waveGradDesc) },
                                 leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
@@ -433,21 +475,10 @@ fun ProfileScreen(
                         style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
                         color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(8.dp))
-                    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)) {
+                    Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         Column {
                             ListItem(
-                                headlineContent = { Text(strings.materialYouTitle) },
-                                supportingContent = { Text(strings.materialYouDesc) },
-                                leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = useDynamicColor,
-                                        onCheckedChange = onToggleDynamicColor
-                                    )
-                                }
-                            )
-                            SettingsDivider()
-                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.pureMaterialYouTitle) },
                                 supportingContent = { Text(strings.pureMaterialYouDesc) },
                                 leadingContent = { Icon(Icons.Filled.ColorLens, contentDescription = null) },
@@ -461,6 +492,7 @@ fun ProfileScreen(
                             SettingsDivider()
 
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.betaText("expressiveHeader")) },
                                 supportingContent = { Text(strings.betaText("expressiveHeaderDesc")) },
                                 leadingContent = { Icon(Icons.Filled.ViewHeadline, null) },
@@ -468,13 +500,49 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.betaText("expressiveNav")) },
                                 supportingContent = { Text(strings.betaText("expressiveNavDesc")) },
                                 leadingContent = { Icon(Icons.Filled.AutoAwesome, null) },
                                 trailingContent = { Switch(checked = expressiveNavigation, onCheckedChange = onToggleExpressiveNavigation) }
                             )
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceContainerLow)
+                                    .padding(horizontal = 16.dp, vertical = 4.dp)
+                            ) {
+                                Row(
+                                    Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Text(strings.betaText("preview"), style = MaterialTheme.typography.labelLarge)
+                                    TextButton(onClick = {
+                                        showNavigationPreview = !showNavigationPreview
+                                        prefs.saveShowNavigationPreview(showNavigationPreview)
+                                    }) {
+                                        Icon(if (showNavigationPreview) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, null)
+                                        Spacer(Modifier.width(4.dp))
+                                        Text(if (showNavigationPreview) strings.betaText("hide") else strings.betaText("show"))
+                                    }
+                                }
+                                AnimatedVisibility(visible = showNavigationPreview) {
+                                    val cardBg = MaterialTheme.colorScheme.surfaceContainerLow
+                                    com.lormusic.app.ui.components.NavigationBarPreview(
+                                        useExpressive = expressiveNavigation,
+                                        tabOrder = navTabOrder,
+                                        backgroundColor = cardBg,
+                                        enableBlur = enableBlur && !pureMaterialYou && !showSearchPlacementDialog,
+                                        useLiquidGlass = useLiquidGlass && !pureMaterialYou && !showSearchPlacementDialog,
+                                        showLabels = showNavBarLabels,
+                                        showSearchButton = !searchBarPlacement.localAtTop
+                                    )
+                                }
+                            }
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.betaText("materialArrows")) },
                                 supportingContent = { Text(strings.betaText("materialArrowsDesc")) },
                                 leadingContent = { com.lormusic.app.ui.components.IosBackChevron() },
@@ -510,6 +578,7 @@ fun ProfileScreen(
                     AnimatedVisibility(visible = showNavigationPreview) {
                         com.lormusic.app.ui.components.NavigationBarPreview(
                             useExpressive = expressiveNavigation,
+                            tabOrder = navTabOrder,
                             enableBlur = enableBlur && !pureMaterialYou && !showSearchPlacementDialog,
                             useLiquidGlass = useLiquidGlass && !pureMaterialYou && !showSearchPlacementDialog,
                             showLabels = showNavBarLabels,
@@ -520,11 +589,150 @@ fun ProfileScreen(
 
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
+                            Column(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .padding(horizontal = 16.dp, vertical = 14.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(
+                                            text = strings.betaText("navTabOrder"),
+                                            style = MaterialTheme.typography.bodyLarge,
+                                            fontWeight = FontWeight.Medium
+                                        )
+                                        Text(
+                                            text = strings.betaText("navTabOrderDesc"),
+                                            style = MaterialTheme.typography.bodySmall,
+                                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                                        )
+                                    }
+                                    if (navTabOrder != com.lormusic.app.ui.components.DEFAULT_LOR_TAB_ORDER) {
+                                        TextButton(
+                                            onClick = {
+                                                onUpdateNavTabOrder(com.lormusic.app.ui.components.DEFAULT_LOR_TAB_ORDER)
+                                            }
+                                        ) {
+                                            Text(strings.betaText("resetOrder"))
+                                        }
+                                    }
+                                }
+                                Spacer(Modifier.height(10.dp))
+                                var pickedTab by remember { mutableStateOf<com.lormusic.app.ui.components.LorTab?>(null) }
+                                var orderWidth by remember { mutableIntStateOf(0) }
+                                val currentOrder by rememberUpdatedState(navTabOrder)
+                                val updateOrder by rememberUpdatedState(onUpdateNavTabOrder)
+                                var fingerX by remember { mutableFloatStateOf(0f) }
+                                Row(
+                                    modifier = Modifier.fillMaxWidth()
+                                        .onSizeChanged { orderWidth = it.width }
+                                        .pointerInput(Unit) {
+                                            detectDragGesturesAfterLongPress(
+                                                onDragStart = { point ->
+                                                    fingerX = point.x
+                                                    val index = (point.x / (orderWidth.toFloat() / currentOrder.size)).toInt().coerceIn(0, currentOrder.lastIndex)
+                                                    pickedTab = currentOrder[index]
+                                                },
+                                                onDragEnd = { pickedTab = null },
+                                                onDragCancel = { pickedTab = null }
+                                            ) { change, delta ->
+                                                change.consume()
+                                                fingerX += delta.x
+                                                val target = (fingerX / (orderWidth.toFloat() / currentOrder.size)).toInt().coerceIn(0, currentOrder.lastIndex)
+                                                val from = currentOrder.indexOf(pickedTab)
+                                                if (from >= 0 && from != target) {
+                                                    val next = currentOrder.toMutableList()
+                                                    next.add(target, next.removeAt(from))
+                                                    updateOrder(next)
+                                                }
+                                            }
+                                        },
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp)
+                                ) {
+                                    navTabOrder.forEachIndexed { index, tab ->
+                                        val isPicked = pickedTab == tab
+                                        val itemShape = RoundedCornerShape(18.dp)
+                                        Surface(
+                                            shape = itemShape,
+                                            color = if (isPicked) MaterialTheme.colorScheme.primaryContainer
+                                            else MaterialTheme.colorScheme.surfaceContainerHigh,
+                                            modifier = Modifier
+                                                .weight(1f)
+                                                .zIndex(if (isPicked) 1f else 0f)
+                                                .graphicsLayer {
+                                                    if (isPicked) {
+                                                        translationX = fingerX - (index + .5f) * orderWidth / navTabOrder.size
+                                                        scaleX = 1.04f
+                                                        scaleY = 1.04f
+                                                    }
+                                                }
+                                                .border(
+                                                    width = if (isPicked) 2.dp else 1.dp,
+                                                    color = if (isPicked) MaterialTheme.colorScheme.primary
+                                                    else MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.35f),
+                                                    shape = itemShape
+                                                )
+                                                .clip(itemShape)
+
+                                        ) {
+                                            Column(
+                                                modifier = Modifier
+                                                    .fillMaxWidth()
+                                                    .padding(horizontal = 8.dp, vertical = 12.dp),
+                                                horizontalAlignment = Alignment.CenterHorizontally
+                                            ) {
+                                                Box(
+                                                    modifier = Modifier
+                                                        .size(20.dp)
+                                                        .clip(CircleShape)
+                                                        .background(
+                                                            if (isPicked) MaterialTheme.colorScheme.primary
+                                                            else MaterialTheme.colorScheme.onSurface.copy(alpha = 0.1f)
+                                                        ),
+                                                    contentAlignment = Alignment.Center
+                                                ) {
+                                                    Text(
+                                                        text = "${index + 1}",
+                                                        style = MaterialTheme.typography.labelSmall,
+                                                        fontWeight = FontWeight.Bold,
+                                                        color = if (isPicked) MaterialTheme.colorScheme.onPrimary
+                                                        else MaterialTheme.colorScheme.onSurfaceVariant
+                                                    )
+                                                }
+                                                Spacer(Modifier.height(6.dp))
+                                                Icon(
+                                                    imageVector = tab.filled,
+                                                    contentDescription = tab.getDisplayName(strings),
+                                                    tint = if (isPicked) MaterialTheme.colorScheme.onPrimaryContainer
+                                                    else MaterialTheme.colorScheme.primary,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                                Spacer(Modifier.height(4.dp))
+                                                Text(
+                                                    text = tab.getDisplayName(strings),
+                                                    style = MaterialTheme.typography.labelMedium,
+                                                    fontWeight = if (isPicked) FontWeight.Bold else FontWeight.SemiBold,
+                                                    color = if (isPicked) MaterialTheme.colorScheme.onPrimaryContainer
+                                                    else MaterialTheme.colorScheme.onSurface,
+                                                    maxLines = 1,
+                                                    overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis
+                                                )
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                            SettingsDivider()
 
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.searchBarPlacementTitle) },
                                 supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
                                 leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
@@ -532,6 +740,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.showNavBarLabelsTitle) },
                                 supportingContent = { Text(strings.showNavBarLabelsDesc) },
                                 leadingContent = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null) },
@@ -544,6 +753,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.betaCategorizedSettingsTitle) },
                                 supportingContent = { Text(strings.betaCategorizedSettingsDesc) },
                                 leadingContent = { Icon(Icons.Filled.Category, contentDescription = null) },
@@ -576,10 +786,11 @@ fun ProfileScreen(
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.betaDynamicPlaybackContextTitle) },
                                 supportingContent = { Text(strings.betaDynamicPlaybackContextDesc) },
                                 leadingContent = { Icon(Icons.Filled.AutoAwesome, contentDescription = null) },
@@ -592,13 +803,15 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.equalizerTitle) },
                                 supportingContent = { Text(if (prefs.getEqualizerEnabled()) strings.equalizerStatusEnabled else strings.equalizerStatusDisabled) },
-                                leadingContent = { Icon(Icons.Filled.GraphicEq, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                leadingContent = { Icon(Icons.Filled.GraphicEq, contentDescription = null) },
                                 modifier = Modifier.clickable { showEqualizerSheet = true }
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.playerSwipeTitle) },
                                 supportingContent = { Text(strings.playerSwipeDesc) },
                                 leadingContent = { Icon(Icons.Filled.Swipe, contentDescription = null) },
@@ -611,6 +824,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.dynamicPlayerColorsTitle) },
                                 supportingContent = { Text(strings.dynamicPlayerColorsDesc) },
                                 leadingContent = { Icon(Icons.Filled.InvertColors, contentDescription = null) },
@@ -623,6 +837,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.squigglySliderTitle) },
                                 supportingContent = { Text(strings.squigglySliderDesc) },
                                 leadingContent = { Icon(Icons.Filled.Waves, contentDescription = null) },
@@ -635,6 +850,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.sleepTimerTitle) },
                                 supportingContent = {
                                     val status = sleepTimerRemainingSec?.let {
@@ -647,6 +863,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.backgroundPlaybackTitle) },
                                 supportingContent = { Text(strings.backgroundPlaybackDesc) },
                                 leadingContent = { Icon(Icons.Filled.ElectricBolt, contentDescription = null) },
@@ -684,19 +901,21 @@ fun ProfileScreen(
                     )
                     }
                     Spacer(Modifier.height(8.dp))
+                    com.lormusic.app.ui.components.GlassTransparencySettings(
+                        percent = glassTransparency,
+                        onPercentChange = onGlassTransparencyChange,
+                        tabOrder = navTabOrder,
+                        showLabels = showNavBarLabels,
+                        showSearchButton = !searchBarPlacement.localAtTop
+                    )
+                    Spacer(Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
                             ListItem(
-                                headlineContent = { BetaHeadline(strings.betaText("expandingSearch")) },
-                                supportingContent = { Text(strings.betaText("expandingDesc")) },
-                                leadingContent = { Icon(Icons.Filled.Search, null) },
-                                trailingContent = { Switch(checked = betaExpandingSearch, onCheckedChange = onToggleBetaExpandingSearch) }
-                            )
-                            SettingsDivider()
-                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { BetaHeadline(strings.betaAutoHideNavBarTitle) },
                                 supportingContent = { Text(strings.betaAutoHideNavBarDesc) },
                                 leadingContent = { Icon(Icons.Filled.VisibilityOff, contentDescription = null) },
@@ -709,6 +928,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { BetaHeadline(strings.betaSeparateHeaderBubblesTitle) },
                                 supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
                                 leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
@@ -721,6 +941,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { BetaHeadline(strings.betaHideDividersTitle) },
                                 supportingContent = { Text(strings.betaHideDividersDesc) },
                                 leadingContent = { Icon(Icons.Filled.LineWeight, contentDescription = null) },
@@ -748,10 +969,11 @@ fun ProfileScreen(
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f)
+                        color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.languageTitle) },
                                 supportingContent = { Text(appLanguage.getLabel(strings)) },
                                 leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
@@ -759,6 +981,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.backupTitle) },
                                 supportingContent = { Text(strings.backupDesc) },
                                 leadingContent = { Icon(Icons.Filled.Backup, contentDescription = null) },
@@ -766,6 +989,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.checkForUpdatesTitle) },
                                 supportingContent = { Text(currentAppVersion) },
                                 leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
@@ -775,6 +999,7 @@ fun ProfileScreen(
                             )
                             SettingsDivider()
                             ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.aboutAppSection) },
                                 supportingContent = { Text(currentAppVersion) },
                                 leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
@@ -815,54 +1040,137 @@ fun ProfileScreen(
                             Column {
                                 Surface(
                                     shape = RoundedCornerShape(24.dp),
-                                    color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.6f),
+                                    color = MaterialTheme.colorScheme.surfaceContainerLow,
                                     modifier = Modifier.fillMaxWidth()
                                 ) {
                                     Column {
+                                        val primary = MaterialTheme.colorScheme.primary
+                                        val secondary = MaterialTheme.colorScheme.secondary
+                                        val tertiary = MaterialTheme.colorScheme.tertiary
+                                        val badgeShape = RoundedCornerShape(
+                                            topStart = 20.dp,
+                                            topEnd = 16.dp,
+                                            bottomEnd = 20.dp,
+                                            bottomStart = 18.dp
+                                        )
+                                        @Composable
+                                        fun CategoryIconBadge(
+                                            icon: androidx.compose.ui.graphics.vector.ImageVector,
+                                            tintA: Color,
+                                            tintB: Color
+                                        ) {
+                                            val richA = if (tintA.luminance() > 0.42f) {
+                                                androidx.compose.ui.graphics.lerp(tintA, Color(0xFF171B24), 0.44f)
+                                            } else tintA
+                                            val richB = if (tintB.luminance() > 0.42f) {
+                                                androidx.compose.ui.graphics.lerp(tintB, Color(0xFF171B24), 0.44f)
+                                            } else tintB
+                                            Box(
+                                                modifier = Modifier
+                                                    .size(44.dp)
+                                                    .clip(badgeShape)
+                                                    .background(
+                                                        androidx.compose.ui.graphics.Brush.linearGradient(
+                                                            listOf(richA, richB)
+                                                        )
+                                                    ),
+                                                contentAlignment = Alignment.Center
+                                            ) {
+                                                Icon(
+                                                    imageVector = icon,
+                                                    contentDescription = null,
+                                                    tint = Color.White,
+                                                    modifier = Modifier.size(22.dp)
+                                                )
+                                            }
+                                        }
+
                                         ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { Text(strings.settingsCategoryAppearance, fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.settingsCategoryAppearanceDesc) },
-                                            leadingContent = { Icon(Icons.Filled.Palette, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                            leadingContent = {
+                                                CategoryIconBadge(
+                                                    icon = Icons.Filled.Palette,
+                                                    tintA = primary.copy(alpha = 0.92f),
+                                                    tintB = androidx.compose.ui.graphics.lerp(primary, secondary, 0.35f)
+                                                )
+                                            },
                                             trailingContent = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                             modifier = Modifier.clickable { activeCategory = SettingsCategory.APPEARANCE }
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { Text(strings.betaText("materialDesign"), fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.betaText("materialDesignDesc")) },
-                                            leadingContent = { Icon(Icons.Filled.ColorLens, null) },
-                                            trailingContent = { Icon(Icons.Filled.ChevronRight, null) },
+                                            leadingContent = {
+                                                CategoryIconBadge(
+                                                    icon = Icons.Filled.Layers,
+                                                    tintA = androidx.compose.ui.graphics.lerp(primary, Color(0xFF3E8ED0), 0.25f),
+                                                    tintB = androidx.compose.ui.graphics.lerp(primary, tertiary, 0.45f)
+                                                )
+                                            },
+                                            trailingContent = { Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                             modifier = Modifier.clickable { activeCategory = SettingsCategory.MATERIAL_YOU }
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { Text(strings.settingsCategoryNavigation, fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.settingsCategoryNavigationDesc) },
-                                            leadingContent = { Icon(Icons.Filled.Navigation, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                            leadingContent = {
+                                                CategoryIconBadge(
+                                                    icon = Icons.Filled.Navigation,
+                                                    tintA = androidx.compose.ui.graphics.lerp(primary, Color(0xFF4CA9B8), 0.32f),
+                                                    tintB = androidx.compose.ui.graphics.lerp(secondary, Color(0xFF2D8C9E), 0.35f)
+                                                )
+                                            },
                                             trailingContent = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                             modifier = Modifier.clickable { activeCategory = SettingsCategory.NAVIGATION }
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { Text(strings.settingsCategoryPlayback, fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.settingsCategoryPlaybackDesc) },
-                                            leadingContent = { Icon(Icons.Filled.MusicNote, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                            leadingContent = {
+                                                CategoryIconBadge(
+                                                    icon = Icons.Filled.MusicNote,
+                                                    tintA = androidx.compose.ui.graphics.lerp(primary, Color(0xFFB36CC4), 0.32f),
+                                                    tintB = androidx.compose.ui.graphics.lerp(tertiary, primary, 0.4f)
+                                                )
+                                            },
                                             trailingContent = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                             modifier = Modifier.clickable { activeCategory = SettingsCategory.PLAYBACK }
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { BetaHeadline(strings.settingsCategoryBeta) },
                                             supportingContent = { Text(strings.settingsCategoryBetaDesc) },
-                                            leadingContent = { Icon(Icons.Filled.Science, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                            leadingContent = {
+                                                CategoryIconBadge(
+                                                    icon = Icons.Filled.Science,
+                                                    tintA = androidx.compose.ui.graphics.lerp(primary, Color(0xFF8B6CC4), 0.38f),
+                                                    tintB = androidx.compose.ui.graphics.lerp(secondary, tertiary, 0.4f)
+                                                )
+                                            },
                                             trailingContent = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                             modifier = Modifier.clickable { activeCategory = SettingsCategory.BETA }
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { Text(strings.settingsCategorySystem, fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.settingsCategorySystemDesc) },
-                                            leadingContent = { Icon(Icons.Filled.Info, contentDescription = null, tint = MaterialTheme.colorScheme.primary) },
+                                            leadingContent = {
+                                                CategoryIconBadge(
+                                                    icon = Icons.Filled.Sync,
+                                                    tintA = androidx.compose.ui.graphics.lerp(primary, Color(0xFF3E78D0), 0.3f),
+                                                    tintB = primary.copy(alpha = 0.85f)
+                                                )
+                                            },
                                             trailingContent = { Icon(Icons.Filled.ChevronRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.5f)) },
                                             modifier = Modifier.clickable { activeCategory = SettingsCategory.SYSTEM }
                                         )
@@ -939,6 +1247,16 @@ fun ProfileScreen(
             enableBlur = enableBlur,
             onSelectTheme = { onChangeThemeMode(it) },
             onDismiss = { showThemeDialog = false }
+        )
+    }
+    if (showAccentColorDialog) {
+        com.lormusic.app.ui.components.AccentColorAutoUpdaterDialog(
+            currentAccent = accentColor,
+            useDynamicColor = useDynamicColor,
+            enableBlur = enableBlur,
+            onSelectDynamicColor = { onToggleDynamicColor(true) },
+            onSelectAccent = { onChangeAccentColor(it) },
+            onDismiss = { showAccentColorDialog = false }
         )
     }
     if (showSearchPlacementDialog) {
@@ -1061,6 +1379,8 @@ fun ProfileScreen(
                                     }
                                 )
                                 Spacer(Modifier.width(10.dp))
+                                com.lormusic.app.ui.components.LanguageFlag(lang)
+                                Spacer(Modifier.width(12.dp))
                                 Text(
                                     text = lang.getLabel(strings),
                                     style = MaterialTheme.typography.bodyLarge,

@@ -40,18 +40,18 @@ fun expressiveColors(): ColorScheme = MaterialTheme.colorScheme
 @Composable
 fun ExpressiveHeaderBackground(modifier: Modifier = Modifier) {
     val colors = expressiveColors()
-    Canvas(modifier.background(colors.background).clip(RoundedCornerShape(bottomStart = 28.dp, bottomEnd = 28.dp))) {
+    Canvas(modifier.background(colors.background)) {
         val w = size.width; val h = size.height
         val back = Path().apply {
-            moveTo(w * .43f, 0f); lineTo(w, 0f); lineTo(w, h * .77f)
-            cubicTo(w * .73f, h * .7f, w * .92f, h * .27f, w * .64f, h * .36f)
-            cubicTo(w * .43f, h * .4f, w * .35f, h * .14f, w * .43f, 0f); close()
+            moveTo(w * .38f, 0f); lineTo(w, 0f); lineTo(w, h * .82f)
+            cubicTo(w * .75f, h * .74f, w * .90f, h * .30f, w * .62f, h * .38f)
+            cubicTo(w * .42f, h * .42f, w * .32f, h * .15f, w * .38f, 0f); close()
         }
         drawPath(back, colors.secondaryContainer.copy(alpha = .42f))
         val front = Path().apply {
-            moveTo(w * .57f, 0f); lineTo(w, 0f); lineTo(w, h * .63f)
-            cubicTo(w * .82f, h * .46f, w * .79f, h * .55f, w * .67f, h * .41f)
-            cubicTo(w * .55f, h * .28f, w * .51f, h * .16f, w * .57f, 0f); close()
+            moveTo(w * .54f, 0f); lineTo(w, 0f); lineTo(w, h * .66f)
+            cubicTo(w * .82f, h * .48f, w * .78f, h * .56f, w * .66f, h * .42f)
+            cubicTo(w * .54f, h * .28f, w * .49f, h * .16f, w * .54f, 0f); close()
         }
         drawPath(front, colors.primaryContainer.copy(alpha = .62f))
     }
@@ -99,10 +99,11 @@ fun ExpressiveSearchTitle(title: String, active: Boolean, query: String, onQuery
                     LaunchedEffect(Unit) { focus.requestFocus(); keyboard?.show() }
                     BasicTextField(value = query, onValueChange = onQuery, singleLine = true,
                         modifier = Modifier.fillMaxWidth().focusRequester(focus),
-                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = colors.onSurface),
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center, color = colors.onSurface),
                         cursorBrush = SolidColor(colors.primary), decorationBox = { inner ->
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.weight(1f)) {
+                                Spacer(Modifier.width(48.dp))
+                                Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                                     if (query.isEmpty()) Text(strings.searchTitle, color = colors.onSurfaceVariant, maxLines = 1)
                                     inner()
                                 }
@@ -150,7 +151,7 @@ fun <T> ExpressiveNavigationBar(items: List<T>, selectedItem: T, onSelect: (T) -
                 }
             }
         }
-        if (showSearch) FilledTonalIconButton(onClick = onSearch, modifier = Modifier.size(48.dp),
+        if (showSearch) FilledTonalIconButton(onClick = onSearch, modifier = Modifier.size(56.dp),
             colors = IconButtonDefaults.filledTonalIconButtonColors(containerColor = if (searchActive) colors.primaryContainer else colors.surfaceContainer,
                 contentColor = if (searchActive) colors.onPrimaryContainer else colors.onSurface)) {
             Icon(Icons.Filled.Search, LocalStrings.current.searchTitle, Modifier.size(24.dp))

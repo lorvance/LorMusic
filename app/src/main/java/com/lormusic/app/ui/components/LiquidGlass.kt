@@ -29,17 +29,21 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 
+val LocalLiquidGlassTransparency = compositionLocalOf { 65 }
+
+internal fun glassBlurDp(percent: Int): Float = 80f * (1f - percent.coerceIn(0, 100) / 100f)
+internal fun glassTintAlpha(percent: Int): Float = .02f + .70f * (1f - percent.coerceIn(0, 100) / 100f)
+
 val LocalLiquidGlassEnabled = staticCompositionLocalOf { false }
 val LocalPureMaterialYou = staticCompositionLocalOf { false }
 val LocalAppBackdrop = staticCompositionLocalOf<Backdrop?> { null }
+val LocalPreviewBackdrop = staticCompositionLocalOf<Backdrop?> { null }
 internal val LocalGlassExport = compositionLocalOf<LayerBackdrop?> { null }
 
 fun isLiquidGlassSupported(): Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
 
-private const val SURFACE_OPACITY = 0.35f
-private val BLUR_RADIUS = 12.dp
-private val REFRACTION_HEIGHT = 24.dp
-private val REFRACTION_AMOUNT = 48.dp
+private val REFRACTION_HEIGHT = 36.dp
+private val REFRACTION_AMOUNT = 88.dp
 
 val GLASS_EDGE_WIDTH = 0.8.dp
 val GLASS_EDGE_COLOR = Color.White.copy(alpha = 0.22f)
@@ -67,10 +71,14 @@ fun Modifier.appBackdropSource(): Modifier {
 fun Modifier.liquidGlass(
     shape: CornerBasedShape,
     hazeState: HazeState? = null,
-    enableBlur: Boolean = true
+    enableBlur: Boolean = true,
+    exportedBackdrop: LayerBackdrop? = null
 ): Modifier {
     val backdrop = LocalAppBackdrop.current ?: return this
-    val glassExport = LocalGlassExport.current
+    val glassExport = exportedBackdrop ?: LocalGlassExport.current
+    val transparency = LocalLiquidGlassTransparency.current
+    val blurRadius = glassBlurDp(transparency).dp
+    val surfaceOpacity = glassTintAlpha(transparency)
     val surfaceColor = MaterialTheme.colorScheme.surface
     val isLight = surfaceColor.luminance() > 0.5f
 
@@ -80,20 +88,29 @@ fun Modifier.liquidGlass(
         effects = {
             colorControls(
                 brightness = if (isLight) 0.05f else -0.05f,
-                contrast = 1.15f,
-                saturation = 1.35f,
+                contrast = 1.3f,
+                saturation = 1.6f,
             )
-            blur(BLUR_RADIUS.toPx())
+            if (enableBlur) {
+                blur(blurRadius.toPx())
+            }
             lens(
-                refractionHeight = REFRACTION_HEIGHT.toPx(),
+                refractionHeight = minOf(REFRACTION_HEIGHT.toPx(), size.minDimension * .45f),
                 refractionAmount = REFRACTION_AMOUNT.toPx(),
-                chromaticAberration = false,
+                chromaticAberration = true,
             )
         },
-        highlight = { Highlight.Default },
+        highlight = { Highlight.Default.copy(width = .9.dp, blurRadius = .4.dp) },
         shadow = { Shadow.Default },
         exportedBackdrop = glassExport,
-        onDrawSurface = { drawRect(surfaceColor.copy(alpha = SURFACE_OPACITY)) },
+        onDrawSurface = {
+            drawRect(surfaceColor.copy(alpha = surfaceOpacity))
+            drawRect(Brush.verticalGradient(listOf(
+                Color.White.copy(alpha = if (isLight) .18f else .12f),
+                Color.Transparent,
+                Color.White.copy(alpha = .025f)
+            )))
+        },
     )
 }
 
@@ -132,7 +149,7 @@ fun Modifier.liquidGlassBubble(
         Modifier.hazeEffect(state = hazeState) {
             blurEnabled = true
             backgroundColor = baseSurface
-            blurRadius = 38.dp
+            blurRadius = 52.dp
             tints = listOf(HazeTint(baseSurface.copy(alpha = 0.45f)))
         }
     } else {
@@ -176,9 +193,10 @@ fun Modifier.lightweightLiquidGlass(
 ): Modifier {
     val useGlass = LocalLiquidGlassEnabled.current && isLiquidGlassSupported()
     val surfaceColor = MaterialTheme.colorScheme.surface
+    val surfaceOpacity = glassTintAlpha(LocalLiquidGlassTransparency.current)
     return if (useGlass) {
         clip(shape)
-            .background(surfaceColor.copy(alpha = SURFACE_OPACITY), shape)
+            .background(surfaceColor.copy(alpha = surfaceOpacity), shape)
             .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     } else {
         clip(shape)

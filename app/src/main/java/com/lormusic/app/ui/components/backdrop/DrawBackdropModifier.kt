@@ -304,25 +304,29 @@ private class DrawBackdropNode(
     private val drawBackdropLayer: DrawScope.() -> Unit = {
         val layer = graphicsLayer
         if (layer != null) {
-            val padding = padding
-            val scale = backdropScale
+            if (com.lormusic.app.ui.components.backdrop.backdrops.activeBackdropRecordings > 0) {
+                // Captures only contain the original page, never cached glass.
+            } else {
+                val padding = padding
+                val scale = backdropScale
 
-            try {
-                recordLayer(
-                    this@DrawBackdropNode,
-                    layer,
-                    size = IntSize(
-                        ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
-                        ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
-                    ),
-                    block = recordBackdropBlock
-                )
+                try {
+                    recordLayer(
+                        this@DrawBackdropNode,
+                        layer,
+                        size = IntSize(
+                            ((size.width * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1),
+                            ((size.height * scale).toInt() + padding.toInt() * 2).coerceAtLeast(1)
+                        ),
+                        block = recordBackdropBlock
+                    )
 
-                layer.topLeft =
-                    if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt())
-                    else IntOffset.Zero
-                drawRecordedBackdrop()
-            } catch (_: Throwable) {
+                    layer.topLeft =
+                        if (padding != 0f) IntOffset(-padding.toInt(), -padding.toInt())
+                        else IntOffset.Zero
+                    drawRecordedBackdrop()
+                } catch (_: Throwable) {
+                }
             }
         }
     }
@@ -352,6 +356,14 @@ private class DrawBackdropNode(
     }
 
     override fun ContentDrawScope.draw() {
+        // A backdrop capture must never retain a glass layer that samples that
+        // capture. Replaying its cached RenderNode would create a native render
+        // graph cycle, which overflows RenderThread's stack on the next frame.
+        if (com.lormusic.app.ui.components.backdrop.backdrops.activeBackdropRecordings > 0) {
+            onDrawSurface?.invoke(this)
+            drawContent()
+            return
+        }
         try {
             if (effectScope.update(this, backdropScale)) {
                 updateEffects()

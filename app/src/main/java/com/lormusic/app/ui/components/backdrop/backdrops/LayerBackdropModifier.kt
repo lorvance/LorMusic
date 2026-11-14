@@ -11,6 +11,8 @@ import androidx.compose.ui.node.invalidateDraw
 import androidx.compose.ui.platform.InspectorInfo
 import com.lormusic.app.ui.components.backdrop.internal.recordLayer
 
+internal var activeBackdropRecordings = 0
+
 fun Modifier.layerBackdrop(backdrop: LayerBackdrop): Modifier =
     this then LayerBackdropElement(backdrop)
 
@@ -57,12 +59,14 @@ private class LayerBackdropNode(
 
     override fun ContentDrawScope.draw() {
         drawContent()
-        if (size.width >= 1f && size.height >= 1f && size.width <= 8192f && size.height <= 8192f) {
+        if (activeBackdropRecordings == 0 && size.width >= 1f && size.height >= 1f && size.width <= 8192f && size.height <= 8192f) {
             try {
                 backdrop.isRecording = true
+                activeBackdropRecordings++
                 recordLayer(this@LayerBackdropNode, backdrop.graphicsLayer) { backdrop.onDraw(this@draw) }
             } catch (_: Throwable) {
             } finally {
+                activeBackdropRecordings--
                 backdrop.isRecording = false
             }
         }

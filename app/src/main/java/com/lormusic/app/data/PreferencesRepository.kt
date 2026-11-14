@@ -27,6 +27,7 @@ class PreferencesRepository(context: Context) {
         KEY_ENABLE_PLAYER_SWIPE to "Boolean",
         KEY_HIDE_DEMO_TRACKS to "Boolean",
         KEY_THEME_MODE to "String",
+        KEY_ACCENT_COLOR to "String",
         KEY_APP_ICON to "String",
         KEY_DYNAMIC_COLOR to "Boolean",
         KEY_SQUIGGLY_SLIDER to "Boolean",
@@ -48,6 +49,7 @@ class PreferencesRepository(context: Context) {
         KEY_SC_USER_PROFILE to "String",
         KEY_CUSTOM_PLAYLISTS to "String",
         KEY_LIQUID_GLASS to "Boolean",
+        KEY_GLASS_TRANSPARENCY to "Int",
         KEY_BETA_UPDATES to "Boolean",
         KEY_BETA_SEPARATE_HEADER_BUBBLES to "Boolean",
         KEY_BETA_DYNAMIC_PLAYBACK_CONTEXT to "Boolean",
@@ -79,6 +81,7 @@ class PreferencesRepository(context: Context) {
         KEY_EXPRESSIVE_NAVIGATION to "Boolean",
         KEY_EXPRESSIVE_HEADER to "Boolean",
         KEY_MATERIAL_ARROWS to "Boolean",
+        KEY_NAV_TAB_ORDER to "String",
     )
 
     init {
@@ -147,9 +150,9 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putBoolean(KEY_SHOW_NAVIGATION_PREVIEW, show).apply()
     }
 
-    fun getBetaExpandingSearch(): Boolean = prefs.getBoolean(KEY_BETA_EXPANDING_SEARCH, false)
+    fun getBetaExpandingSearch(): Boolean = true
     fun saveBetaExpandingSearch(enabled: Boolean) {
-        prefs.edit().putBoolean(KEY_BETA_EXPANDING_SEARCH, enabled).apply()
+        prefs.edit().putBoolean(KEY_BETA_EXPANDING_SEARCH, true).apply()
     }
 
     fun getLocalFavoriteIds(): Set<String> {
@@ -233,6 +236,25 @@ class PreferencesRepository(context: Context) {
 
     fun saveThemeMode(mode: ThemeMode) {
         prefs.edit().putString(KEY_THEME_MODE, mode.name).apply()
+    }
+
+    fun getAccentColor(): AppAccentColor {
+        val raw = prefs.getString(KEY_ACCENT_COLOR, AppAccentColor.PIXEL_BLUE.name) ?: AppAccentColor.PIXEL_BLUE.name
+        return AppAccentColor.entries.find { it.name == raw } ?: AppAccentColor.PIXEL_BLUE
+    }
+
+    fun saveAccentColor(color: AppAccentColor) {
+        prefs.edit().putString(KEY_ACCENT_COLOR, color.name).apply()
+    }
+
+    fun getNavTabOrder(): List<com.lormusic.app.ui.components.LorTab> {
+        val raw = prefs.getString(KEY_NAV_TAB_ORDER, null)
+        return com.lormusic.app.ui.components.parseLorTabOrder(raw)
+    }
+
+    fun saveNavTabOrder(order: List<com.lormusic.app.ui.components.LorTab>) {
+        val normalized = com.lormusic.app.ui.components.normalizeLorTabOrder(order)
+        prefs.edit().putString(KEY_NAV_TAB_ORDER, normalized.joinToString(",") { it.route }).apply()
     }
 
     fun getAppIconOption(): AppIconOption {
@@ -605,6 +627,12 @@ class PreferencesRepository(context: Context) {
             arr.put(obj)
         }
         prefs.edit().putString(KEY_CUSTOM_PLAYLISTS, arr.toString()).apply()
+    }
+
+    fun getGlassTransparency(): Int = prefs.getInt(KEY_GLASS_TRANSPARENCY, 65).coerceIn(0, 100)
+
+    fun saveGlassTransparency(percent: Int) {
+        prefs.edit().putInt(KEY_GLASS_TRANSPARENCY, percent.coerceIn(0, 100)).apply()
     }
 
     fun getUseLiquidGlass(): Boolean {
@@ -1024,6 +1052,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_EXPRESSIVE_HEADER = "expressive_header"
         private const val KEY_MATERIAL_ARROWS = "material_arrows"
         private const val KEY_EXPRESSIVE_NAVIGATION = "expressive_navigation"
+        private const val KEY_NAV_TAB_ORDER = "nav_tab_order"
         private const val KEY_SHOW_NAVIGATION_PREVIEW = "show_navigation_preview"
         private const val KEY_BETA_EXPANDING_SEARCH = "beta_expanding_search"
         private const val KEY_FAVORITES = "favorite_song_ids"
@@ -1033,6 +1062,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_ENABLE_PLAYER_SWIPE = "enable_player_swipe_gesture"
         private const val KEY_HIDE_DEMO_TRACKS = "hide_demo_tracks"
         private const val KEY_THEME_MODE = "theme_mode"
+        private const val KEY_ACCENT_COLOR = "accent_color"
         private const val KEY_APP_ICON = "app_icon_option"
         private const val KEY_DYNAMIC_COLOR = "use_dynamic_color"
         private const val KEY_SQUIGGLY_SLIDER = "use_squiggly_slider"
@@ -1051,6 +1081,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_SAVED_YT_SONGS = "saved_yt_music_songs_json"
         private const val KEY_CUSTOM_PLAYLISTS = "custom_playlists_json"
         private const val KEY_LIQUID_GLASS = "use_liquid_glass"
+        private const val KEY_GLASS_TRANSPARENCY = "liquid_glass_transparency"
         private const val KEY_BETA_UPDATES = "enable_beta_updates"
         private const val KEY_ALBUM_ART_GRADIENT = "use_album_art_gradient_v2"
         private const val KEY_MY_WAVE_COVER_GRADIENT = "use_my_wave_cover_gradient"

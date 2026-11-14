@@ -12,6 +12,8 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import android.view.HapticFeedbackConstants
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.Crossfade
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -76,7 +78,7 @@ fun LibraryScreen(
     useLiquidGlass: Boolean = false,
     classicLibraryDesign: Boolean = false,
     expressiveHeader: Boolean = false,
-    betaExpandingSearch: Boolean = false,
+    betaExpandingSearch: Boolean = true,
     onCloseExternalSearch: () -> Unit = {},
     showTopSearchBar: Boolean = true,
     externalSearchActive: Boolean = false,
@@ -341,8 +343,45 @@ fun LibraryScreen(
                     headerHeightDp = with(density) { coords.size.height.toDp() }
                 }
         ) {
-            if (expressiveHeader) ExpressiveHeaderBackground(Modifier.matchParentSize())
-            else Box(Modifier.matchParentSize().background(MaterialTheme.colorScheme.background.copy(alpha = .96f)))
+            val topScrimColor = MaterialTheme.colorScheme.background
+            if (expressiveHeader) {
+                ExpressiveHeaderBackground(Modifier.matchParentSize())
+            } else if (enableBlur) {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .hazeEffect(state = hazeState) {
+                            blurEnabled = true
+                            backgroundColor = topScrimColor
+                            blurRadius = 45.dp
+                            tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
+                        }
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    topScrimColor.copy(alpha = 0.75f),
+                                    topScrimColor.copy(alpha = 0.35f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            } else {
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    topScrimColor.copy(alpha = 0.96f),
+                                    topScrimColor.copy(alpha = 0.78f),
+                                    topScrimColor.copy(alpha = 0.42f),
+                                    Color.Transparent
+                                )
+                            )
+                        )
+                )
+            }
 
             Column(
                 modifier = Modifier
@@ -445,7 +484,7 @@ fun LibraryScreen(
                     val sortShape = RoundedCornerShape(topStart = 26.dp, topEnd = 16.dp, bottomEnd = 26.dp, bottomStart = 16.dp)
                     Box(
                         modifier = Modifier
-                            .size(52.dp)
+                            .size(if (expressiveHeader) 52.dp else 44.dp)
                             .clip(if (expressiveHeader) sortShape else CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
@@ -490,33 +529,172 @@ fun LibraryScreen(
                     }
                 }
 
-                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                    MoreButtonBubble()
-                    if (expressiveHeader) {
-                        ExpressiveSearchTitle(title = strings.navLibrary, active = betaExpandingSearch && isSearchVisible,
-                            query = searchQuery, onQuery = { searchQuery = it }, onClose = { closeSearch() },
-                            modifier = Modifier.weight(1f))
-                    } else {
-                        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                            if (betaExpandingSearch && isSearchVisible) {
-                                ExpressiveSearchTitle(title = strings.navLibrary, active = true,
-                                    query = searchQuery, onQuery = { searchQuery = it }, onClose = { closeSearch() },
-                                    modifier = Modifier.fillMaxWidth(), largeTitle = false)
-                            } else {
-                                Box(Modifier.height(44.dp).clip(CircleShape).then(bubbleModifier(CircleShape))
-                                    .padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
-                                    Text(strings.navLibrary, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.ExtraBold)
+                if (expressiveHeader) {
+                    Row(
+                        Modifier.fillMaxWidth(),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        MoreButtonBubble()
+                        ExpressiveSearchTitle(
+                            title = strings.navLibrary,
+                            active = betaExpandingSearch && isSearchVisible,
+                            query = searchQuery,
+                            onQuery = { searchQuery = it },
+                            onClose = { closeSearch() },
+                            modifier = Modifier.weight(1f)
+                        )
+                        if (showTopSearchBar) {
+                            IconButton(onClick = { if (isTopSearchExpanded) closeSearch() else isTopSearchExpanded = true }) {
+                                Icon(if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search, strings.searchTitle)
+                            }
+                        }
+                        SortButtonBubble()
+                    }
+                } else {
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        if (showTopSearchBar) {
+                            Box(
+                                modifier = Modifier
+                                    .size(44.dp)
+                                    .clip(CircleShape)
+                                    .clickable {
+                                        view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
+                                        isTopSearchExpanded = !isTopSearchExpanded
+                                        if (!isTopSearchExpanded) searchQuery = ""
+                                    }
+                                    .then(bubbleModifier(CircleShape)),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                Icon(
+                                    imageVector = if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search,
+                                    contentDescription = strings.searchTitle,
+                                    tint = MaterialTheme.colorScheme.onSurface,
+                                    modifier = Modifier.size(20.dp)
+                                )
+                            }
+                        } else {
+                            MoreButtonBubble()
+                        }
+
+                        val searchShape = RoundedCornerShape(22.dp)
+                        BoxWithConstraints(
+                            Modifier
+                                .weight(1f)
+                                .padding(horizontal = 8.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            val bubbleWidth by animateDpAsState(
+                                if (betaExpandingSearch && isSearchVisible) maxWidth else 108.dp.coerceAtMost(maxWidth),
+                                animationSpec = tween(260),
+                                label = "searchBubbleWidth"
+                            )
+                            Box(
+                                modifier = Modifier
+                                    .then(
+                                        if (betaExpandingSearch) Modifier.width(bubbleWidth)
+                                        else Modifier.wrapContentWidth()
+                                    )
+                                    .height(44.dp)
+                                    .clip(searchShape)
+                                    .then(bubbleModifier(searchShape))
+                                    .clickable(enabled = betaExpandingSearch && !isSearchVisible) {
+                                        isTopSearchExpanded = true
+                                    }
+                                    .padding(horizontal = if (betaExpandingSearch) 14.dp else 20.dp),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                val isExpandedSearch = betaExpandingSearch && isSearchVisible
+                                Box(
+                                    modifier = Modifier.fillMaxSize(),
+                                    contentAlignment = Alignment.Center
+                                ) {
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = !isExpandedSearch,
+                                        enter = fadeIn(tween(180, delayMillis = 70)),
+                                        exit = fadeOut(tween(110))
+                                    ) {
+                                        Text(
+                                            strings.navLibrary,
+                                            style = MaterialTheme.typography.titleMedium,
+                                            fontWeight = FontWeight.ExtraBold,
+                                            maxLines = 1
+                                        )
+                                    }
+                                    androidx.compose.animation.AnimatedVisibility(
+                                        visible = isExpandedSearch,
+                                        enter = fadeIn(tween(180, delayMillis = 70)),
+                                        exit = fadeOut(tween(110))
+                                    ) {
+                                        LaunchedEffect(Unit) {
+                                            searchFocus.requestFocus()
+                                            keyboard?.show()
+                                        }
+                                        BasicTextField(
+                                            value = searchQuery,
+                                            onValueChange = { searchQuery = it },
+                                            singleLine = true,
+                                            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                color = MaterialTheme.colorScheme.onSurface
+                                            ),
+                                            cursorBrush = androidx.compose.ui.graphics.SolidColor(
+                                                MaterialTheme.colorScheme.primary
+                                            ),
+                                            modifier = Modifier
+                                                .fillMaxWidth()
+                                                .focusRequester(searchFocus),
+                                            decorationBox = { inner ->
+                                                Row(verticalAlignment = Alignment.CenterVertically) {
+                                                    Spacer(Modifier.width(32.dp))
+                                                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                                                        if (searchQuery.isEmpty()) {
+                                                            Text(
+                                                                strings.searchTitle,
+                                                                modifier = Modifier.fillMaxWidth(),
+                                                                textAlign = androidx.compose.ui.text.style.TextAlign.Center,
+                                                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                                                maxLines = 1
+                                                            )
+                                                        }
+                                                        inner()
+                                                    }
+                                                    IconButton(
+                                                        onClick = {
+                                                            if (searchQuery.isNotEmpty()) searchQuery = ""
+                                                            else closeSearch()
+                                                        },
+                                                        modifier = Modifier.size(32.dp)
+                                                    ) {
+                                                        Icon(
+                                                            Icons.Filled.Close,
+                                                            strings.clear,
+                                                            modifier = Modifier.size(18.dp)
+                                                        )
+                                                    }
+                                                }
+                                            }
+                                        )
+                                    }
                                 }
                             }
                         }
-                    }
-                    if (showTopSearchBar) {
-                        IconButton(onClick = { if (isTopSearchExpanded) closeSearch() else isTopSearchExpanded = true }) {
-                            Icon(if (isTopSearchExpanded) Icons.Filled.Close else Icons.Filled.Search, strings.searchTitle)
+
+                        if (showTopSearchBar) {
+                            Row(
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(8.dp)
+                            ) {
+                                MoreButtonBubble()
+                                SortButtonBubble()
+                            }
+                        } else {
+                            SortButtonBubble()
                         }
                     }
-                    SortButtonBubble()
                 }
 
                 Spacer(Modifier.height(8.dp))
@@ -633,7 +811,8 @@ fun LibraryScreen(
                         OutlinedTextField(
                             value = searchQuery,
                             onValueChange = { searchQuery = it },
-                            placeholder = { Text(strings.searchPlaceholder) },
+                            placeholder = { Text(strings.searchPlaceholder, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
                             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
                             trailingIcon = {
                                 if (searchQuery.isNotEmpty()) {

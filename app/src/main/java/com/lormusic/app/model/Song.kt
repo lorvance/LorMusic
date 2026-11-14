@@ -112,6 +112,27 @@ enum class ThemeMode(val label: String) {
     }
 }
 
+enum class AppAccentColor(val baseName: String, val primaryHex: Long, val isDefault: Boolean = false) {
+    PIXEL_BLUE("Pixel Blue", 0xFF6489D8, isDefault = true),
+    SOFT_LAVENDER("Soft Lavender", 0xFFA18BD4),
+    SAGE_GREEN("Sage Green", 0xFF719B83),
+    PEACH_CORAL("Peach Coral", 0xFFD98B79),
+    GOLDEN_SAND("Golden Sand", 0xFFC6A15D),
+    DUSTY_TEAL("Dusty Teal", 0xFF5D9EAA),
+    DUSTY_ROSE("Dusty Rose", 0xFFC47FA3);
+
+    fun getDisplayName(strings: AppStrings): String {
+        if (!isDefault) return baseName
+        val suffix = when (strings) {
+            StringsEn -> "Default"
+            StringsUk -> "За замовчуванням"
+            StringsPl -> "Domyślny"
+            else -> "По умолчанию"
+        }
+        return "$baseName | $suffix"
+    }
+}
+
 enum class AppIconOption(val label: String, val subtitle: String, val aliasClassName: String) {
     MINIMAL("Минимализм", "Лавандовый цветок с нотой", "com.lormusic.app.MainActivityAliasMinimal"),
     REGULAR("Стандартная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),

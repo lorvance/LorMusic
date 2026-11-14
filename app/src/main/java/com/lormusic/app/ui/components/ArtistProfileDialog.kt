@@ -52,22 +52,24 @@ fun IosBackChevron(
         Icon(Icons.AutoMirrored.Filled.ArrowBack, LocalStrings.current.back, modifier.size(24.dp), tint = color)
         return
     }
-    Canvas(modifier = modifier.size(width = 11.dp, height = 18.dp)) {
-        val strokeWidth = 2.5.dp.toPx()
-        val path = Path().apply {
-            moveTo(size.width * 0.85f, 0f)
-            lineTo(size.width * 0.15f, size.height * 0.5f)
-            lineTo(size.width * 0.85f, size.height)
-        }
-        drawPath(
-            path = path,
-            color = color,
-            style = Stroke(
-                width = strokeWidth,
-                cap = StrokeCap.Round,
-                join = StrokeJoin.Round
+    Box(modifier = modifier.size(24.dp), contentAlignment = Alignment.Center) {
+        Canvas(modifier = Modifier.size(width = 11.dp, height = 18.dp)) {
+            val strokeWidth = 2.5.dp.toPx()
+            val path = Path().apply {
+                moveTo(size.width * 0.85f, 0f)
+                lineTo(size.width * 0.15f, size.height * 0.5f)
+                lineTo(size.width * 0.85f, size.height)
+            }
+            drawPath(
+                path = path,
+                color = color,
+                style = Stroke(
+                    width = strokeWidth,
+                    cap = StrokeCap.Round,
+                    join = StrokeJoin.Round
+                )
             )
-        )
+        }
     }
 }
 
@@ -480,7 +482,7 @@ fun ArtistProfileDialog(
                                         .hazeEffect(state = albumHazeState) {
                                             blurEnabled = true
                                             backgroundColor = topScrimColor
-                                            blurRadius = 24.dp
+                                            blurRadius = 36.dp
                                             tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
                                         }
                                         .background(

@@ -1,5 +1,11 @@
 package com.lormusic.app.ui.components
 
+import androidx.compose.animation.AnimatedContent
+import androidx.compose.animation.animateContentSize
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.togetherWith
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -14,6 +20,8 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
@@ -23,6 +31,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.window.Dialog
 import com.lormusic.app.model.LocalStrings
 import dev.chrisbanes.haze.HazeState
+import dev.chrisbanes.haze.HazeTint
+import dev.chrisbanes.haze.hazeEffect
 
 val LocalMaterialArrows = staticCompositionLocalOf { false }
 
@@ -31,23 +41,103 @@ fun LegacyScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
     hazeState: HazeState?, enableBlur: Boolean, useLiquidGlass: Boolean,
     actionIcon: ImageVector = Icons.Filled.MoreVert, actionLabel: String = LocalStrings.current.actions,
     applyStatusInsets: Boolean = true) {
-    Row(Modifier.fillMaxWidth().then(if (applyStatusInsets) Modifier.statusBarsPadding() else Modifier)
-        .padding(horizontal = 14.dp, vertical = 10.dp), verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-        Box(Modifier.size(44.dp).clip(CircleShape)
-            .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass).clickable(onClick = onBack),
-            contentAlignment = Alignment.Center) { IosBackChevron() }
-        Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-            Box(Modifier.height(44.dp).widthIn(max = 250.dp).clip(CircleShape)
-                .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass).padding(horizontal = 20.dp),
-                contentAlignment = Alignment.Center) {
-                Text(title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                    maxLines = 1, overflow = TextOverflow.Ellipsis)
+    val topScrimColor = MaterialTheme.colorScheme.background
+    val pureMy = LocalPureMaterialYou.current
+    Box(Modifier.fillMaxWidth()) {
+        if (enableBlur && !pureMy && hazeState != null) {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .hazeEffect(state = hazeState) {
+                        blurEnabled = true
+                        backgroundColor = topScrimColor
+                        blurRadius = 42.dp
+                        tints = listOf(HazeTint(topScrimColor.copy(alpha = 0.65f)))
+                    }
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                topScrimColor.copy(alpha = 0.80f),
+                                topScrimColor.copy(alpha = 0.42f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .matchParentSize()
+                    .background(
+                        Brush.verticalGradient(
+                            listOf(
+                                topScrimColor.copy(alpha = 0.96f),
+                                topScrimColor.copy(alpha = 0.78f),
+                                topScrimColor.copy(alpha = 0.42f),
+                                Color.Transparent
+                            )
+                        )
+                    )
+            )
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .then(if (applyStatusInsets) Modifier.statusBarsPadding() else Modifier)
+                .padding(horizontal = 16.dp, vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp)
+        ) {
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass)
+                    .clickable(onClick = onBack),
+                contentAlignment = Alignment.Center
+            ) {
+                IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
+            }
+            Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                Box(
+                    Modifier
+                        .height(44.dp)
+                        .widthIn(max = 260.dp)
+                        .animateContentSize(animationSpec = tween(220))
+                        .clip(RoundedCornerShape(22.dp))
+                        .liquidGlassBubble(RoundedCornerShape(22.dp), hazeState, enableBlur, useLiquidGlass)
+                        .padding(horizontal = 22.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    AnimatedContent(
+                        targetState = title,
+                        transitionSpec = {
+                            fadeIn(animationSpec = tween(200)).togetherWith(fadeOut(animationSpec = tween(150)))
+                        },
+                        label = "legacyHeaderTitleAnim"
+                    ) { titleText ->
+                        Text(
+                            text = titleText,
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.ExtraBold,
+                            color = MaterialTheme.colorScheme.onSurface,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
+            Box(
+                Modifier
+                    .size(44.dp)
+                    .clip(CircleShape)
+                    .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass)
+                    .clickable(onClick = onAction),
+                contentAlignment = Alignment.Center
+            ) {
+                Icon(actionIcon, actionLabel, tint = MaterialTheme.colorScheme.onSurface)
             }
         }
-        Box(Modifier.size(44.dp).clip(CircleShape)
-            .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass).clickable(onClick = onAction),
-            contentAlignment = Alignment.Center) { Icon(actionIcon, actionLabel) }
     }
 }
 

@@ -72,7 +72,7 @@ fun MiniPlayer(
         Modifier.hazeEffect(state = hazeState) {
             blurEnabled = true
             backgroundColor = baseSurface
-            blurRadius = 30.dp
+            blurRadius = 46.dp
             tints = listOf(HazeTint(baseSurface.copy(alpha = 0.42f)))
         }
     } else {

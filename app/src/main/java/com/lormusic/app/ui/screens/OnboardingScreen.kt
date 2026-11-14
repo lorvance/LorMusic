@@ -1,5 +1,7 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.PhysicsSwitch as Switch
+
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build

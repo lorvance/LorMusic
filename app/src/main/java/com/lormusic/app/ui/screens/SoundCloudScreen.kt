@@ -1395,7 +1395,8 @@ private fun ScSearchTab(
                         query = it
                         onSearch(it)
                     },
-                    placeholder = { Text(strings.soundCloudPlaceholder) },
+                    placeholder = { Text(strings.soundCloudPlaceholder, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
+            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
                     singleLine = true,
                     colors = OutlinedTextFieldDefaults.colors(
                         focusedBorderColor = Color.Transparent,

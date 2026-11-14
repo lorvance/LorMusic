@@ -30,10 +30,20 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import com.lormusic.app.data.AppUpdateInfo
 import com.lormusic.app.data.UpdateState
+import com.lormusic.app.model.AppAccentColor
 import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
 import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
+import com.lormusic.app.model.betaText
+import com.lormusic.app.ui.theme.deepToneColor
+import com.lormusic.app.ui.theme.lightToneColor
+import com.lormusic.app.ui.theme.seedColor
+import android.os.Build
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.style.TextOverflow
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
@@ -170,7 +180,7 @@ fun UpdateDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -191,6 +201,7 @@ fun UpdateDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                 Row(
@@ -431,7 +442,7 @@ fun SleepTimerAutoUpdaterDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -452,6 +463,7 @@ fun SleepTimerAutoUpdaterDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                     Row(
@@ -589,7 +601,7 @@ fun ThemeAutoUpdaterDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -610,6 +622,7 @@ fun ThemeAutoUpdaterDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                     Row(
@@ -681,6 +694,313 @@ fun ThemeAutoUpdaterDialog(
                                         style = MaterialTheme.typography.titleSmall,
                                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
                                     )
+                                    if (isSelected) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(14.dp))
+
+                    OutlinedButton(
+                        onClick = onDismiss,
+                        shape = RoundedCornerShape(20.dp),
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(48.dp)
+                    ) {
+                        Text(strings.close, style = MaterialTheme.typography.titleSmall)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun AccentColorSwatchPreview(
+    accent: AppAccentColor,
+    modifier: Modifier = Modifier
+) {
+    val main = accent.seedColor
+    val light = accent.lightToneColor
+    val deep = accent.deepToneColor
+    Canvas(
+        modifier = modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .border(1.5.dp, Color.White.copy(alpha = 0.28f), CircleShape)
+    ) {
+        drawArc(
+            color = main,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = true
+        )
+        drawArc(
+            color = light,
+            startAngle = 90f,
+            sweepAngle = 90f,
+            useCenter = true
+        )
+        drawArc(
+            color = deep,
+            startAngle = 0f,
+            sweepAngle = 90f,
+            useCenter = true
+        )
+        drawCircle(
+            color = main,
+            radius = size.minDimension * 0.28f
+        )
+    }
+}
+
+@Composable
+fun DynamicWallpaperSwatchPreview(
+    modifier: Modifier = Modifier
+) {
+    val context = LocalContext.current
+    val dark = isSystemInDarkTheme()
+    val scheme = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+        if (dark) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+    } else {
+        MaterialTheme.colorScheme
+    }
+    val main = scheme.primary
+    val light = scheme.primaryContainer
+    val deep = scheme.tertiary
+    Canvas(
+        modifier = modifier
+            .size(28.dp)
+            .clip(CircleShape)
+            .border(1.5.dp, Color.White.copy(alpha = 0.28f), CircleShape)
+    ) {
+        drawArc(
+            color = main,
+            startAngle = 180f,
+            sweepAngle = 180f,
+            useCenter = true
+        )
+        drawArc(
+            color = light,
+            startAngle = 90f,
+            sweepAngle = 90f,
+            useCenter = true
+        )
+        drawArc(
+            color = deep,
+            startAngle = 0f,
+            sweepAngle = 90f,
+            useCenter = true
+        )
+        drawCircle(
+            color = main,
+            radius = size.minDimension * 0.28f
+        )
+    }
+}
+
+@Composable
+fun AccentColorAutoUpdaterDialog(
+    currentAccent: AppAccentColor,
+    useDynamicColor: Boolean = false,
+    enableBlur: Boolean = true,
+    onSelectDynamicColor: () -> Unit = {},
+    onSelectAccent: (AppAccentColor) -> Unit,
+    onDismiss: () -> Unit
+) {
+    val strings = LocalStrings.current
+    Dialog(
+        onDismissRequest = onDismiss,
+        properties = DialogProperties(
+            usePlatformDefaultWidth = false,
+            decorFitsSystemWindows = false,
+            dismissOnBackPress = true,
+            dismissOnClickOutside = true
+        )
+    ) {
+        val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
+        val outlineVariant = MaterialTheme.colorScheme.outlineVariant
+        val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
+
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .background(backdropColor)
+                .clickable(
+                    interactionSource = remember { MutableInteractionSource() },
+                    indication = null
+                ) { onDismiss() },
+            contentAlignment = Alignment.BottomCenter
+        ) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .navigationBarsPadding()
+                    .clip(RoundedCornerShape(28.dp))
+                    .background(
+                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
+                        else surfaceContainerHigh
+                    )
+                    .border(
+                        1.dp,
+                        if (enableBlur) Color.White.copy(alpha = 0.18f)
+                        else outlineVariant.copy(alpha = 0.35f),
+                        RoundedCornerShape(28.dp)
+                    )
+                    .clickable(
+                        interactionSource = remember { MutableInteractionSource() },
+                        indication = null
+                    ) {}
+            ) {
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
+                        .padding(22.dp)
+                ) {
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(16.dp),
+                        modifier = Modifier.fillMaxWidth()
+                    ) {
+                        Box(
+                            modifier = Modifier
+                                .size(52.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primaryContainer),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Icon(
+                                imageVector = Icons.Filled.ColorLens,
+                                contentDescription = null,
+                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
+                                modifier = Modifier.size(26.dp)
+                            )
+                        }
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = strings.betaText("accentColor"),
+                                style = MaterialTheme.typography.headlineSmall,
+                                fontWeight = FontWeight.Bold,
+                                color = MaterialTheme.colorScheme.onSurface
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(18.dp))
+
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .heightIn(max = 380.dp)
+                            .verticalScroll(rememberScrollState()),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                            val dynContext = LocalContext.current
+                            val dynScheme = if (isSystemInDarkTheme()) dynamicDarkColorScheme(dynContext) else dynamicLightColorScheme(dynContext)
+                            Button(
+                                onClick = {
+                                    onSelectDynamicColor()
+                                    onDismiss()
+                                },
+                                shape = RoundedCornerShape(18.dp),
+                                colors = if (useDynamicColor) {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = dynScheme.primary,
+                                        contentColor = dynScheme.onPrimary
+                                    )
+                                } else {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp),
+                                        modifier = Modifier.weight(1f)
+                                    ) {
+                                        DynamicWallpaperSwatchPreview()
+                                        Text(
+                                            text = strings.materialYouTitle,
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = if (useDynamicColor) FontWeight.Bold else FontWeight.SemiBold,
+                                            maxLines = 1,
+                                            overflow = TextOverflow.Ellipsis
+                                        )
+                                    }
+                                    if (useDynamicColor) {
+                                        Icon(
+                                            imageVector = Icons.Filled.Check,
+                                            contentDescription = null,
+                                            modifier = Modifier.size(20.dp)
+                                        )
+                                    }
+                                }
+                            }
+                        }
+
+                        AppAccentColor.entries.forEach { accent ->
+                            val isSelected = !useDynamicColor && currentAccent == accent
+                            Button(
+                                onClick = {
+                                    onSelectAccent(accent)
+                                    onDismiss()
+                                },
+                                shape = RoundedCornerShape(18.dp),
+                                colors = if (isSelected) {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = accent.seedColor,
+                                        contentColor = Color(0xFF0A101D)
+                                    )
+                                } else {
+                                    ButtonDefaults.buttonColors(
+                                        containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
+                                        contentColor = MaterialTheme.colorScheme.onSurface
+                                    )
+                                },
+                                contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .height(52.dp)
+                            ) {
+                                Row(
+                                    modifier = Modifier.fillMaxWidth(),
+                                    verticalAlignment = Alignment.CenterVertically,
+                                    horizontalArrangement = Arrangement.SpaceBetween
+                                ) {
+                                    Row(
+                                        verticalAlignment = Alignment.CenterVertically,
+                                        horizontalArrangement = Arrangement.spacedBy(12.dp)
+                                    ) {
+                                        AccentColorSwatchPreview(accent = accent)
+                                        Text(
+                                            text = accent.getDisplayName(strings),
+                                            style = MaterialTheme.typography.titleSmall,
+                                            fontWeight = if (isSelected) FontWeight.Bold else FontWeight.SemiBold
+                                        )
+                                    }
                                     if (isSelected) {
                                         Icon(
                                             imageVector = Icons.Filled.Check,
@@ -784,7 +1104,7 @@ fun PlaybackSpeedAutoUpdaterDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -805,6 +1125,7 @@ fun PlaybackSpeedAutoUpdaterDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                     Row(
@@ -938,7 +1259,7 @@ fun AboutAutoUpdaterDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -959,6 +1280,7 @@ fun AboutAutoUpdaterDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                     Row(
@@ -1072,7 +1394,7 @@ fun BackupAutoUpdaterDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -1093,6 +1415,7 @@ fun BackupAutoUpdaterDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                     Row(
@@ -1209,7 +1532,7 @@ fun RestoreAutoUpdaterDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
                     .navigationBarsPadding()
                     .clip(RoundedCornerShape(28.dp))
                     .background(
@@ -1230,6 +1553,7 @@ fun RestoreAutoUpdaterDialog(
                 Column(
                     modifier = Modifier
                         .fillMaxWidth()
+                        .verticalScroll(rememberScrollState())
                         .padding(22.dp)
                 ) {
                     Row(
