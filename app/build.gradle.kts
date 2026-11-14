@@ -15,7 +15,7 @@ android {
         applicationId = "com.lorvance.lormusic"
         minSdk = 26
         targetSdk = 35
-        versionCode = 71
+        versionCode = 73
         versionName = "1.8.0"
     }
 
