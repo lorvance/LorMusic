@@ -1,0 +1,53 @@
+{
+  "android_source": "LorMusic 1.8.0 local workspace",
+  "repositories": [
+    {
+      "file": "model/Song.kt",
+      "android_source_sha256": "d0c93fdbd90218e2cddd9efc238555892510980424033fe2ef1d50868f98bdb9",
+      "desktop_source_sha256": "130c842e01f410b8aff6aa46956c374bd965e3a11adc595ac410341217dc0867",
+      "adapted": true
+    },
+    {
+      "file": "data/LyricsRepository.kt",
+      "android_source_sha256": "5d26742e318a85e89a120b3ae33dcba8540491b68576aa279bb4dabfe4e279cd",
+      "desktop_source_sha256": "e45a82f8cb87a703f615c056c8878f6e3af9eadd8fc536e07dda647597563960",
+      "adapted": true
+    },
+    {
+      "file": "data/YouTubeSessionCookies.kt",
+      "android_source_sha256": "1ad5cc8db6e27cea6bb586e90ad3eeed7b00db25b9bbd48888ae4417a3ad6ce5",
+      "desktop_source_sha256": "7d1ad8cddee82a80080183bcc59713eabf59e0fd44180880b106d569790fc7d2",
+      "adapted": true
+    },
+    {
+      "file": "data/SoundCloudRepository.kt",
+      "android_source_sha256": "07633586656ad7e5865e23b0b24362246ec7def8b2708418854b3aaa0b512ddb",
+      "desktop_source_sha256": "d58ad8855232db48f296b8a2f4e77d69741582948ab01c62dc722145bf24d62f",
+      "adapted": true
+    },
+    {
+      "file": "data/AlphaNumericComparator.kt",
+      "android_source_sha256": "dca8c195e5921216431fd33c66b7b97737c25c59ab5692b625a50f5caf321c74",
+      "desktop_source_sha256": "c1ee13d80ad0df971d27eb2666fbe5fa4c0da2e94997c38dd7e2cd7b0a011492",
+      "adapted": true
+    },
+    {
+      "file": "data/TagFixEngine.kt",
+      "android_source_sha256": "635f41ae723f8befdea8f387b25f40ee080119184bf8bddbbc7f2ca0ab9f82fe",
+      "desktop_source_sha256": "baa25891f0500f20b32f616b38aa7730f1181200bb3b75f3ceeb2a23d4b76fb9",
+      "adapted": true
+    },
+    {
+      "file": "data/ShazamRecognizer.kt",
+      "android_source_sha256": "faf5da4c1fa057c1b399e94d91a96fcd2adc9f0521efabdf3fca6b567b5e8a78",
+      "desktop_source_sha256": "d4efa3eb04bf378bec6cfce436bfeaed9d579ef62cd3e1d6328abe1a6994b754",
+      "adapted": true
+    },
+    {
+      "file": "data/YouTubeMusicRepository.kt",
+      "android_source_sha256": "3e8a45b90bfd95f14b92a3744dc9b423558dda1218ac5434f56acd436f7028b8",
+      "desktop_source_sha256": "9dbeefd00aa41a00159840dff3a058989ad4d546e6871d7f8ab6f9607fc9677e",
+      "adapted": true
+    }
+  ]
+}

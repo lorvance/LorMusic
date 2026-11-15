@@ -1,0 +1,18 @@
+{
+  "version": "1.8.0",
+  "build_date": "2026-11-15",
+  "platform": "Ubuntu 26.10 x86_64",
+  "main_jar_sha256": "f227485d0d616dc625dfead4aacdbd2141a6f9487dfc6397f679b02b87b3f22d",
+  "installers": {
+    "LorMusic-1.8.0-Linux-amd64.deb": {
+      "sha256": "688e4f506c66cd7ea6e77c88afa12445ec663941cdd9f0555734ba7fcbacfc99",
+      "bytes": 104526212
+    },
+    "LorMusic-1.8.0-Windows-x64-Setup.exe": {
+      "sha256": "9917bf6f7da069d65ed12049137fb9145aa9ffb4c367b3fa18786bdf3a466da0",
+      "bytes": 155321502
+    }
+  },
+  "windows_execution_tested": false,
+  "personal_accounts_tested": false
+}

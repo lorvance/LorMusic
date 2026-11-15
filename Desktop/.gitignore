@@ -1,0 +1,8 @@
+.gradle/
+build/
+dist/
+packaging/windows/
+packaging/*.exe
+*.log
+.idea/
+*.iml
