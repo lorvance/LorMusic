@@ -63,7 +63,7 @@ object SoundCloudRepository {
         conn.setRequestProperty("Accept", "application/json, text/plain, */*")
         if (includeAuth) {
             val token = cleanToken(currentAuthToken)
-            if (token.isNotBlank()) {
+            if (token.isNotBlank() && token != "guest") {
                 conn.setRequestProperty("Authorization", "OAuth $token")
             }
         }
@@ -123,7 +123,7 @@ object SoundCloudRepository {
         val title = obj.optString("title", "Без названия").trim()
         val userObj = obj.optJSONObject("user")
         val artist = userObj?.optString("username", "SoundCloud")?.trim() ?: "SoundCloud"
-        val durationMs = obj.optLong("duration", 180_000L).coerceAtLeast(10_000L)
+        val durationMs = obj.optLong("full_duration", 0L).takeIf { it > 0L } ?: obj.optLong("duration", 0L).coerceAtLeast(0L)
         val rawArt = obj.optString("artwork_url", "").ifBlank {
             userObj?.optString("avatar_url", "") ?: ""
         }
@@ -359,7 +359,9 @@ object SoundCloudRepository {
         null
     }
 
-    fun resolveStreamUriForExoPlayer(uri: Uri): Uri {
+    fun resolveStreamUriForExoPlayer(uri: Uri): Uri = resolveStreamUri(uri, false)
+
+    private fun resolveStreamUri(uri: Uri, forDownload: Boolean): Uri {
         val scheme = uri.scheme ?: return uri
         if (scheme != "sc") return uri
 
@@ -371,12 +373,12 @@ object SoundCloudRepository {
             val candidateTranscodings = mutableListOf<String>()
 
             val cached = transcodingsCache[trackId]
-            if (!cached.isNullOrBlank()) {
+            if (!forDownload && !cached.isNullOrBlank()) {
                 candidateTranscodings.add(cached)
             }
 
             val trackMetaUrl = "https://api-v2.soundcloud.com/tracks/$trackId?client_id=$cid"
-            val conn = openConnection(trackMetaUrl, includeAuth = false)
+            val conn = openConnection(trackMetaUrl, includeAuth = true)
             if (conn.responseCode in 200..299) {
                 val body = conn.inputStream.bufferedReader().use { it.readText() }
                 conn.disconnect()
@@ -389,6 +391,9 @@ object SoundCloudRepository {
                         val format = tc.optJSONObject("format")
                         val protocol = format?.optString("protocol", "") ?: ""
                         val tcUrl = tc.optString("url", "")
+                        val mime = format?.optString("mime_type", "").orEmpty()
+                        if (forDownload && tc.optBoolean("snipped", false)) continue
+                        if (forDownload && !(mime.startsWith("audio/mpeg") || mime.startsWith("audio/mp4") || mime.startsWith("audio/aac"))) continue
                         if (tcUrl.isNotBlank() && !candidateTranscodings.contains(tcUrl)) {
                             if (protocol == "progressive") {
                                 candidateTranscodings.add(0, tcUrl)
@@ -405,7 +410,7 @@ object SoundCloudRepository {
             for (tcUrl in candidateTranscodings) {
                 val sep = if (tcUrl.contains("?")) "&" else "?"
                 val finalStreamMetaUrl = "$tcUrl${sep}client_id=$cid"
-                val sConn = openConnection(finalStreamMetaUrl, includeAuth = false)
+                val sConn = openConnection(finalStreamMetaUrl, includeAuth = true)
                 if (sConn.responseCode in 200..299) {
                     val sBody = sConn.inputStream.bufferedReader().use { it.readText() }
                     sConn.disconnect()
@@ -426,241 +431,90 @@ object SoundCloudRepository {
     }
 
     suspend fun downloadTrackToPhoneWithTags(
-        context: Context,
-        song: Song,
-        onProgress: ((Float) -> Unit)? = null
-    ): Pair<Song, SongTagOverride>? = withContext(Dispatchers.IO) {
-        runCatching {
-            val resolvedUri = resolveStreamUriForExoPlayer(Uri.parse(song.uri))
-            val streamUrl = resolvedUri.toString()
-            if (!streamUrl.startsWith("http")) return@withContext null
-
-            val (cleanTitle, cleanArtist) = YouTubeMusicRepository.normalizeTrackTitleAndArtist(song.title, song.artist)
-            val cleanAlbum = song.album.takeIf {
-                it.isNotBlank() && !it.equals("LorMusic", ignoreCase = true) && !it.equals("SoundCloud", ignoreCase = true)
-            } ?: "SoundCloud"
-            val cleanGenre = song.genre.ifBlank { "SoundCloud" }
-            val cleanYear = song.year.ifBlank { "2025" }
-            val realDurationMs = song.durationMs.coerceAtLeast(1000L)
-
-            val tempFile = File(context.cacheDir, "sc_dl_${System.currentTimeMillis()}.tmp")
-            var isM4a = false
-            try {
-                val conn = (URL(streamUrl).openConnection() as HttpURLConnection).apply {
-                    connectTimeout = 12000
-                    readTimeout = 30000
-                    setRequestProperty("User-Agent", USER_AGENT)
+        context: Context, song: Song, onProgress: ((Float)->Unit)? = null
+    ): Pair<Song,SongTagOverride>? = withContext(Dispatchers.IO) {
+        val raw=File.createTempFile("sc-download-", ".tmp",context.cacheDir)
+        val normalized=File.createTempFile("sc-audio-", ".tmp",context.cacheDir)
+        var pending:Uri?=null
+        try {
+            val stream=resolveStreamUri(Uri.parse(song.uri),true).toString()
+            require(stream.startsWith("http")){"No downloadable audio stream"}
+            val hlsDuration=downloadAudio(stream,raw,onProgress)
+            val (title,artist)=YouTubeMusicRepository.normalizeTrackTitleAndArtist(song.title,song.artist)
+            val album=song.album.takeIf{it.isNotBlank()&&!it.equals("LorMusic",true)&&!it.equals("SoundCloud",true)} ?: "SoundCloud"
+            val genre=song.genre.ifBlank{"SoundCloud"};val year=song.year
+            val cover=song.albumArtUri?.let { art->runCatching {
+                when {art.startsWith("http")->YouTubeMusicRepository.downloadBinaryBytes(art)
+                    art.startsWith("//")->YouTubeMusicRepository.downloadBinaryBytes("https:$art")
+                    art.startsWith("/")->File(art).readBytes()
+                    else->context.contentResolver.openInputStream(Uri.parse(art))?.use{it.readBytes()}}
+            }.getOrNull() }
+            val prepared=DownloadedAudioPreparer.prepare(raw,normalized,Mp3DownloadMetadata.Tags(title,artist,album,genre,year,cover))
+            require(prepared.durationMs>0){"Could not measure downloaded audio"}
+            if(hlsDuration>0)require(kotlin.math.abs(prepared.durationMs-hlsDuration)<=maxOf(2500L,hlsDuration/20)){"Downloaded audio is incomplete"}
+            val name=("$artist - $title").replace(Regex("""[\\/:*?"<>|]"""),"_").take(90)+prepared.extension
+            var saved:String?=null;var path:String?=null;var numericId:Long?=null
+            if(Build.VERSION.SDK_INT>=Build.VERSION_CODES.Q){
+                val resolver=context.contentResolver
+                val values=ContentValues().apply{
+                    put(MediaStore.Audio.Media.DISPLAY_NAME,name);put(MediaStore.Audio.Media.TITLE,title);put(MediaStore.Audio.Media.ARTIST,artist);put(MediaStore.Audio.Media.ALBUM,album)
+                    year.toIntOrNull()?.let{put(MediaStore.Audio.Media.YEAR,it)}
+                    put(MediaStore.Audio.Media.MIME_TYPE,prepared.mime);put(MediaStore.Audio.Media.DURATION,prepared.durationMs)
+                    put(MediaStore.Audio.Media.RELATIVE_PATH,Environment.DIRECTORY_MUSIC+"/LorMusic");put(MediaStore.Audio.Media.IS_MUSIC,1);put(MediaStore.Audio.Media.IS_PENDING,1)
                 }
-                val contentType = conn.contentType ?: ""
-                val isPlaylist = streamUrl.contains(".m3u8", ignoreCase = true) ||
-                    contentType.contains("application/vnd.apple.mpegurl", ignoreCase = true) ||
-                    contentType.contains("application/x-mpegurl", ignoreCase = true)
-
-                if (isPlaylist) {
-                    val playlistBody = conn.inputStream.bufferedReader().use { it.readText() }
-                    conn.disconnect()
-
-                    val mapRegex = Regex("""#EXT-X-MAP:URI="([^"]+)"""")
-                    val initUrl = mapRegex.find(playlistBody)?.groupValues?.get(1)
-                    val segmentUrls = playlistBody.lineSequence()
-                        .map { it.trim() }
-                        .filter { it.isNotBlank() && !it.startsWith("#") }
-                        .map { line ->
-                            if (line.startsWith("http://") || line.startsWith("https://")) {
-                                line
-                            } else {
-                                val base = streamUrl.substringBeforeLast('/') + "/"
-                                base + line
-                            }
-                        }
-                        .toList()
-
-                    val totalSegments = (if (initUrl != null) 1 else 0) + segmentUrls.size
-                    var downloadedCount = 0
-
-                    isM4a = initUrl != null || segmentUrls.any { it.contains(".m4s") || it.contains("aac") || it.contains(".mp4") }
-
-                    FileOutputStream(tempFile).use { out ->
-                        if (initUrl != null) {
-                            val initConn = (URL(initUrl).openConnection() as HttpURLConnection).apply {
-                                setRequestProperty("User-Agent", USER_AGENT)
-                                connectTimeout = 10000
-                                readTimeout = 15000
-                            }
-                            initConn.inputStream.use { it.copyTo(out) }
-                            initConn.disconnect()
-                            downloadedCount++
-                            if (totalSegments > 0) {
-                                onProgress?.invoke((downloadedCount.toFloat() / totalSegments).coerceIn(0f, 1f))
-                            }
-                        }
-
-                        for (segUrl in segmentUrls) {
-                            val segConn = (URL(segUrl).openConnection() as HttpURLConnection).apply {
-                                setRequestProperty("User-Agent", USER_AGENT)
-                                connectTimeout = 10000
-                                readTimeout = 15000
-                            }
-                            segConn.inputStream.use { it.copyTo(out) }
-                            segConn.disconnect()
-                            downloadedCount++
-                            if (totalSegments > 0) {
-                                onProgress?.invoke((downloadedCount.toFloat() / totalSegments).coerceIn(0f, 1f))
-                            }
-                        }
-                    }
-                } else {
-                    val contentLength = conn.contentLengthLong
-                    FileOutputStream(tempFile).use { output ->
-                        conn.inputStream.use { input ->
-                            val buffer = ByteArray(16384)
-                            var bytesRead: Int
-                            var totalBytes = 0L
-                            while (input.read(buffer).also { bytesRead = it } != -1) {
-                                output.write(buffer, 0, bytesRead)
-                                totalBytes += bytesRead
-                                if (contentLength > 0L) {
-                                    val progress = (totalBytes.toFloat() / contentLength.toFloat()).coerceIn(0f, 1f)
-                                    onProgress?.invoke(progress)
-                                }
-                            }
-                        }
-                    }
-                    conn.disconnect()
-
-                    val header = ByteArray(8)
-                    tempFile.inputStream().use { it.read(header) }
-                    val headerStr = String(header, Charsets.ISO_8859_1)
-                    isM4a = headerStr.contains("ftyp")
-                }
-
-                val coverBytes = song.albumArtUri?.takeIf { it.startsWith("http") }?.let {
-                    YouTubeMusicRepository.downloadBinaryBytes(it)
-                }
-
-                if (isM4a) {
-                    runCatching {
-                        YouTubeMusicRepository.injectM4aMetadataAtoms(
-                            m4aFile = tempFile,
-                            title = cleanTitle,
-                            artist = cleanArtist,
-                            album = cleanAlbum,
-                            genre = cleanGenre,
-                            year = cleanYear,
-                            coverBytes = coverBytes
-                        )
-                    }
-                }
-
-                val ext = if (isM4a) ".m4a" else ".mp3"
-                val mime = if (isM4a) "audio/mp4" else "audio/mpeg"
-                val cleanFileName = "$cleanArtist - $cleanTitle"
-                    .replace(Regex("""[\\/:*?"<>|]"""), "_")
-                    .take(90) + ext
-
-                var savedUriString: String? = null
-                var savedFilePath: String? = null
-                var mediaStoreNumericId: Long? = null
-
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    val resolver = context.contentResolver
-                    val values = ContentValues().apply {
-                        put(MediaStore.Audio.Media.DISPLAY_NAME, cleanFileName)
-                        put(MediaStore.Audio.Media.TITLE, cleanTitle)
-                        put(MediaStore.Audio.Media.ARTIST, cleanArtist)
-                        put(MediaStore.Audio.Media.ALBUM, cleanAlbum)
-                        put(MediaStore.Audio.Media.YEAR, cleanYear.toIntOrNull() ?: 2025)
-                        put(MediaStore.Audio.Media.MIME_TYPE, mime)
-                        put(MediaStore.Audio.Media.DURATION, realDurationMs)
-                        put(MediaStore.Audio.Media.RELATIVE_PATH, Environment.DIRECTORY_MUSIC + "/LorMusic")
-                        put(MediaStore.Audio.Media.IS_MUSIC, 1)
-                        put(MediaStore.Audio.Media.IS_PENDING, 1)
-                    }
-                    val itemUri = resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI, values)
-                    if (itemUri != null) {
-                        resolver.openOutputStream(itemUri)?.use { out ->
-                            tempFile.inputStream().use { inp -> inp.copyTo(out) }
-                        }
-
-                        val doneValues = ContentValues().apply {
-                            put(MediaStore.Audio.Media.IS_PENDING, 0)
-                            put(MediaStore.Audio.Media.TITLE, cleanTitle)
-                            put(MediaStore.Audio.Media.ARTIST, cleanArtist)
-                            put(MediaStore.Audio.Media.ALBUM, cleanAlbum)
-                            put(MediaStore.Audio.Media.DURATION, realDurationMs)
-                        }
-                        resolver.update(itemUri, doneValues, null, null)
-                        savedUriString = itemUri.toString()
-                        savedFilePath = "/storage/emulated/0/Music/LorMusic/$cleanFileName"
-                        mediaStoreNumericId = runCatching { ContentUris.parseId(itemUri) }.getOrNull()
-                    }
-                }
-
-                if (savedUriString == null) {
-                    val musicDir = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC), "LorMusic").apply {
-                        if (!exists()) mkdirs()
-                    }
-                    val targetFile = File(musicDir, cleanFileName)
-                    tempFile.copyTo(targetFile, overwrite = true)
-                    savedFilePath = targetFile.absolutePath
-                    savedUriString = Uri.fromFile(targetFile).toString()
-                    MediaScannerConnection.scanFile(context, arrayOf(targetFile.absolutePath), arrayOf(mime), null)
-                }
-
-                val finalSongId = if (mediaStoreNumericId != null && mediaStoreNumericId > 0L) {
-                    "local_$mediaStoreNumericId"
-                } else {
-                    savedUriString ?: ("sc_dl_" + System.currentTimeMillis())
-                }
-
-                var diskCoverUri: String? = null
-                if (coverBytes != null && coverBytes.isNotEmpty()) {
-                    runCatching {
-                        val safeId = finalSongId.replace(Regex("[^a-zA-Z0-9_]"), "_")
-                        val coversDir = File(context.filesDir, "tag_covers").apply { if (!exists()) mkdirs() }
-                        val coverFile = File(coversDir, "custom_$safeId.jpg")
-                        coverFile.writeBytes(coverBytes)
-                        diskCoverUri = coverFile.absolutePath
-                    }
-                }
-
-                val finalSong = Song(
-                    id = finalSongId,
-                    title = cleanTitle,
-                    artist = cleanArtist,
-                    album = cleanAlbum,
-                    durationMs = realDurationMs,
-                    uri = savedUriString ?: song.uri,
-                    coverColorSeed = (cleanArtist + cleanTitle).hashCode(),
-                    albumArtUri = diskCoverUri ?: song.albumArtUri,
-                    isLocal = true,
-                    filePath = savedFilePath,
-                    folderName = "LorMusic",
-                    dateAddedSec = System.currentTimeMillis() / 1000L,
-                    genre = cleanGenre,
-                    year = cleanYear,
-                    isRemoteYt = false,
-                    isRemoteSc = false
-                )
-
-                val override = SongTagOverride(
-                    songId = finalSongId,
-                    title = cleanTitle,
-                    artist = cleanArtist,
-                    album = cleanAlbum,
-                    genre = cleanGenre,
-                    year = cleanYear,
-                    trackNumber = "1",
-                    albumArtUri = diskCoverUri,
-                    customLyrics = null
-                )
-
-                onProgress?.invoke(1f)
-                Pair(finalSong, override)
-            } finally {
-                runCatching { tempFile.delete() }
+                val uri=resolver.insert(MediaStore.Audio.Media.EXTERNAL_CONTENT_URI,values) ?: error("Cannot create audio file")
+                pending=uri
+                requireNotNull(resolver.openOutputStream(uri,"w")).use{out->normalized.inputStream().use{it.copyTo(out)}}
+                resolver.update(uri,ContentValues().apply{put(MediaStore.Audio.Media.IS_PENDING,0);put(MediaStore.Audio.Media.DURATION,prepared.durationMs)},null,null)
+                saved=uri.toString();numericId=ContentUris.parseId(uri)
+                path=runCatching{resolver.query(uri,arrayOf(MediaStore.Audio.Media.DATA),null,null,null)?.use{if(it.moveToFirst())it.getString(0)else null}}.getOrNull()
+                pending=null
+            }else{
+                val dir=File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_MUSIC),"LorMusic").apply{mkdirs()}
+                var file=File(dir,name);var index=2
+                while(file.exists()){file=File(dir,name.removeSuffix(prepared.extension)+" (${index++})"+prepared.extension)}
+                normalized.copyTo(file,overwrite=false);path=file.absolutePath;saved=Uri.fromFile(file).toString()
+                MediaScannerConnection.scanFile(context,arrayOf(path),arrayOf(prepared.mime),null)
             }
-        }.getOrNull()
+            val id=numericId?.let{"local_$it"} ?: requireNotNull(saved)
+            val cachedCover=cover?.takeIf{it.isNotEmpty()}?.let{bytes->runCatching{val file=File(File(context.filesDir,"tag_covers").apply{mkdirs()},"custom_${id.replace(Regex("[^a-zA-Z0-9_]"),"_")}.jpg");file.writeBytes(bytes);Uri.fromFile(file).toString()}.getOrNull()}
+            val artwork=cachedCover ?: song.albumArtUri
+            val local=Song(id,title,artist,album,prepared.durationMs,requireNotNull(saved),(artist+title).hashCode(),artwork,true,path,"LorMusic",System.currentTimeMillis()/1000,genre,year,"1",isRemoteSc=false)
+            val override=SongTagOverride(id,title,artist,album,genre,year,"1",artwork)
+            onProgress?.invoke(1f)
+            Pair(local,override)
+        }catch(cancel:kotlinx.coroutines.CancellationException){throw cancel}
+        catch(_:Exception){null}
+        finally{
+            pending?.let{runCatching{context.contentResolver.delete(it,null,null)}}
+            raw.delete();normalized.delete()
+        }
+    }
+
+    private fun downloadAudio(url:String,file:File,progress:((Float)->Unit)?,depth:Int=0):Long{
+        require(depth<=3){"Too many nested HLS playlists"}
+        val conn=(URL(url).openConnection() as HttpURLConnection).apply{connectTimeout=12000;readTimeout=30000;setRequestProperty("User-Agent",USER_AGENT)}
+        try {
+            var duration=0L
+            require(conn.responseCode in 200..299){"Audio server returned ${conn.responseCode}"}
+            val type=conn.contentType.orEmpty()
+            if(url.contains(".m3u8",true)||type.contains("mpegurl",true)){
+                val playlist=HlsAudioPlaylist.parse(conn.url.toString(),conn.inputStream.bufferedReader().use{it.readText()})
+                playlist.childPlaylist?.let{return downloadAudio(it,file,progress,depth+1)}
+                duration=playlist.durationMs
+                file.outputStream().buffered().use{out->playlist.parts.forEachIndexed{index,part->
+                    val c=(URL(part.url).openConnection() as HttpURLConnection).apply{connectTimeout=12000;readTimeout=30000;setRequestProperty("User-Agent",USER_AGENT);part.range?.let{setRequestProperty("Range","bytes=${it.offset}-${it.offset+it.length-1}")}}
+                    try{require(c.responseCode in 200..299);if(part.range!=null)require(c.responseCode==206){"Server ignored HLS byte range"};val copied=c.inputStream.use{it.copyTo(out)};part.range?.let{require(copied==it.length){"Incomplete HLS segment"}}}finally{c.disconnect()}
+                    progress?.invoke(.9f*(index+1)/playlist.parts.size)
+                }}
+            }else{
+                val length=conn.contentLengthLong;var downloaded=0L
+                file.outputStream().buffered().use{out->conn.inputStream.use{input->val buffer=ByteArray(16384);while(true){val n=input.read(buffer);if(n<0)break;out.write(buffer,0,n);downloaded+=n;if(length>0)progress?.invoke((.9f*downloaded/length).coerceIn(0f,.9f))}}}
+                if(length>0)require(downloaded==length){"Incomplete audio download"}
+            }
+            require(file.length()>4){"Empty audio download"}
+            return duration
+        }finally{conn.disconnect()}
     }
 
     fun getShareUrl(song: Song): String? {

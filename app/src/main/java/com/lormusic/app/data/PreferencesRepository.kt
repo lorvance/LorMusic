@@ -501,6 +501,8 @@ class PreferencesRepository(context: Context) {
             buildList {
                 for (i in 0 until arr.length()) {
                     val obj = arr.getJSONObject(i)
+                    val uri=obj.getString("uri")
+                    val local=obj.optBoolean("isLocal",uri.startsWith("content:")||uri.startsWith("file:")||uri.startsWith("/"))
                     add(
                         Song(
                             id = obj.getString("id"),
@@ -508,15 +510,16 @@ class PreferencesRepository(context: Context) {
                             artist = obj.getString("artist"),
                             album = obj.optString("album", "SoundCloud"),
                             durationMs = obj.optLong("durationMs", 180_000L),
-                            uri = obj.getString("uri"),
+                            uri = uri,
                             coverColorSeed = obj.optInt("coverColorSeed", i),
                             albumArtUri = obj.optString("albumArtUri", "").takeIf { it.isNotBlank() },
-                            isLocal = false,
-                            folderName = "SoundCloud",
+                            isLocal = local,
+                            filePath = obj.optString("filePath", "").takeIf{it.isNotBlank()},
+                            folderName = obj.optString("folderName",if(local)"LorMusic" else "SoundCloud"),
                             dateAddedSec = obj.optLong("dateAddedSec", System.currentTimeMillis() / 1000L),
                             genre = obj.optString("genre", ""),
                             year = obj.optString("year", ""),
-                            isRemoteSc = true
+                            isRemoteSc = !local
                         )
                     )
                 }
@@ -536,6 +539,9 @@ class PreferencesRepository(context: Context) {
             obj.put("album", s.album)
             obj.put("durationMs", s.durationMs)
             obj.put("uri", s.uri)
+            obj.put("isLocal",s.isLocal)
+            obj.put("filePath",s.filePath ?: "")
+            obj.put("folderName",s.folderName)
             obj.put("coverColorSeed", s.coverColorSeed)
             obj.put("albumArtUri", s.albumArtUri ?: "")
             obj.put("dateAddedSec", s.dateAddedSec)

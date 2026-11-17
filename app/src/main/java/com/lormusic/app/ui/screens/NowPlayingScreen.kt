@@ -34,6 +34,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.scale
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
@@ -164,9 +165,10 @@ fun NowPlayingScreen(
         }
     }
 
-    val gradientColors = rememberAlbumArtGradient(song, useAlbumArtGradient, accentColor)
-    val cachedDominant = remember(song.id, gradientColors) {
-        coverAccentCache.get(song.id) ?: gradientColors.firstOrNull()?.copy(alpha = 1.0f) ?: accentColor
+    val artworkColors = rememberAlbumArtGradient(song, useAlbumArtGradient || useDynamicPlayerColors, accentColor)
+    val gradientColors = if(useAlbumArtGradient) artworkColors else listOf(MaterialTheme.colorScheme.background,MaterialTheme.colorScheme.background)
+    val cachedDominant = remember(song.id, song.albumArtUri, artworkColors) {
+        coverAccentCache.get(song.id) ?: artworkColors.firstOrNull()?.copy(alpha = 1.0f) ?: accentColor
     }
     val effectiveAccentColor = if (useDynamicPlayerColors) ensureReadableAccent(cachedDominant) else accentColor
     val playButtonContentColor = if (useDynamicPlayerColors) getContrastingContentColor(effectiveAccentColor) else MaterialTheme.colorScheme.onPrimary
@@ -1784,39 +1786,22 @@ fun ensureReadableAccent(color: Color, minLuminance: Float = 0.52f): Color {
     )
 }
 
-private fun extractSongGradientColors(
+private suspend fun extractSongGradientColors(
     context: android.content.Context,
     song: Song,
     fallback: Color
 ): Pair<Color, Color> {
     val cacheKey = song.albumArtUri?.takeIf { it.isNotBlank() } ?: song.id
-    coverGradientsCache.get(cacheKey)?.let { return it }
+    coverGradientsCache.get(cacheKey)?.let { coverAccentCache.put(song.id,it.first.copy(alpha=1f));return it }
 
-    val art = song.albumArtUri
-    if (!art.isNullOrBlank()) {
+    run {
         try {
-            val bmp = if (art.startsWith("content://") || art.startsWith("file://")) {
-                val stream = context.contentResolver.openInputStream(android.net.Uri.parse(art))
-                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 16 }
-                val b = android.graphics.BitmapFactory.decodeStream(stream, null, opts)
-                stream?.close()
-                b
-            } else if (art.startsWith("http://") || art.startsWith("https://")) {
-                val conn = java.net.URL(art).openConnection() as java.net.HttpURLConnection
-                conn.connectTimeout = 2500
-                conn.readTimeout = 2500
-                val stream = conn.inputStream
-                val opts = android.graphics.BitmapFactory.Options().apply { inSampleSize = 8 }
-                val b = android.graphics.BitmapFactory.decodeStream(stream, null, opts)
-                stream.close()
-                conn.disconnect()
-                b
-            } else null
+            // Use the same URI/path/embedded-art loader as the visible cover.
+            val bmp = com.lormusic.app.ui.components.loadSongBitmap(context,"gradient_${song.uri}_${song.albumArtUri}",song.albumArtUri,song.uri)?.asAndroidBitmap()
 
             if (bmp != null) {
                 val p1 = bmp.getPixel(bmp.width / 4, bmp.height / 4)
                 val p2 = bmp.getPixel((bmp.width * 3) / 4, (bmp.height * 3) / 4)
-                bmp.recycle()
                 val color1 = Color(p1)
                 val color2 = Color(p2)
                 val pair = Pair(
@@ -1827,10 +1812,11 @@ private fun extractSongGradientColors(
                 coverAccentCache.put(song.id, color1.copy(alpha = 1.0f))
                 return pair
             }
+        } catch (cancel: kotlinx.coroutines.CancellationException) { throw cancel
         } catch (_: Exception) {
         }
     }
-    val hash = kotlin.math.abs((song.title + song.artist).hashCode())
+    val hash = Math.floorMod((song.title + song.artist).hashCode(),360)
     val hue1 = (hash % 360).toFloat()
     val hue2 = ((hash + 130) % 360).toFloat()
     val c1 = Color.hsv(hue1, 0.70f, 0.50f)
