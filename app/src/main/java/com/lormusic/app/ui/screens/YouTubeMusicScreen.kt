@@ -167,7 +167,7 @@ fun YouTubeMusicScreen(
                 }
             )
     ) {
-        ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "YouTube Music", activeTab.getDisplayName(strings), googleAccount?.avatarUrl, { if(activeTab!=YtMusicTab.HOME)onSelectTab(YtMusicTab.HOME)else onSwitchToLocal() }, { if(googleAccount==null)showWebLoginDialog=true else showAccountMenuDialog=true }) {
+        ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "YouTube Music", activeTab.getDisplayName(strings), googleAccount?.avatarUrl, { if(activeTab!=YtMusicTab.HOME)onSelectTab(YtMusicTab.HOME)else onSwitchToLocal() }, { if(googleAccount==null)showWebLoginDialog=true else showAccountMenuDialog=true }, showHeader = activeTab == YtMusicTab.HOME) {
         if (googleAccount == null) {
             YtSignInRequiredGate(
                 isSyncing = isLoadingFeed,
@@ -2106,7 +2106,7 @@ private fun YtLibrariesTab(
                 .clipToBounds()
         ) {
             val topScrimColor = MaterialTheme.colorScheme.background
-            if (enableBlur) {
+            if (enableBlur && !LocalExpressiveServiceStyle.current) {
                 Box(
                     modifier = Modifier
                         .matchParentSize()
@@ -2157,7 +2157,7 @@ private fun YtLibrariesTab(
                             .size(46.dp)
                             .clip(CircleShape)
                             .clickable { selectedPlaylist = null }
-                            .then(bubbleModifier(CircleShape)),
+                            .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer, CircleShape) else bubbleModifier(CircleShape)),
                         contentAlignment = Alignment.Center
                     ) {
                         IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
@@ -2171,7 +2171,7 @@ private fun YtLibrariesTab(
                             .weight(1f, fill = false)
                             .height(46.dp)
                             .clip(RoundedCornerShape(23.dp))
-                            .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                            .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(23.dp)) else bubbleModifier(RoundedCornerShape(23.dp)))
                             .padding(horizontal = 20.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -2194,7 +2194,7 @@ private fun YtLibrariesTab(
                                 .height(46.dp)
                                 .clip(RoundedCornerShape(23.dp))
                                 .clickable { onPlayQueue(activePl.songs, 0, false, PlaybackContext(PlaybackContextType.PLAYLIST, activePl.name)) }
-                                .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                                .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(23.dp)) else bubbleModifier(RoundedCornerShape(23.dp)))
                                 .padding(horizontal = 14.dp),
                             contentAlignment = Alignment.Center
                         ) {
@@ -2238,7 +2238,7 @@ private fun YtLibrariesTab(
                             .weight(1f)
                             .height(46.dp)
                             .clip(RoundedCornerShape(23.dp))
-                            .then(bubbleModifier(RoundedCornerShape(23.dp)))
+                            .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.surfaceContainer, RoundedCornerShape(23.dp)) else bubbleModifier(RoundedCornerShape(23.dp)))
                             .padding(horizontal = 16.dp),
                         contentAlignment = Alignment.Center
                     ) {
@@ -2264,7 +2264,7 @@ private fun YtLibrariesTab(
                     Spacer(Modifier.width(10.dp))
 
                     Box(Modifier.size(46.dp).clip(CircleShape)
-                        .then(bubbleModifier(CircleShape)).clickable { showCreateDialog = true },
+                        .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer, CircleShape) else bubbleModifier(CircleShape)).clickable { showCreateDialog = true },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.Add, strings.newPlaylistDialogTitle, tint = MaterialTheme.colorScheme.primary)
                     }

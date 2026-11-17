@@ -21,6 +21,8 @@ import androidx.compose.ui.unit.dp
 import com.lormusic.app.R
 import com.lormusic.app.model.LocalStrings
 
+val LocalExpressiveServiceStyle = staticCompositionLocalOf { false }
+
 val LocalManagedServiceHeader = staticCompositionLocalOf { false }
 
 @Composable
@@ -35,10 +37,11 @@ fun ServiceScreenShell(
     avatar: String?,
     onBack: () -> Unit,
     onAccount: () -> Unit,
+    showHeader: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     Column(Modifier.fillMaxSize()) {
-        if (enabled)
+        if (enabled && showHeader)
             ServiceExpressiveHeader(
                 name,
                 tab,
@@ -47,7 +50,7 @@ fun ServiceScreenShell(
                 onAccount,
                 Modifier.statusBarsPadding(),
             )
-        CompositionLocalProvider(LocalManagedServiceHeader provides enabled) {
+        CompositionLocalProvider(LocalManagedServiceHeader provides (enabled && showHeader), LocalExpressiveServiceStyle provides enabled) {
             Box(Modifier.weight(1f).fillMaxWidth()) { content() }
         }
     }
@@ -64,7 +67,7 @@ fun ServiceExpressiveHeader(
 ) {
     val c = MaterialTheme.colorScheme
     val strings = LocalStrings.current
-    Box(modifier.fillMaxWidth().height(96.dp).background(c.background)) {
+    Box(modifier.fillMaxWidth().height(88.dp).background(c.background)) {
         Canvas(Modifier.matchParentSize()) {
             val top =
                 Path().apply {
@@ -130,13 +133,7 @@ fun ServiceExpressiveHeader(
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
                 )
-                Text(
-                    tab,
-                    style = MaterialTheme.typography.labelMedium,
-                    color = c.onSurfaceVariant,
-                    maxLines = 1,
-                    overflow = TextOverflow.Ellipsis,
-                )
+
             }
             FilledTonalIconButton(
                 onClick = onAccount,

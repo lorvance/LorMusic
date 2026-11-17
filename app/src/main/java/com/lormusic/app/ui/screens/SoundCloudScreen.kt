@@ -127,7 +127,7 @@ fun SoundCloudScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
-        ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "SoundCloud", activeTab.getDisplayName(strings), profile?.avatarUrl, { if(activeTab!=ScTab.HOME)onSelectTab(ScTab.HOME)else onSwitchToLocal() }, { if(profile==null)showWebLoginDialog=true else showAccountMenuDialog=true }) {
+        ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "SoundCloud", activeTab.getDisplayName(strings), profile?.avatarUrl, { if(activeTab!=ScTab.HOME)onSelectTab(ScTab.HOME)else onSwitchToLocal() }, { if(profile==null)showWebLoginDialog=true else showAccountMenuDialog=true }, showHeader = activeTab == ScTab.HOME) {
         if (profile == null) {
             ScSignInRequiredGate(
                 hazeState = null,
@@ -148,7 +148,7 @@ fun SoundCloudScreen(
                     .fillMaxSize()
                     .serviceStatusBarsPadding()
             ) {
-                if(!LocalManagedServiceHeader.current) {
+                if(activeTab == ScTab.HOME && !LocalManagedServiceHeader.current) {
                 if (betaSeparateHeaderBubbles) {
                     Box(
                         modifier = Modifier
