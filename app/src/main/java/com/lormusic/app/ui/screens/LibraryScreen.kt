@@ -1,5 +1,8 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.LocalBottomControlsHeight
+
+import com.lormusic.app.ui.components.AnchoredBubbleMenu
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.animation.core.tween
@@ -240,7 +243,7 @@ fun LibraryScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxSize()
-                        .padding(top = headerHeightDp, bottom = 140.dp, start = 32.dp, end = 32.dp),
+                        .padding(top = headerHeightDp, bottom = LocalBottomControlsHeight.current + 16.dp, start = 32.dp, end = 32.dp),
                     contentAlignment = Alignment.Center
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -271,7 +274,7 @@ fun LibraryScreen(
                         start = 12.dp,
                         end = 12.dp,
                         top = headerHeightDp + 12.dp,
-                        bottom = 185.dp
+                        bottom = LocalBottomControlsHeight.current + 16.dp
                     ),
                     verticalArrangement = Arrangement.spacedBy(4.dp),
                     modifier = Modifier.fillMaxSize()
@@ -396,7 +399,7 @@ fun LibraryScreen(
                             extraSmall = RoundedCornerShape(22.dp)
                         )
                     ) {
-                        DropdownMenu(
+                        AnchoredBubbleMenu(
                             expanded = showMoreMenu,
                             onDismissRequest = { showMoreMenu = false },
                             shape = RoundedCornerShape(24.dp)
@@ -505,7 +508,7 @@ fun LibraryScreen(
                                 extraSmall = RoundedCornerShape(22.dp)
                             )
                         ) {
-                            DropdownMenu(
+                            AnchoredBubbleMenu(
                                 expanded = showSortMenu,
                                 onDismissRequest = { showSortMenu = false },
                                 shape = RoundedCornerShape(24.dp)

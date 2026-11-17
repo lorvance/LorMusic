@@ -118,13 +118,15 @@ fun UpdateDialog(
     val targetLang = when (appLanguage) {
         AppLanguage.UK -> "uk"
         AppLanguage.PL -> "pl"
-        AppLanguage.RU -> "ru"
+        AppLanguage.DE -> "de"
+        AppLanguage.RU, AppLanguage.RANDOM -> "ru"
         AppLanguage.EN -> null
         AppLanguage.SYSTEM -> {
             val loc = java.util.Locale.getDefault().language.lowercase()
             when {
                 loc.startsWith("uk") -> "uk"
                 loc.startsWith("pl") -> "pl"
+                loc.startsWith("de") -> "de"
                 loc.startsWith("ru") || loc.startsWith("be") || loc.startsWith("kk") -> "ru"
                 else -> null
             }
@@ -141,7 +143,7 @@ fun UpdateDialog(
         label = "arrowRotation"
     )
 
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = {
             if (updateState !is UpdateState.Downloading) {
                 onDismiss()
@@ -181,7 +183,9 @@ fun UpdateDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(540.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -200,9 +204,10 @@ fun UpdateDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                 Row(
                     verticalAlignment = Alignment.CenterVertically,
@@ -395,7 +400,7 @@ fun UpdateDialog(
                                 shape = RoundedCornerShape(20.dp),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp)
+                                    .height(52.dp)
                             ) {
                                 Text(strings.remindLater, style = MaterialTheme.typography.titleSmall)
                             }
@@ -416,7 +421,7 @@ fun SleepTimerAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -443,7 +448,9 @@ fun SleepTimerAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(420.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -462,9 +469,10 @@ fun SleepTimerAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -539,7 +547,7 @@ fun SleepTimerAutoUpdaterDialog(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp)
+                                    .height(52.dp)
                             ) {
                                 Text(
                                     text = label,
@@ -557,7 +565,7 @@ fun SleepTimerAutoUpdaterDialog(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                     ) {
                         Text(strings.close, style = MaterialTheme.typography.titleSmall)
                     }
@@ -575,7 +583,7 @@ fun ThemeAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -602,7 +610,9 @@ fun ThemeAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(400.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -621,9 +631,10 @@ fun ThemeAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -682,7 +693,7 @@ fun ThemeAutoUpdaterDialog(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp)
+                                    .height(52.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -713,7 +724,7 @@ fun ThemeAutoUpdaterDialog(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                     ) {
                         Text(strings.close, style = MaterialTheme.typography.titleSmall)
                     }
@@ -817,7 +828,7 @@ fun AccentColorAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -844,7 +855,9 @@ fun AccentColorAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(560.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -863,9 +876,10 @@ fun AccentColorAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1020,7 +1034,7 @@ fun AccentColorAutoUpdaterDialog(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                     ) {
                         Text(strings.close, style = MaterialTheme.typography.titleSmall)
                     }
@@ -1078,7 +1092,7 @@ fun PlaybackSpeedAutoUpdaterDialog(
 ) {
     val strings = LocalStrings.current
     val speeds = listOf(0.75f, 1.0f, 1.25f, 1.5f, 2.0f)
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -1105,7 +1119,9 @@ fun PlaybackSpeedAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(340.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -1124,9 +1140,10 @@ fun PlaybackSpeedAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1185,7 +1202,7 @@ fun PlaybackSpeedAutoUpdaterDialog(
                                 },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(48.dp)
+                                    .height(52.dp)
                             ) {
                                 Row(
                                     modifier = Modifier.fillMaxWidth(),
@@ -1216,7 +1233,7 @@ fun PlaybackSpeedAutoUpdaterDialog(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                     ) {
                         Text(strings.close, style = MaterialTheme.typography.titleSmall)
                     }
@@ -1233,7 +1250,7 @@ fun AboutAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -1260,7 +1277,9 @@ fun AboutAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(500.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -1279,9 +1298,10 @@ fun AboutAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1350,7 +1370,7 @@ fun AboutAutoUpdaterDialog(
                         shape = RoundedCornerShape(20.dp),
                         modifier = Modifier
                             .fillMaxWidth()
-                            .height(48.dp)
+                            .height(52.dp)
                     ) {
                         Text(strings.great, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
@@ -1368,7 +1388,7 @@ fun BackupAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -1395,7 +1415,9 @@ fun BackupAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(360.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -1414,9 +1436,10 @@ fun BackupAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,
@@ -1506,7 +1529,7 @@ fun RestoreAutoUpdaterDialog(
     onDismiss: () -> Unit
 ) {
     val strings = LocalStrings.current
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -1533,7 +1556,9 @@ fun RestoreAutoUpdaterDialog(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .navigationBarsPadding()
+                    .padding(bottom = LocalDialogBottomInset.current)
+                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
+                    .height(470.dp)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -1552,9 +1577,10 @@ fun RestoreAutoUpdaterDialog(
             ) {
                 Column(
                     modifier = Modifier
-                        .fillMaxWidth()
+                        .fillMaxSize()
                         .verticalScroll(rememberScrollState())
-                        .padding(22.dp)
+                        .padding(22.dp),
+                    verticalArrangement = Arrangement.SpaceBetween
                 ) {
                     Row(
                         verticalAlignment = Alignment.CenterVertically,

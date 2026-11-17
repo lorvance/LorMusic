@@ -1,5 +1,16 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.ServiceScreenShell
+import com.lormusic.app.ui.components.LocalPureMaterialYou
+import com.lormusic.app.ui.components.LocalManagedServiceHeader
+import com.lormusic.app.ui.components.serviceStatusBarsPadding
+
+import com.lormusic.app.ui.components.LocalDialogBottomInset
+
+import com.lormusic.app.ui.components.FullWindowDialog
+
+import com.lormusic.app.ui.components.LocalBottomControlsHeight
+
 import android.content.Intent
 import android.graphics.Bitmap
 import android.view.HapticFeedbackConstants
@@ -88,6 +99,7 @@ fun SoundCloudScreen(
     hazeState: HazeState? = null,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
+    expressiveHeader: Boolean = false,
     betaSeparateHeaderBubbles: Boolean = false
 ) {
     val view = LocalView.current
@@ -115,6 +127,7 @@ fun SoundCloudScreen(
             .fillMaxSize()
             .background(MaterialTheme.colorScheme.background)
     ) {
+        ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "SoundCloud", activeTab.getDisplayName(strings), profile?.avatarUrl, { if(activeTab!=ScTab.HOME)onSelectTab(ScTab.HOME)else onSwitchToLocal() }, { if(profile==null)showWebLoginDialog=true else showAccountMenuDialog=true }) {
         if (profile == null) {
             ScSignInRequiredGate(
                 hazeState = null,
@@ -133,8 +146,9 @@ fun SoundCloudScreen(
             Column(
                 modifier = Modifier
                     .fillMaxSize()
-                    .statusBarsPadding()
+                    .serviceStatusBarsPadding()
             ) {
+                if(!LocalManagedServiceHeader.current) {
                 if (betaSeparateHeaderBubbles) {
                     Box(
                         modifier = Modifier
@@ -307,6 +321,7 @@ fun SoundCloudScreen(
                         }
                     }
                 }
+                }
 
                 AnimatedContent(
                     targetState = activeTab,
@@ -387,6 +402,7 @@ fun SoundCloudScreen(
                     }
                 }
             }
+        }
         }
     }
 
@@ -612,11 +628,12 @@ private fun ScSignInRequiredGate(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center
     ) {
+        if(!LocalManagedServiceHeader.current) {
         Row(
             modifier = Modifier
                 .align(Alignment.TopCenter)
                 .fillMaxWidth()
-                .statusBarsPadding()
+                .serviceStatusBarsPadding()
                 .padding(horizontal = 14.dp, vertical = 8.dp),
             horizontalArrangement = Arrangement.Start,
             verticalAlignment = Alignment.CenterVertically
@@ -654,6 +671,7 @@ private fun ScSignInRequiredGate(
                     }
                 }
             }
+        }
         }
 
         Surface(
@@ -765,7 +783,7 @@ private fun ScHomeTab(
             .fillMaxSize()
             .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
             .appBackdropSource(),
-        contentPadding = PaddingValues(bottom = 140.dp)
+        contentPadding = PaddingValues(bottom = LocalBottomControlsHeight.current + 16.dp)
     ) {
         if (likes.isNotEmpty()) {
             item {
@@ -1092,7 +1110,7 @@ private fun ScChartsTab(
             .fillMaxSize()
             .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
             .appBackdropSource(),
-        contentPadding = PaddingValues(bottom = 140.dp)
+        contentPadding = PaddingValues(bottom = LocalBottomControlsHeight.current + 16.dp)
     ) {
         item {
             Row(
@@ -1188,7 +1206,7 @@ private fun ScLibrariesTab(
             .fillMaxSize()
             .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
             .appBackdropSource(),
-        contentPadding = PaddingValues(bottom = 140.dp)
+        contentPadding = PaddingValues(bottom = LocalBottomControlsHeight.current + 16.dp)
     ) {
         item {
             Row(
@@ -1427,7 +1445,7 @@ private fun ScSearchTab(
                     .fillMaxSize()
                     .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
                     .appBackdropSource(),
-                contentPadding = PaddingValues(bottom = 140.dp)
+                contentPadding = PaddingValues(bottom = LocalBottomControlsHeight.current + 16.dp)
             ) {
                 itemsIndexed(searchResults) { idx, song ->
                     SongRow(
@@ -1529,15 +1547,15 @@ private fun ScRealWebLoginDialog(
         }
     }
 
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(usePlatformDefaultWidth = false)
     ) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding(),
+                .serviceStatusBarsPadding()
+                .padding(bottom = LocalDialogBottomInset.current),
             color = MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {

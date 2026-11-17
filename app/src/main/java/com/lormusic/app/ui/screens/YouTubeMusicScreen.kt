@@ -1,5 +1,11 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.LocalDialogBottomInset
+
+import com.lormusic.app.ui.components.FullWindowDialog
+
+import com.lormusic.app.ui.components.LocalBottomControlsHeight
+
 import com.lormusic.app.model.LocalStrings
 
 import android.annotation.SuppressLint
@@ -103,6 +109,7 @@ fun YouTubeMusicScreen(
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
     useMyWaveCoverGradient: Boolean = false,
+    expressiveHeader: Boolean = false,
     betaSeparateHeaderBubbles: Boolean = false,
     showTopSearchBar: Boolean = false,
     recentsViewMode: String = "grid",
@@ -160,6 +167,7 @@ fun YouTubeMusicScreen(
                 }
             )
     ) {
+        ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "YouTube Music", activeTab.getDisplayName(strings), googleAccount?.avatarUrl, { if(activeTab!=YtMusicTab.HOME)onSelectTab(YtMusicTab.HOME)else onSwitchToLocal() }, { if(googleAccount==null)showWebLoginDialog=true else showAccountMenuDialog=true }) {
         if (googleAccount == null) {
             YtSignInRequiredGate(
                 isSyncing = isLoadingFeed,
@@ -272,6 +280,7 @@ fun YouTubeMusicScreen(
                 }
             }
         }
+        }
     }
 
     if (showWebLoginDialog) {
@@ -298,7 +307,7 @@ fun YouTubeMusicScreen(
         } else {
             Color.Black.copy(alpha = 0.75f)
         }
-        Dialog(
+        FullWindowDialog(
             onDismissRequest = { showAccountMenuDialog = false },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
@@ -318,8 +327,8 @@ fun YouTubeMusicScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
-                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(bottom = LocalDialogBottomInset.current)
                         .clip(RoundedCornerShape(28.dp))
                         .background(
                             if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
@@ -630,7 +639,7 @@ private fun YtMusicRealWebLoginDialog(
         }
     }
 
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -640,8 +649,8 @@ private fun YtMusicRealWebLoginDialog(
         Surface(
             modifier = Modifier
                 .fillMaxSize()
-                .statusBarsPadding()
-                .navigationBarsPadding(),
+                .serviceStatusBarsPadding()
+                .padding(bottom = LocalDialogBottomInset.current),
             color = MaterialTheme.colorScheme.background
         ) {
             Column(modifier = Modifier.fillMaxSize()) {
@@ -899,12 +908,13 @@ private fun YtSignInRequiredGate(
             }
         }
 
+        if(!LocalManagedServiceHeader.current) {
         if (betaSeparateHeaderBubbles) {
             Box(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .statusBarsPadding()
+                    .serviceStatusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 10.dp)
             ) {
                 Box(
@@ -960,7 +970,7 @@ private fun YtSignInRequiredGate(
                 modifier = Modifier
                     .align(Alignment.TopCenter)
                     .fillMaxWidth()
-                    .statusBarsPadding()
+                    .serviceStatusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.CenterVertically
@@ -998,6 +1008,7 @@ private fun YtSignInRequiredGate(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -1043,7 +1054,7 @@ private fun YtHomeTab(
             avatarBitmap = loadSongBitmap(context, "yt_avatar_${url.hashCode()}", url, null)
         }
     }
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = if(LocalManagedServiceHeader.current) 0.dp else WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val smoothFling = rememberSmoothFlingBehavior()
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
         Modifier.liquidGlassBubble(
@@ -1067,8 +1078,8 @@ private fun YtHomeTab(
                 flingBehavior = smoothFling,
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = PaddingValues(
-                    top = statusBarTop + 72.dp,
-                    bottom = 225.dp,
+                    top = if(LocalManagedServiceHeader.current) 12.dp else statusBarTop + 72.dp,
+                    bottom = LocalBottomControlsHeight.current + 16.dp,
                     start = 16.dp,
                     end = 16.dp
                 ),
@@ -1440,6 +1451,7 @@ private fun YtHomeTab(
             }
         }
 
+        if(!LocalManagedServiceHeader.current) {
         Box(
             modifier = Modifier
                 .align(Alignment.TopCenter)
@@ -1488,7 +1500,7 @@ private fun YtHomeTab(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
+                        .serviceStatusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 10.dp)
                 ) {
                     Box(
@@ -1617,7 +1629,7 @@ private fun YtHomeTab(
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .statusBarsPadding()
+                        .serviceStatusBarsPadding()
                         .padding(horizontal = 16.dp, vertical = 10.dp),
                     horizontalArrangement = Arrangement.SpaceBetween,
                     verticalAlignment = Alignment.CenterVertically
@@ -1726,6 +1738,7 @@ private fun YtHomeTab(
                     }
                 }
             }
+        }
         }
     }
 }
@@ -1913,7 +1926,7 @@ private fun YtLibrariesTab(
     var newPlaylistName by remember { mutableStateOf("") }
     val strings = LocalStrings.current
     var selectedPlaylist by remember { mutableStateOf<Playlist?>(null) }
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = if(LocalManagedServiceHeader.current) 0.dp else WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { shape ->
         Modifier.liquidGlassBubble(
             shape = shape,
@@ -1945,7 +1958,7 @@ private fun YtLibrariesTab(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         top = statusBarTop + 76.dp,
-                        bottom = 220.dp,
+                        bottom = LocalBottomControlsHeight.current + 16.dp,
                         start = 16.dp,
                         end = 16.dp
                     ),
@@ -1978,7 +1991,7 @@ private fun YtLibrariesTab(
                     modifier = Modifier.fillMaxSize(),
                     contentPadding = PaddingValues(
                         top = statusBarTop + 76.dp,
-                        bottom = 220.dp,
+                        bottom = LocalBottomControlsHeight.current + 16.dp,
                         start = 16.dp,
                         end = 16.dp
                     ),
@@ -2133,7 +2146,7 @@ private fun YtLibrariesTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .statusBarsPadding()
+                    .serviceStatusBarsPadding()
                     .padding(horizontal = 16.dp, vertical = 10.dp),
                 verticalAlignment = Alignment.CenterVertically
             ) {
@@ -2464,7 +2477,7 @@ private fun YtMyWaveTab(
     onSongMoreClick: (Song) -> Unit
 ) {
     val strings = LocalStrings.current
-    val statusBarTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
+    val statusBarTop = if(LocalManagedServiceHeader.current) 0.dp else WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
     val moods: List<Pair<String, String?>> = listOf(
         strings.moodForYourTaste to null,
         strings.moodEnergetic to "electronic dance",
@@ -2555,7 +2568,7 @@ private fun YtMyWaveTab(
                     start = 16.dp,
                     end = 16.dp,
                     top = statusBarTop + 16.dp,
-                    bottom = 225.dp
+                    bottom = LocalBottomControlsHeight.current + 16.dp
                 ),
                 horizontalAlignment = Alignment.CenterHorizontally,
                 verticalArrangement = Arrangement.spacedBy(12.dp)
@@ -2862,7 +2875,7 @@ private fun YtSearchTab(
             .background(MaterialTheme.colorScheme.background)
             .hazeSource(state = hazeState)
             .appBackdropSource()
-            .statusBarsPadding()
+            .serviceStatusBarsPadding()
             .padding(horizontal = 16.dp, vertical = 10.dp)
     ) {
         Text(
@@ -2912,7 +2925,7 @@ private fun YtSearchTab(
         LazyColumn(
             flingBehavior = rememberSmoothFlingBehavior(),
             modifier = Modifier.fillMaxSize(),
-            contentPadding = PaddingValues(bottom = 225.dp),
+            contentPadding = PaddingValues(bottom = LocalBottomControlsHeight.current + 16.dp),
             verticalArrangement = Arrangement.spacedBy(8.dp)
         ) {
             itemsIndexed(displayed, key = { idx, s -> "yt_s_${s.id}_$idx" }) { index, song ->

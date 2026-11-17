@@ -1,5 +1,12 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.LocalDialogBottomInset
+import com.lormusic.app.ui.components.LocalDialogTopInset
+
+import com.lormusic.app.ui.components.LocalBottomControlsHeight
+
+import com.lormusic.app.ui.components.FullWindowDialog
+
 import com.lormusic.app.ui.components.PhysicsSwitch as Switch
 
 import com.lormusic.app.model.betaText
@@ -94,6 +101,10 @@ fun ProfileScreen(
     onToggleMaterialArrows: (Boolean) -> Unit = {},
     expressiveNavigation: Boolean = false,
     onToggleExpressiveNavigation: (Boolean) -> Unit = {},
+    ytNavTabOrder: List<com.lormusic.app.ui.components.YtMusicTab> = com.lormusic.app.ui.components.DEFAULT_YT_TAB_ORDER,
+    scNavTabOrder: List<com.lormusic.app.ui.components.ScTab> = com.lormusic.app.ui.components.DEFAULT_SC_TAB_ORDER,
+    onUpdateYtNavTabOrder: (List<com.lormusic.app.ui.components.YtMusicTab>)->Unit = {},
+    onUpdateScNavTabOrder: (List<com.lormusic.app.ui.components.ScTab>)->Unit = {},
     navTabOrder: List<com.lormusic.app.ui.components.LorTab> = com.lormusic.app.ui.components.DEFAULT_LOR_TAB_ORDER,
     onUpdateNavTabOrder: (List<com.lormusic.app.ui.components.LorTab>) -> Unit = {},
     enableBlur: Boolean,
@@ -209,7 +220,7 @@ fun ProfileScreen(
                 modifier = Modifier
                     .fillMaxSize()
                     .verticalScroll(scrollState)
-                    .padding(start = 20.dp, end = 20.dp, top = profileHeaderHeight, bottom = 185.dp)
+                    .padding(start = 20.dp, end = 20.dp, top = profileHeaderHeight, bottom = LocalBottomControlsHeight.current + 16.dp)
             ) {
                 @Composable
                 fun BetaBadge() {
@@ -263,12 +274,14 @@ fun ProfileScreen(
                 val waveGradTitle = when (strings) {
                     com.lormusic.app.model.StringsEn -> "Live 'My Wave' cover gradient"
                     com.lormusic.app.model.StringsUk -> "Живий градієнт «Моєї хвилі»"
+                    com.lormusic.app.model.StringsDe -> "Lebendiger Farbverlauf für Meine Welle"
                     com.lormusic.app.model.StringsPl -> "Żywy gradient «Mojej fali»"
                     else -> "Живой градиент «Моей волны»"
                 }
                 val waveGradDesc = when (strings) {
                     com.lormusic.app.model.StringsEn -> "Powerful moving gradient and Play button color from wave track covers"
                     com.lormusic.app.model.StringsUk -> "Потужний рухомий градієнт та колір кнопки Play з обкладинок треків хвилі"
+                    com.lormusic.app.model.StringsDe -> "Animierter Hintergrund und Play-Farbe aus den Covers deiner Welle"
                     com.lormusic.app.model.StringsPl -> "Dynamiczny ruchomy gradient i kolor przycisku Play z okładek utworów fali"
                     else -> "Мощный движущийся градиент и цвет кнопки Play из обложек треков волны"
                 }
@@ -372,6 +385,21 @@ fun ProfileScreen(
                         color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                headlineContent = { Text(strings.betaSeparateHeaderBubblesTitle) },
+                                supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
+                                leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = betaSeparateHeaderBubbles,
+                                        onCheckedChange = onToggleBetaSeparateHeaderBubbles
+                                    )
+                                }
+                            )
+                            SettingsDivider()
+
+
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.themeModeTitle) },
@@ -771,6 +799,14 @@ fun ProfileScreen(
                             )
                         }
                     }
+                    Spacer(Modifier.height(16.dp))
+                    Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerLow){
+                        Column {
+                            com.lormusic.app.ui.components.ServiceNavOrderEditor("YouTube Music",ytNavTabOrder,com.lormusic.app.ui.components.DEFAULT_YT_TAB_ORDER,{it.getDisplayName(strings)},{it.filled},onUpdateYtNavTabOrder)
+                            SettingsDivider()
+                            com.lormusic.app.ui.components.ServiceNavOrderEditor("SoundCloud",scNavTabOrder,com.lormusic.app.ui.components.DEFAULT_SC_TAB_ORDER,{it.getDisplayName(strings)},{it.filled},onUpdateScNavTabOrder)
+                        }
+                    }
                 }
 
                 @Composable
@@ -923,19 +959,6 @@ fun ProfileScreen(
                                     Switch(
                                         checked = betaAutoHideNavBar,
                                         onCheckedChange = onToggleBetaAutoHideNavBar
-                                    )
-                                }
-                            )
-                            SettingsDivider()
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { BetaHeadline(strings.betaSeparateHeaderBubblesTitle) },
-                                supportingContent = { Text(strings.betaSeparateHeaderBubblesDesc) },
-                                leadingContent = { Icon(Icons.Filled.BubbleChart, contentDescription = null) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = betaSeparateHeaderBubbles,
-                                        onCheckedChange = onToggleBetaSeparateHeaderBubbles
                                     )
                                 }
                             )
@@ -1304,7 +1327,7 @@ fun ProfileScreen(
         )
     }
     if (showLanguageDialog) {
-        Dialog(
+        FullWindowDialog(
             onDismissRequest = { showLanguageDialog = false },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
@@ -1329,8 +1352,8 @@ fun ProfileScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
-                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(bottom = LocalDialogBottomInset.current)
                         .clip(RoundedCornerShape(28.dp))
                         .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f) else surfaceContainerHigh)
                         .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
@@ -1407,7 +1430,7 @@ fun ProfileScreen(
             com.lormusic.app.model.StringsEn ->
                 "Music player styled with Material 3 Expressive + Apple Liquid Glass.\n\n" +
                     "• Redesigned YouTube Music with floating bubbles and 4-row recents scroll\n" +
-                    "• Launch animations: equalizer for Default, ball bounce for Classic, pulse for Minimalism\n" +
+                    "• Smooth launch animation with the selected app icon\n" +
                     "• Strict sequential track playback order when shuffle is off\n" +
                     "• Liquid Glass (Apple) design on Android 13+\n" +
                     "• Markdown update changelog and Auto-Updater\n" +
@@ -1416,12 +1439,17 @@ fun ProfileScreen(
             com.lormusic.app.model.StringsUk ->
                 "Музичний плеєр у стилі Material 3 Expressive + Apple Liquid Glass.\n\n" +
                     "• Новий дизайн YouTube Music з плаваючими баблами та 4-рядковим скролом недавніх\n" +
-                    "• Анімації запуску: еквалайзер для стандартної, політ кульки для класичної, підстрибування для мінімалізму\n" +
+                    "• Плавна анімація запуску з вибраною іконкою застосунку\n" +
                     "• Виправлено випадковий порядок треків при вимкненому перемішуванні\n" +
                     "• Дизайн Liquid Glass (Apple) для Android 13+\n" +
                     "• Вікно автоапдейтера з Markdown\n" +
                     "• Автоматичний TagFix та розпізнавання через Shazam\n" +
                     "• Динамічний градієнт обкладинки та завантаження треків"
+            com.lormusic.app.model.StringsDe ->
+                "Musikplayer mit Material 3 Expressive und Liquid Glass.\n\n" +
+                    "Lokale Musik, YouTube Music und SoundCloud in einer Mediathek. " +
+                    "Mit gemeinsamen Playlists, synchronisierten Liedtexten, TagFix, Equalizer " +
+                    "und anpassbarem Liquid Glass."
             com.lormusic.app.model.StringsPl ->
                 "Odtwarzacz muzyczny w stylu Material 3 Expressive + Apple Liquid Glass.\n\n" +
                     "• Integracja z YouTube Music oraz SoundCloud i wspólnymi playlistami\n" +
@@ -1433,7 +1461,7 @@ fun ProfileScreen(
                 "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
                     "• Интеграция SoundCloud с чартами, поиском и общими плейлистами с YouTube Music\n" +
                     "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
-                    "• Анимации запуска: эквалайзер для обычной, полёт красного шарика для Old, подпрыгивание для минимализма\n" +
+                    "• Плавная анимация запуска с выбранной иконкой приложения\n" +
                     "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
                     "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
                     "• Редизайн окна автоапдейтера с Markdown\n" +
@@ -1447,7 +1475,7 @@ fun ProfileScreen(
         )
     }
     if (easterEggStage == 1) {
-        Dialog(
+        FullWindowDialog(
             onDismissRequest = { easterEggStage = 0 },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
@@ -1472,8 +1500,8 @@ fun ProfileScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
-                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(bottom = LocalDialogBottomInset.current)
                         .clip(RoundedCornerShape(28.dp))
                         .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f) else surfaceContainerHigh)
                         .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))
@@ -1519,7 +1547,7 @@ fun ProfileScreen(
             }
         }
     } else if (easterEggStage == 2) {
-        Dialog(
+        FullWindowDialog(
             onDismissRequest = { easterEggStage = 0 },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
@@ -1544,8 +1572,8 @@ fun ProfileScreen(
                 Box(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
-                        .navigationBarsPadding()
+                        .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                        .padding(bottom = LocalDialogBottomInset.current)
                         .clip(RoundedCornerShape(28.dp))
                         .background(if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f) else surfaceContainerHigh)
                         .border(1.dp, if (enableBlur) Color.White.copy(alpha = 0.18f) else outlineVariant.copy(alpha = 0.35f), RoundedCornerShape(28.dp))

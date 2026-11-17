@@ -143,7 +143,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     var showSpeedDialog by remember { mutableStateOf(false) }
     var isBottomLocalSearchActive by remember { mutableStateOf(false) }
 
-    var showLaunchSplash by rememberSaveable { mutableStateOf(true) }
 
     val allSongs by playerViewModel.allSongs
     val localSongsCount by playerViewModel.localSongsCount
@@ -285,6 +284,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     CompositionLocalProvider(
         LocalAppBackdrop provides appBackdrop,
         LocalLiquidGlassEnabled provides isGlassActive,
+        LocalBottomControlsHeight provides bottomControlsHeight,
         LocalLiquidGlassTransparency provides playerViewModel.glassTransparency.value,
         LocalPureMaterialYou provides pureMaterialYou,
         LocalMaterialArrows provides playerViewModel.materialArrows.value,
@@ -327,6 +327,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         when (mode) {
                             1 -> {
                                 YouTubeMusicScreen(
+                                    expressiveHeader = playerViewModel.expressiveHeader.value,
                                     activeTab = activeYtTab,
                                     recentlyPlayed = playerViewModel.getRecentlyPlayedSongs(),
                                     recommendations = ytRecommendations,
@@ -376,6 +377,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                             }
                             2 -> {
                                 SoundCloudScreen(
+                                    expressiveHeader = playerViewModel.expressiveHeader.value,
                                     activeTab = activeScTab,
                                     onSelectTab = { playerViewModel.selectScTab(it) },
                                     charts = playerViewModel.soundCloudCharts.value,
@@ -555,6 +557,10 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 expressiveNavigation = playerViewModel.expressiveNavigation.value,
                                                 onToggleExpressiveNavigation = playerViewModel::setExpressiveNavigation,
                                                 navTabOrder = playerViewModel.navTabOrder.value,
+                                                ytNavTabOrder = playerViewModel.ytNavTabOrder.value,
+                                                scNavTabOrder = playerViewModel.scNavTabOrder.value,
+                                                onUpdateYtNavTabOrder = playerViewModel::setYtNavTabOrder,
+                                                onUpdateScNavTabOrder = playerViewModel::setScNavTabOrder,
                                                 onUpdateNavTabOrder = playerViewModel::setNavTabOrder,
                                                 totalSongsCount = visibleTotalSongs,
                                                 localSongsCount = localSongsCount,
@@ -856,6 +862,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         ) {
                             if (isYtMusicMode) {
                                 YtMusicBottomNavBar(
+                                    tabOrder = playerViewModel.ytNavTabOrder.value,
                                     useExpressive = playerViewModel.expressiveNavigation.value,
                                     selected = activeYtTab,
                                     onSelect = { tab ->
@@ -869,6 +876,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                 )
                             } else if (isSoundCloudMode) {
                                 ScMusicBottomNavBar(
+                                    tabOrder = playerViewModel.scNavTabOrder.value,
                                     useExpressive = playerViewModel.expressiveNavigation.value,
                                     selected = activeScTab,
                                     onSelect = { tab: com.lormusic.app.ui.components.ScTab ->
@@ -978,6 +986,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         AppLanguage.UK -> "uk"
                                         AppLanguage.EN -> "en"
                                         AppLanguage.PL -> "pl"
+                                        AppLanguage.DE -> "de"
+                                        AppLanguage.SYSTEM -> java.util.Locale.getDefault().language
+                                            .takeIf { it in setOf("ru", "en", "uk", "pl", "de") } ?: "ru"
                                         else -> "ru"
                                     }
                                     playerViewModel.translateCurrentLyrics(target)
@@ -992,11 +1003,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     }
                 }
 
-                if (showLaunchSplash) {
-                    MaterialYouLaunchSplash(
-                        iconOption = selectedAppIcon
-                    )
-                }
+
             }
         }
 

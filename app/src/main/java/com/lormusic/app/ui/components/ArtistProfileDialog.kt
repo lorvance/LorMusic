@@ -235,7 +235,7 @@ fun ArtistProfileDialog(
                                 modifier = Modifier.fillMaxSize(),
                                 contentPadding = PaddingValues(
                                     top = 74.dp,
-                                    bottom = if (currentSong != null) 180.dp else 40.dp
+                                    bottom = if (currentSong != null) LocalBottomControlsHeight.current + 16.dp else 40.dp
                                 ),
                                 verticalArrangement = Arrangement.spacedBy(6.dp)
                             ) {
@@ -584,7 +584,7 @@ fun ArtistProfileDialog(
                             .then(if (miniPlayerHazeState != null) Modifier.hazeSource(miniPlayerHazeState) else Modifier)
                             .appBackdropSource(),
                         contentPadding = PaddingValues(
-                            bottom = if (currentSong != null) 180.dp else 40.dp
+                            bottom = if (currentSong != null) LocalBottomControlsHeight.current + 16.dp else 40.dp
                         )
                     ) {
                         item(key = "header") {

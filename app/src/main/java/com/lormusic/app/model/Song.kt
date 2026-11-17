@@ -126,6 +126,7 @@ enum class AppAccentColor(val baseName: String, val primaryHex: Long, val isDefa
         val suffix = when (strings) {
             StringsEn -> "Default"
             StringsUk -> "За замовчуванням"
+            StringsDe -> "Standard"
             StringsPl -> "Domyślny"
             else -> "По умолчанию"
         }
@@ -151,18 +152,21 @@ enum class AppIconOption(val label: String, val subtitle: String, val aliasClass
             MINIMAL -> when (strings) {
                 StringsEn -> "Lavender flower with note"
                 StringsUk -> "Лавандова квітка з нотою"
+                StringsDe -> "Lavendelfarbene Blume mit Note"
                 StringsPl -> "Lawendowy kwiat z nutą"
                 else -> subtitle
             }
             REGULAR -> when (strings) {
                 StringsEn -> "3D flower with equalizer"
                 StringsUk -> "Об'ємна квітка з еквалайзером"
+                StringsDe -> "3D-Blume mit Equalizer"
                 StringsPl -> "Kwiat 3D z korektorem"
                 else -> subtitle
             }
             OLD -> when (strings) {
                 StringsEn -> "Classic original icon"
                 StringsUk -> "Класична стара іконка"
+                StringsDe -> "Klassisches Originalsymbol"
                 StringsPl -> "Klasyczna oryginalna ikona"
                 else -> subtitle
             }
@@ -184,6 +188,7 @@ enum class LibraryFilter(val label: String) {
             ALL -> when (strings) {
                 StringsEn -> "All"
                 StringsUk -> "Всі"
+                StringsDe -> "Alle"
                 StringsPl -> "Wszystkie"
                 else -> "Все"
             }
@@ -192,6 +197,7 @@ enum class LibraryFilter(val label: String) {
             FOLDERS -> when (strings) {
                 StringsEn -> "Folders"
                 StringsUk -> "Папки"
+                StringsDe -> "Ordner"
                 StringsPl -> "Foldery"
                 else -> "По папкам"
             }
@@ -238,12 +244,14 @@ enum class SearchBarPlacement(
             LOCAL_TOP_YT_BOTTOM -> when (strings) {
                 StringsEn -> "Top in Library, bottom in YT Music"
                 StringsUk -> "Зверху в медіатеці, знизу в YT Music"
+                StringsDe -> "In der Mediathek oben, bei YT Music unten"
                 StringsPl -> "U góry w bibliotece, na dole w YT Music"
                 else -> label
             }
             LOCAL_BOTTOM_YT_TOP -> when (strings) {
                 StringsEn -> "Bottom in Library, top in YT Music"
                 StringsUk -> "Знизу в медіатеці, зверху в YT Music"
+                StringsDe -> "In der Mediathek unten, bei YT Music oben"
                 StringsPl -> "Na dole w bibliotece, u góry w YT Music"
                 else -> label
             }
@@ -257,24 +265,28 @@ enum class SearchBarPlacement(
             LOCAL_TOP_YT_BOTTOM -> when (strings) {
                 StringsEn -> "In header of local library and separate bottom button in YT Music (default)"
                 StringsUk -> "У шапці локальної медіатеки та окремою кнопкою знизу в YT Music (за замовчуванням)"
+                StringsDe -> "In der Kopfzeile der lokalen Mediathek und als eigene Taste unten bei YT Music (Standard)"
                 StringsPl -> "W nagłówku biblioteki lokalnej i osobny przycisk na dole w YT Music (domyślnie)"
                 else -> subtitle
             }
             LOCAL_BOTTOM_YT_TOP -> when (strings) {
                 StringsEn -> "Separate bottom button in local music and in top header of YT Music"
                 StringsUk -> "Окремою кнопкою знизу в локальній музиці та у верхній шапці YT Music"
+                StringsDe -> "Eigene Taste unten für lokale Musik und in der Kopfzeile bei YT Music"
                 StringsPl -> "Osobny przycisk na dole w muzyce lokalnej i w górnym nagłówku YT Music"
                 else -> subtitle
             }
             ALWAYS_BOTTOM -> when (strings) {
                 StringsEn -> "Round search button next to bottom navigation bar in all modes"
                 StringsUk -> "Кругла кнопка пошуку праворуч від нижньої панелі в усіх режимах"
+                StringsDe -> "Runde Suchtaste neben der unteren Navigationsleiste in allen Modi"
                 StringsPl -> "Okrągły przycisk wyszukiwania obok dolnego paska nawigacji we wszystkich trybach"
                 else -> subtitle
             }
             ALWAYS_TOP -> when (strings) {
                 StringsEn -> "Search bar is always located in top header"
                 StringsUk -> "Рядок пошуку завжди знаходиться у верхній шапці"
+                StringsDe -> "Die Suchleiste befindet sich immer in der oberen Kopfzeile"
                 StringsPl -> "Pasek wyszukiwania znajduje się zawsze w górnym nagłówku"
                 else -> subtitle
             }

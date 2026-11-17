@@ -1,7 +1,15 @@
 package com.lormusic.app.ui.screens
 
+import com.lormusic.app.ui.components.LocalDialogBottomInset
+import com.lormusic.app.ui.components.LocalDialogTopInset
+
+import com.lormusic.app.ui.components.LocalBottomControlsHeight
+
+import com.lormusic.app.ui.components.FullWindowDialog
+
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
+import androidx.compose.animation.animateContentSize
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
@@ -190,7 +198,7 @@ fun PlaylistsScreen(
                 ) {
                     LazyVerticalGrid(
                         columns = GridCells.Fixed(2),
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeightDp + 12.dp, bottom = 185.dp),
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = headerHeightDp + 12.dp, bottom = LocalBottomControlsHeight.current + 16.dp),
                         horizontalArrangement = Arrangement.spacedBy(14.dp),
                         verticalArrangement = Arrangement.spacedBy(16.dp),
                         modifier = Modifier.fillMaxSize()
@@ -612,6 +620,7 @@ private fun PlaylistDetailContent(
     var detailHeaderHeightDp by remember { mutableStateOf(96.dp) }
     var showAddTracksDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var pendingRemoval by remember(playlist.id) { mutableStateOf<Song?>(null) }
     var selectedSourceInfoSong by remember { mutableStateOf<Song?>(null) }
     val firstSong = playlist.songs.firstOrNull()
     val isUnifiedPlaylist = playlist.isUnified || playlist.id == "sys_unified_favorites"
@@ -647,7 +656,7 @@ private fun PlaylistDetailContent(
                 )
                 Spacer(Modifier.width(16.dp))
                 Column(modifier = Modifier.weight(1f)) {
-                    Text(playlist.name, style = MaterialTheme.typography.headlineMedium)
+                    Text(playlist.name, style = MaterialTheme.typography.headlineMedium, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Spacer(Modifier.height(4.dp))
                     Text(
                         text = "${playlist.songs.size} ${strings.tracksCount}",
@@ -735,7 +744,7 @@ private fun PlaylistDetailContent(
                 }
             } else {
                 LazyColumn(
-                    contentPadding = PaddingValues(start = 12.dp, end = 14.dp, top = 4.dp, bottom = 180.dp),
+                    contentPadding = PaddingValues(start = 12.dp, end = 14.dp, top = 4.dp, bottom = LocalBottomControlsHeight.current + 16.dp),
                     verticalArrangement = Arrangement.spacedBy(4.dp)
                 ) {
                     itemsIndexed(playlist.songs, key = { idx, s -> "${s.id}_$idx" }) { idx, song ->
@@ -763,7 +772,7 @@ private fun PlaylistDetailContent(
                                 Spacer(Modifier.width(4.dp))
                             }
                             if (!playlist.isSystem) {
-                                IconButton(onClick = { onRemoveSong(song.id) }) {
+                                IconButton(onClick = { pendingRemoval = song }) {
                                     Icon(
                                         imageVector = Icons.Filled.RemoveCircleOutline,
                                         contentDescription = strings.removeFromPlaylist,
@@ -846,13 +855,15 @@ private fun PlaylistDetailContent(
                         IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
                     }
                     Spacer(Modifier.width(10.dp))
+                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                     Box(
                         modifier = Modifier
-                            .weight(1f)
-                            .height(44.dp)
+                            .widthIn(min = 64.dp)
+                            .heightIn(min = 44.dp)
+                            .animateContentSize()
                             .clip(RoundedCornerShape(22.dp))
                             .then(bubbleModifier(RoundedCornerShape(22.dp)))
-                            .padding(horizontal = 20.dp),
+                            .padding(horizontal = 20.dp, vertical = 10.dp),
                         contentAlignment = Alignment.Center
                     ) {
                         Text(
@@ -863,6 +874,7 @@ private fun PlaylistDetailContent(
                             modifier = Modifier.basicMarquee(iterations = Int.MAX_VALUE),
                             color = MaterialTheme.colorScheme.onSurface
                         )
+                    }
                     }
                     if (!playlist.isSystem) {
                         Spacer(Modifier.width(10.dp))
@@ -911,6 +923,21 @@ private fun PlaylistDetailContent(
             song = sourceSong,
             enableBlur = enableBlur,
             onDismiss = { selectedSourceInfoSong = null }
+        )
+    }
+
+    pendingRemoval?.let { track ->
+        AlertDialog(
+            onDismissRequest = { pendingRemoval = null },
+            title = { Text(strings.betaText("removePlaylistTrackTitle")) },
+            text = { Text(strings.betaText("removePlaylistTrackDesc").format(track.title, playlist.name)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    pendingRemoval = null
+                    onRemoveSong(track.id)
+                }) { Text(strings.removeFromPlaylist) }
+            },
+            dismissButton = { TextButton(onClick = { pendingRemoval = null }) { Text(strings.cancel) } }
         )
     }
 
@@ -969,7 +996,7 @@ private fun PlaylistDetailContent(
         }
         val allFilteredSelected = filteredSongs.isNotEmpty() && selectedIds.containsAll(filteredSongs.map { it.id })
 
-        Dialog(
+        FullWindowDialog(
             onDismissRequest = { showAddTracksDialog = false },
             properties = DialogProperties(
                 usePlatformDefaultWidth = false,
@@ -986,8 +1013,8 @@ private fun PlaylistDetailContent(
                     androidx.core.view.WindowCompat.setDecorFitsSystemWindows(win, false)
                 }
             }
-            val statusTop = WindowInsets.statusBars.asPaddingValues().calculateTopPadding()
-            val navBottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            val statusTop = LocalDialogTopInset.current
+            val navBottom = LocalDialogBottomInset.current
             Surface(
                 modifier = Modifier
                     .fillMaxSize()
@@ -1363,10 +1390,12 @@ private fun PlaylistDetailContent(
                                         )
                                     }
 
+                                    Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
                                     Box(
                                         modifier = Modifier
-                                            .weight(1f)
-                                            .height(44.dp)
+                                            .widthIn(min = 72.dp)
+                                            .heightIn(min = 44.dp)
+                                            .animateContentSize()
                                             .clip(RoundedCornerShape(22.dp))
                                             .then(dialogBubbleModifier(RoundedCornerShape(22.dp)))
                                             .padding(horizontal = 16.dp),
@@ -1389,6 +1418,7 @@ private fun PlaylistDetailContent(
                                         }
                                     }
 
+                                    }
                                     if (filteredSongs.isNotEmpty()) {
                                         Box(
                                             modifier = Modifier
@@ -1509,7 +1539,7 @@ private fun PlaylistDetailContent(
                                 enabled = selectedIds.isNotEmpty(),
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .height(56.dp),
+                                    .height(52.dp),
                                 shape = RoundedCornerShape(28.dp),
                                 colors = ButtonDefaults.buttonColors(
                                     containerColor = MaterialTheme.colorScheme.primary,
@@ -1670,7 +1700,7 @@ private fun TrackSourceInfoDialog(
         Color.Black.copy(alpha = 0.75f)
     }
 
-    Dialog(
+    FullWindowDialog(
         onDismissRequest = onDismiss,
         properties = DialogProperties(
             usePlatformDefaultWidth = false,
@@ -1690,8 +1720,8 @@ private fun TrackSourceInfoDialog(
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 92.dp)
-                    .navigationBarsPadding()
+                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                    .padding(bottom = LocalDialogBottomInset.current)
                     .clip(RoundedCornerShape(28.dp))
                     .background(
                         if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)

@@ -1,6 +1,9 @@
 package com.lormusic.app.ui.components
 
 import androidx.compose.material.icons.filled.Language
+import androidx.compose.material.icons.filled.Casino
+import androidx.compose.ui.draw.clip
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.size
 import androidx.compose.runtime.Composable
@@ -14,12 +17,13 @@ import com.lormusic.app.model.AppLanguage
 /** Original vector flags, drawn at the current display density. */
 @Composable
 fun LanguageFlag(language: AppLanguage) {
+    if(language==AppLanguage.RANDOM){androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Casino,null,Modifier.size(30.dp,20.dp));return}
     if (language == AppLanguage.SYSTEM) {
         androidx.compose.material3.Icon(androidx.compose.material.icons.Icons.Default.Language,
             null, Modifier.size(30.dp, 20.dp))
         return
     }
-    Canvas(Modifier.size(30.dp, 20.dp)) {
+    Canvas(Modifier.size(30.dp, 20.dp).clip(RoundedCornerShape(3.dp))) {
         fun stripe(color: Color, y: Float, height: Float) = drawRect(color, Offset(0f, size.height * y), Size(size.width, size.height * height))
         drawRect(Color.White)
         when (language) {
@@ -29,6 +33,7 @@ fun LanguageFlag(language: AppLanguage) {
                 stripe(Color(0xFFCE1124), .4f, .2f)
             }
             AppLanguage.UK -> { stripe(Color(0xFF0057B7), 0f, .5f); stripe(Color(0xFFFFD700), .5f, .5f) }
+            AppLanguage.DE -> { stripe(Color.Black, 0f, 1f/3); stripe(Color(0xFFDD0000), 1f/3, 1f/3); stripe(Color(0xFFFFCE00), 2f/3, 1f/3) }
             AppLanguage.PL -> stripe(Color(0xFFDC143C), .5f, .5f)
             else -> Unit
         }

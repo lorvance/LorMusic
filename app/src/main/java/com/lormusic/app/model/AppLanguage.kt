@@ -5,7 +5,11 @@ enum class AppLanguage(val code: String, val displayName: String) {
     RU("ru", "Русский"),
     EN("en", "English"),
     UK("uk", "Українська"),
-    PL("pl", "Polski");
+    PL("pl", "Polski"),
+    DE("de", "Deutsch"),
+    RANDOM("random", "Рандом");
+
+    val contentLanguageCode: String get() = when(this){SYSTEM -> java.util.Locale.getDefault().language; RANDOM -> "ru"; else -> code}
 
     fun getLabel(strings: AppStrings): String {
         return when (this) {
@@ -14,6 +18,8 @@ enum class AppLanguage(val code: String, val displayName: String) {
             EN -> "English"
             UK -> "Українська"
             PL -> "Polski"
+            DE -> "Deutsch"
+            RANDOM -> "Рандом"
         }
     }
 

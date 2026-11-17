@@ -754,7 +754,7 @@ val StringsRu = AppStrings(
     tagFixSectionTitle = "Восстановление тегов (TagFix)",
     checkForUpdatesTitle = "Проверить обновления",
     aboutAppSection = "О приложении",
-    appVersion = "1.7.2 | 54",
+    appVersion = com.lormusic.app.BuildConfig.VERSION_NAME,
     cancel = "Отмена",
     apply = "Применить",
     save = "Сохранить",
@@ -1120,7 +1120,7 @@ val StringsEn = AppStrings(
     tagFixSectionTitle = "Tag recovery (TagFix)",
     checkForUpdatesTitle = "Check for updates",
     aboutAppSection = "About application",
-    appVersion = "1.7.2 | 54",
+    appVersion = com.lormusic.app.BuildConfig.VERSION_NAME,
     cancel = "Cancel",
     apply = "Apply",
     save = "Save",
@@ -1533,7 +1533,7 @@ val StringsUk = AppStrings(
     tagFixSectionTitle = "Відновлення тегів (TagFix)",
     checkForUpdatesTitle = "Перевірити оновлення",
     aboutAppSection = "Про додаток",
-    appVersion = "1.7.2 | 54",
+    appVersion = com.lormusic.app.BuildConfig.VERSION_NAME,
     cancel = "Скасувати",
     apply = "Застосувати",
     save = "Зберегти",
@@ -1946,7 +1946,7 @@ val StringsPl = AppStrings(
     tagFixSectionTitle = "Odzyskiwanie tagów (TagFix)",
     checkForUpdatesTitle = "Sprawdź aktualizacje",
     aboutAppSection = "O aplikacji",
-    appVersion = "1.7.2 | 54",
+    appVersion = com.lormusic.app.BuildConfig.VERSION_NAME,
     cancel = "Anuluj",
     apply = "Zastosuj",
     save = "Zapisz",
@@ -2195,15 +2195,18 @@ val StringsPl = AppStrings(
 
 fun resolveStrings(language: AppLanguage): AppStrings {
     return when (language) {
+        AppLanguage.RANDOM -> StringsRandom
         AppLanguage.RU -> StringsRu
         AppLanguage.EN -> StringsEn
         AppLanguage.UK -> StringsUk
         AppLanguage.PL -> StringsPl
+        AppLanguage.DE -> StringsDe
         AppLanguage.SYSTEM -> {
             val lang = Locale.getDefault().language.lowercase()
             when {
                 lang.startsWith("uk") -> StringsUk
                 lang.startsWith("pl") -> StringsPl
+                lang.startsWith("de") -> StringsDe
                 lang.startsWith("en") -> StringsEn
                 else -> StringsRu
             }

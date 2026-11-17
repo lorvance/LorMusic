@@ -120,6 +120,13 @@ enum class ScTab(val label: String, val filled: ImageVector, val outline: ImageV
     }
 }
 
+val DEFAULT_YT_TAB_ORDER = listOf(YtMusicTab.LIBRARIES, YtMusicTab.HOME, YtMusicTab.MY_WAVE)
+val DEFAULT_SC_TAB_ORDER = listOf(ScTab.CHARTS, ScTab.HOME, ScTab.LIBRARIES)
+fun normalizeYtTabOrder(order: List<YtMusicTab>) = (order.filter { it != YtMusicTab.SEARCH }.distinct() + DEFAULT_YT_TAB_ORDER).distinct().take(3)
+fun normalizeScTabOrder(order: List<ScTab>) = (order.filter { it != ScTab.SEARCH }.distinct() + DEFAULT_SC_TAB_ORDER).distinct().take(3)
+fun parseYtTabOrder(raw: String?) = if(raw.isNullOrBlank()) DEFAULT_YT_TAB_ORDER else normalizeYtTabOrder(raw.split(",").mapNotNull { token -> YtMusicTab.entries.find { it.name == token } })
+fun parseScTabOrder(raw: String?) = if(raw.isNullOrBlank()) DEFAULT_SC_TAB_ORDER else normalizeScTabOrder(raw.split(",").mapNotNull { token -> ScTab.entries.find { it.name == token } })
+
 @Composable
 fun LorBottomNavBar(
     selected: LorTab,
@@ -142,6 +149,12 @@ fun LorBottomNavBar(
         ExpressiveNavigationBar(items = tabs, selectedItem = selected, onSelect = onSelect,
             label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
             searchActive = isLocalSearchActive, onSearch = onToggleLocalSearch, modifier = modifier, applyInsets = applyNavigationInsets )
+        return
+    }
+    if (!useLiquidGlass) {
+        val strings = com.lormusic.app.model.LocalStrings.current
+        JoinedBlurNavigationBar(tabs, selected, onSelect, { it.getDisplayName(strings) }, { if(it==selected)it.filled else it.outline }, hazeState, enableBlur,
+            showBottomSearchButton, isLocalSearchActive, onToggleLocalSearch, showLabels, applyNavigationInsets, modifier)
         return
     }
     val view = LocalView.current
@@ -488,13 +501,21 @@ fun YtMusicBottomNavBar(
     showBottomSearchButton: Boolean = true,
     showLabels: Boolean = false,
     useExpressive: Boolean = false,
+    tabOrder: List<YtMusicTab> = DEFAULT_YT_TAB_ORDER,
     modifier: Modifier = Modifier
 ) {
+    val orderedTabs = remember(tabOrder) { normalizeYtTabOrder(tabOrder) }
     if (useExpressive) {
         val strings = com.lormusic.app.model.LocalStrings.current
-        ExpressiveNavigationBar(items = YtMusicTab.entries.filter { it != YtMusicTab.SEARCH }, selectedItem = selected, onSelect = onSelect,
+        ExpressiveNavigationBar(items = orderedTabs, selectedItem = selected, onSelect = onSelect,
             label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
             searchActive = selected == YtMusicTab.SEARCH, onSearch = { onSelect(YtMusicTab.SEARCH) }, modifier = modifier )
+        return
+    }
+    if (!useLiquidGlass) {
+        val strings = com.lormusic.app.model.LocalStrings.current
+        JoinedBlurNavigationBar(orderedTabs, selected, onSelect, { it.getDisplayName(strings) }, { if(it==selected)it.filled else it.outline }, hazeState, enableBlur,
+            showBottomSearchButton, selected == YtMusicTab.SEARCH, { onSelect(YtMusicTab.SEARCH) }, showLabels, true, modifier)
         return
     }
     val view = LocalView.current
@@ -507,13 +528,7 @@ fun YtMusicBottomNavBar(
     val isPureMy = LocalPureMaterialYou.current
     val liquidMotion = useLiquidGlass && isLiquidGlassSupported() && !isPureMy
     val navSurface = rememberLayerBackdrop()
-    val mainTabs = remember {
-        listOf(
-            YtMusicTab.HOME,
-            YtMusicTab.LIBRARIES,
-            YtMusicTab.MY_WAVE
-        )
-    }
+    val mainTabs = orderedTabs
 
     var innerWidthPx by remember { mutableIntStateOf(0) }
     var isDraggingNav by remember { mutableStateOf(false) }
@@ -849,13 +864,21 @@ fun ScMusicBottomNavBar(
     showBottomSearchButton: Boolean = true,
     showLabels: Boolean = false,
     useExpressive: Boolean = false,
+    tabOrder: List<ScTab> = DEFAULT_SC_TAB_ORDER,
     modifier: Modifier = Modifier
 ) {
+    val orderedTabs = remember(tabOrder) { normalizeScTabOrder(tabOrder) }
     if (useExpressive) {
         val strings = com.lormusic.app.model.LocalStrings.current
-        ExpressiveNavigationBar(items = ScTab.entries.filter { it != ScTab.SEARCH }, selectedItem = selected, onSelect = onSelect,
+        ExpressiveNavigationBar(items = orderedTabs, selectedItem = selected, onSelect = onSelect,
             label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
             searchActive = selected == ScTab.SEARCH, onSearch = { onSelect(ScTab.SEARCH) }, modifier = modifier )
+        return
+    }
+    if (!useLiquidGlass) {
+        val strings = com.lormusic.app.model.LocalStrings.current
+        JoinedBlurNavigationBar(orderedTabs, selected, onSelect, { it.getDisplayName(strings) }, { if(it==selected)it.filled else it.outline }, hazeState, enableBlur,
+            showBottomSearchButton, selected == ScTab.SEARCH, { onSelect(ScTab.SEARCH) }, showLabels, true, modifier)
         return
     }
     val view = LocalView.current
@@ -868,13 +891,7 @@ fun ScMusicBottomNavBar(
     val isPureMy = LocalPureMaterialYou.current
     val liquidMotion = useLiquidGlass && isLiquidGlassSupported() && !isPureMy
     val navSurface = rememberLayerBackdrop()
-    val mainTabs = remember {
-        listOf(
-            ScTab.HOME,
-            ScTab.CHARTS,
-            ScTab.LIBRARIES
-        )
-    }
+    val mainTabs = orderedTabs
 
     var innerWidthPx by remember { mutableIntStateOf(0) }
     var isDraggingNav by remember { mutableStateOf(false) }

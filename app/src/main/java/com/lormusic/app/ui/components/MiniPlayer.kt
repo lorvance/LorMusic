@@ -103,6 +103,7 @@ fun MiniPlayer(
         modifier = Modifier
             .fillMaxWidth()
             .padding(start = 16.dp, end = 16.dp, top = 0.dp, bottom = 4.dp)
+            .height(64.dp)
             .graphicsLayer {
                 translationX = (animatedDragX * 0.35f).coerceIn(-48f, 48f)
             }
@@ -152,9 +153,10 @@ fun MiniPlayer(
                 onOpen()
             }
     ) {
-        Column(modifier = Modifier.fillMaxWidth()) {
+        Column(modifier = Modifier.fillMaxSize()) {
             Row(
                 modifier = Modifier
+                    .weight(1f)
                     .padding(horizontal = 10.dp, vertical = 8.dp)
                     .fillMaxWidth(),
                 verticalAlignment = Alignment.CenterVertically

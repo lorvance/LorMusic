@@ -241,8 +241,8 @@ fun SongArtwork(
     }
 
     var loadedBitmap by remember(cacheKey) { mutableStateOf(ArtworkCache.getBitmap(cacheKey)) }
-    val surfaceColor = remember(seed) { MinimalistSurfaceTints[abs(seed) % MinimalistSurfaceTints.size] }
-    val subtleAccent = remember(seed) { MinimalistAccentTints[abs(seed) % MinimalistAccentTints.size] }
+    val surfaceColor = remember(seed) { MinimalistSurfaceTints[Math.floorMod(seed, MinimalistSurfaceTints.size)] }
+    val subtleAccent = remember(seed) { MinimalistAccentTints[Math.floorMod(seed, MinimalistAccentTints.size)] }
     val primaryAccent = MaterialTheme.colorScheme.primary
 
     LaunchedEffect(cacheKey) {
@@ -280,30 +280,7 @@ fun SongArtwork(
                 modifier = Modifier.fillMaxSize()
             )
         } else {
-            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                Canvas(modifier = Modifier.fillMaxSize()) {
-                    val minDim = size.minDimension
-                    drawCircle(
-                        color = subtleAccent.copy(alpha = 0.08f),
-                        radius = minDim * 0.34f,
-                        center = center
-                    )
-                    drawCircle(
-                        color = Color.White.copy(alpha = 0.06f),
-                        radius = minDim * 0.34f,
-                        center = center,
-                        style = Stroke(width = 1.dp.toPx())
-                    )
-                }
-                if (showCenterIcon && !showEqualizerOverlay) {
-                    Icon(
-                        imageVector = Icons.Rounded.MusicNote,
-                        contentDescription = null,
-                        tint = subtleAccent.copy(alpha = 0.82f),
-                        modifier = Modifier.fillMaxSize(0.38f)
-                    )
-                }
-            }
+            DefaultSongCover(seed, Modifier.fillMaxSize(), showNote = showCenterIcon && !showEqualizerOverlay)
         }
 
         if (showEqualizerOverlay) {

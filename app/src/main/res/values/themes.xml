@@ -5,8 +5,8 @@
         <item name="android:colorBackground">#FF121017</item>
         <item name="android:statusBarColor">@android:color/transparent</item>
         <item name="android:navigationBarColor">@android:color/transparent</item>
-        <item name="android:windowSplashScreenBackground" tools:targetApi="s">#FF1C1124</item>
-        <item name="android:windowSplashScreenAnimatedIcon" tools:targetApi="s">@drawable/ic_launcher_regular_fg</item>
+        <item name="android:windowSplashScreenAnimationDuration" tools:targetApi="s">0</item>
+        <item name="android:windowSplashScreenBackground" tools:targetApi="s">#FF121017</item>
     </style>
     <style name="Theme.LorMusic.ExternalAudio" parent="Theme.LorMusic">
         <item name="android:windowIsTranslucent">true</item>

@@ -82,6 +82,8 @@ class PreferencesRepository(context: Context) {
         KEY_EXPRESSIVE_HEADER to "Boolean",
         KEY_MATERIAL_ARROWS to "Boolean",
         KEY_NAV_TAB_ORDER to "String",
+        "yt_nav_tab_order" to "String",
+        "sc_nav_tab_order" to "String",
     )
 
     init {
@@ -256,6 +258,11 @@ class PreferencesRepository(context: Context) {
         val normalized = com.lormusic.app.ui.components.normalizeLorTabOrder(order)
         prefs.edit().putString(KEY_NAV_TAB_ORDER, normalized.joinToString(",") { it.route }).apply()
     }
+
+    fun getYtNavTabOrder() = com.lormusic.app.ui.components.parseYtTabOrder(prefs.getString("yt_nav_tab_order", null))
+    fun saveYtNavTabOrder(order: List<com.lormusic.app.ui.components.YtMusicTab>) { prefs.edit().putString("yt_nav_tab_order", com.lormusic.app.ui.components.normalizeYtTabOrder(order).joinToString(",") { it.name }).apply() }
+    fun getScNavTabOrder() = com.lormusic.app.ui.components.parseScTabOrder(prefs.getString("sc_nav_tab_order", null))
+    fun saveScNavTabOrder(order: List<com.lormusic.app.ui.components.ScTab>) { prefs.edit().putString("sc_nav_tab_order", com.lormusic.app.ui.components.normalizeScTabOrder(order).joinToString(",") { it.name }).apply() }
 
     fun getAppIconOption(): AppIconOption {
         val raw = prefs.getString(KEY_APP_ICON, AppIconOption.REGULAR.name) ?: AppIconOption.REGULAR.name
@@ -652,7 +659,7 @@ class PreferencesRepository(context: Context) {
     }
 
     fun getBetaSeparateHeaderBubbles(): Boolean {
-        return prefs.getBoolean(KEY_BETA_SEPARATE_HEADER_BUBBLES, false)
+        return prefs.getBoolean(KEY_BETA_SEPARATE_HEADER_BUBBLES, true)
     }
 
     fun saveBetaSeparateHeaderBubbles(enabled: Boolean) {
