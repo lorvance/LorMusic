@@ -91,7 +91,6 @@ fun LegacyScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
             Box(
                 Modifier
                     .size(44.dp)
-                    .clip(CircleShape)
                     .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass)
                     .clickable(onClick = onBack),
                 contentAlignment = Alignment.Center
@@ -130,7 +129,6 @@ fun LegacyScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
             Box(
                 Modifier
                     .size(44.dp)
-                    .clip(CircleShape)
                     .liquidGlassBubble(CircleShape, hazeState, enableBlur, useLiquidGlass)
                     .clickable(onClick = onAction),
                 contentAlignment = Alignment.Center

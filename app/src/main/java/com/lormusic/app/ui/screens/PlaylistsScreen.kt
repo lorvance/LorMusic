@@ -101,6 +101,7 @@ fun PlaylistsScreen(
     enableBlur: Boolean = true,
     expressiveHeader: Boolean = false,
     useLiquidGlass: Boolean = false,
+    onRestoreHiddenSong: (Song) -> Unit = {},
     onBackToLibrary: () -> Unit = {}
 ) {
     val strings = LocalStrings.current
@@ -176,6 +177,7 @@ fun PlaylistsScreen(
                     selectedPlaylistId = null
                 },
                 onToggleFavorite = onToggleFavorite,
+                onRestoreHiddenSong = onRestoreHiddenSong,
                 bubbleModifier = { bubbleModifier(it) },
                 contentBubbleModifier = { contentBubbleModifier(it) },
                 hazeState = hazeState,
@@ -534,7 +536,9 @@ private fun PlaylistCard(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Icon(
-                            imageVector = Icons.Filled.Favorite,
+                            imageVector = if (playlist.id == com.lormusic.app.model.HIDDEN_TRACKS_PLAYLIST_ID) {
+                                Icons.Filled.VisibilityOff
+                            } else Icons.Filled.Favorite,
                             contentDescription = null,
                             tint = MaterialTheme.colorScheme.primary,
                             modifier = Modifier.size(14.dp)
@@ -555,7 +559,6 @@ private fun PlaylistCard(
                         .align(Alignment.BottomEnd)
                         .padding(10.dp)
                         .size(42.dp)
-                        .clip(CircleShape)
                         .then(bubbleModifier(CircleShape))
                         .clickable(onClick = onQuickPlay),
                     contentAlignment = Alignment.Center
@@ -604,6 +607,7 @@ private fun PlaylistDetailContent(
     onRemoveSong: (String) -> Unit,
     onDeletePlaylist: () -> Unit,
     onToggleFavorite: (Song) -> Unit,
+    onRestoreHiddenSong: (Song) -> Unit,
     bubbleModifier: @Composable (CornerBasedShape) -> Modifier = { Modifier },
     contentBubbleModifier: @Composable (CornerBasedShape) -> Modifier = bubbleModifier,
     hazeState: HazeState? = null,
@@ -717,8 +721,11 @@ private fun PlaylistDetailContent(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text(
-                            text = if (playlist.isSystem) strings.emptyFavoritesHint
-                            else strings.emptyPlaylistHint,
+                            text = when {
+                                playlist.id == com.lormusic.app.model.HIDDEN_TRACKS_PLAYLIST_ID -> strings.noTracksInHidden
+                                playlist.isSystem -> strings.emptyFavoritesHint
+                                else -> strings.emptyPlaylistHint
+                            },
                             style = MaterialTheme.typography.bodyLarge,
                             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f)
                         )
@@ -771,7 +778,11 @@ private fun PlaylistDetailContent(
                                 )
                                 Spacer(Modifier.width(4.dp))
                             }
-                            if (!playlist.isSystem) {
+                            if (playlist.id == com.lormusic.app.model.HIDDEN_TRACKS_PLAYLIST_ID) {
+                                IconButton(onClick = { onRestoreHiddenSong(song) }) {
+                                    Icon(Icons.Filled.Visibility, contentDescription = strings.unhideFromStream)
+                                }
+                            } else if (!playlist.isSystem) {
                                 IconButton(onClick = { pendingRemoval = song }) {
                                     Icon(
                                         imageVector = Icons.Filled.RemoveCircleOutline,
@@ -847,7 +858,6 @@ private fun PlaylistDetailContent(
                     Box(
                         modifier = Modifier
                             .size(44.dp)
-                            .clip(CircleShape)
                             .then(bubbleModifier(CircleShape))
                             .clickable(onClick = onBack),
                         contentAlignment = Alignment.Center
@@ -881,7 +891,6 @@ private fun PlaylistDetailContent(
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
-                                .clip(CircleShape)
                                 .then(bubbleModifier(CircleShape))
                                 .clickable { showAddTracksDialog = true },
                             contentAlignment = Alignment.Center
@@ -897,7 +906,6 @@ private fun PlaylistDetailContent(
                         Box(
                             modifier = Modifier
                                 .size(44.dp)
-                                .clip(CircleShape)
                                 .then(bubbleModifier(CircleShape))
                                 .clickable { showDeleteConfirmDialog = true },
                             contentAlignment = Alignment.Center
@@ -1627,7 +1635,6 @@ private fun TrackSourceBadgeBubble(
     Box(
         modifier = Modifier
             .size(38.dp)
-            .clip(CircleShape)
             .then(bubbleModifier(CircleShape))
             .clickable(onClick = onClick),
         contentAlignment = Alignment.Center

@@ -49,6 +49,24 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val totalListeningTimeMs = mutableStateOf(prefs.getTotalListeningTimeMs())
     val topAlbum = mutableStateOf(prefs.getTopAlbum())
     val hiddenSongIds = mutableStateOf(prefs.getHiddenSongIds())
+    private val hiddenRemoteTracks = mutableStateOf(prefs.getHiddenRemoteTracks())
+    val betaTesterJokesUnlocked = mutableStateOf(prefs.areBetaTesterJokesUnlocked())
+    val betaTesterJokes = mutableStateOf(prefs.getBetaTesterJokes())
+
+    fun unlockBetaTesterJokes(password: String): Boolean {
+        if (betaTesterJokesUnlocked.value) return true
+        if (!com.lormusic.app.data.BetaTesterAccess.matches(password)) return false
+        prefs.unlockBetaTesterJokes()
+        betaTesterJokes.value = true
+        betaTesterJokesUnlocked.value = true
+        return true
+    }
+
+    fun setBetaTesterJokes(enabled: Boolean) {
+        if (!betaTesterJokesUnlocked.value) return
+        prefs.saveBetaTesterJokes(enabled)
+        betaTesterJokes.value = enabled
+    }
     val customPlaylists = mutableStateOf<List<Playlist>>(emptyList())
     val recentlyPlayedIds = mutableStateOf(prefs.getRecentlyPlayedIds())
     private var pendingDeleteSong: Song? = null
@@ -130,7 +148,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val recentsViewMode = mutableStateOf(prefs.getRecentsViewMode())
     val autoTagFixDetectedSongs = mutableStateOf<List<Song>>(emptyList())
     val showAutoTagFixPrompt = mutableStateOf(false)
-    val searchBarPlacement = mutableStateOf(prefs.getSearchBarPlacement())
     val enablePlayerSwipe = mutableStateOf(prefs.getEnablePlayerSwipe())
     val hideDemoTracks = mutableStateOf(prefs.getHideDemoTracks())
     val selectedSort = mutableStateOf(prefs.getSortOption())
@@ -993,6 +1010,22 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         return listOf(favPlaylist, unifiedFavPlaylist) + customPlaylists.value
     }
 
+    fun hiddenTracksPlaylist(): Playlist? {
+        val ids = hiddenSongIds.value
+        if (ids.isEmpty()) return null
+        val tracks = (allSongs.value + savedYtSongs.value + savedScSongs.value +
+            customPlaylists.value.flatMap { it.songs } + queue.value +
+            listOfNotNull(currentSong.value) + hiddenRemoteTracks.value)
+            .filter { it.id in ids }
+            .distinctBy { it.id }
+        return Playlist(
+            id = com.lormusic.app.model.HIDDEN_TRACKS_PLAYLIST_ID,
+            name = resolveStrings(appLanguage.value).hiddenTracksPlaylist,
+            songs = tracks,
+            isSystem = true,
+        )
+    }
+
     fun isFavorite(songId: String): Boolean {
         return when {
             songId.startsWith("yt_") -> ytFavoriteIds.value.contains(songId)
@@ -1001,19 +1034,15 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         }
     }
 
-    fun isSongHidden(songId: String): Boolean = hiddenSongIds.value.contains(songId)
-
-    fun toggleHiddenSong(song: Song) {
-        val updated = hiddenSongIds.value.toMutableSet()
-        val nowHidden = if (updated.contains(song.id)) {
-            updated.remove(song.id)
-            false
-        } else {
-            updated.add(song.id)
-            true
-        }
+    fun setSongHidden(song: Song, nowHidden: Boolean) {
+        val hidden = hiddenSongIds.value
+        if (nowHidden == hidden.contains(song.id)) return
+        val updated = if (nowHidden) hidden + song.id else hidden - song.id
+        val remoteTracks = hiddenRemoteTracks.value.filter { it.id in updated && it.id != song.id }
+        val nextRemoteTracks = if (nowHidden && !song.isLocal) remoteTracks + song else remoteTracks
         hiddenSongIds.value = updated
-        prefs.saveHiddenSongIds(updated)
+        hiddenRemoteTracks.value = nextRemoteTracks
+        prefs.saveHiddenTracks(updated, nextRemoteTracks)
 
         if (nowHidden && selectedFilter.value != LibraryFilter.HIDDEN) {
             val idxInQueue = queue.value.indexOfFirst { it.id == song.id }
@@ -1744,11 +1773,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         prefs.saveShowNavBarLabels(show)
     }
 
-    fun setSearchBarPlacement(placement: SearchBarPlacement) {
-        searchBarPlacement.value = placement
-        prefs.saveSearchBarPlacement(placement)
-    }
-
     fun setEnablePlayerSwipe(enabled: Boolean) {
         enablePlayerSwipe.value = enabled
         prefs.saveEnablePlayerSwipe(enabled)
@@ -1821,7 +1845,6 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         autoTagFixEnabled.value = prefs.getAutoTagFixEnabled()
         appLanguage.value = prefs.getAppLanguage()
         YouTubeMusicRepository.currentLanguage = appLanguage.value.contentLanguageCode
-        searchBarPlacement.value = prefs.getSearchBarPlacement()
         enablePlayerSwipe.value = prefs.getEnablePlayerSwipe()
         hideDemoTracks.value = prefs.getHideDemoTracks()
         selectedAppIcon.value = prefs.getAppIconOption()
@@ -1835,6 +1858,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         selectedFilter.value = prefs.getLibraryFilter()
         selectedSort.value = prefs.getSortOption()
         hiddenSongIds.value = prefs.getHiddenSongIds()
+        hiddenRemoteTracks.value = prefs.getHiddenRemoteTracks()
+        betaTesterJokesUnlocked.value = prefs.areBetaTesterJokesUnlocked()
+        betaTesterJokes.value = prefs.getBetaTesterJokes()
         tagOverrides.value = prefs.getTagOverrides()
         savedYtSongs.value = loadCleanSavedYtSongs()
         savedScSongs.value = prefs.getSavedScSongs()
@@ -1894,6 +1920,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setUseLiquidGlass(enabled: Boolean) {
+        if(enabled) { setPureMaterialYou(false); setEnableBlur(true); setExpressiveNavigation(false) }
         useLiquidGlass.value = enabled
         prefs.saveUseLiquidGlass(enabled)
     }

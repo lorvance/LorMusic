@@ -175,7 +175,7 @@ fun EqualizerSheet(
                                         )
                                     }
 
-                                    Slider(
+                                    AdaptiveGlassSlider(
                                         value = bandLevel.toFloat(),
                                         onValueChange = { newLvl ->
                                             val intLvl = newLvl.toInt()
@@ -233,7 +233,7 @@ fun EqualizerSheet(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            Slider(
+                            AdaptiveGlassSlider(
                                 value = state.bassBoost.toFloat(),
                                 onValueChange = { v ->
                                     val intV = v.toInt()
@@ -274,7 +274,7 @@ fun EqualizerSheet(
                                     color = MaterialTheme.colorScheme.primary
                                 )
                             }
-                            Slider(
+                            AdaptiveGlassSlider(
                                 value = state.virtualizer.toFloat(),
                                 onValueChange = { v ->
                                     val intV = v.toInt()

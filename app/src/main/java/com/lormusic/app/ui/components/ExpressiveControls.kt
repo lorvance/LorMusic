@@ -13,6 +13,8 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.icons.filled.Pause
+import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -249,6 +251,9 @@ fun AppIconVectorPreview(
         contentAlignment = Alignment.Center
     ) {
         when (option) {
+            AppIconOption.PULSE -> {
+                Image(painter=painterResource(R.drawable.icon_preview_pulse),contentDescription=option.label,contentScale=ContentScale.Crop,modifier=Modifier.fillMaxSize())
+            }
             AppIconOption.REGULAR -> {
                 Image(
                     painter = painterResource(id = R.drawable.icon_preview_regular),

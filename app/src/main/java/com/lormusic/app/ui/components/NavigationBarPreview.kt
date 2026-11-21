@@ -13,6 +13,8 @@ import androidx.compose.ui.graphics.drawscope.ContentDrawScope
 import androidx.compose.ui.graphics.lerp
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.unit.dp
+import com.kyant.backdrop.backdrops.layerBackdrop as modernLayerBackdrop
+import io.github.ntvien.liquidglass.internal.backdrop.backdrops.layerBackdrop as sceneLayerBackdrop
 import com.lormusic.app.ui.components.backdrop.backdrops.layerBackdrop
 import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
@@ -60,6 +62,8 @@ fun NavigationBarPreview(
         }
     }
     val backdrop = rememberLayerBackdrop(onDraw = drawBg)
+    val modernBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop(onDraw=drawBg)
+    val sceneBackdrop = remember(modernBackdrop) { NtBackdropAdapter(modernBackdrop) }
     var tab by remember { mutableStateOf(LorTab.LIBRARY) }
     var searching by remember { mutableStateOf(false) }
 
@@ -76,6 +80,8 @@ fun NavigationBarPreview(
     }
 
     CompositionLocalProvider(
+        LocalModernBackdrop provides modernBackdrop,
+        io.github.ntvien.liquidglass.LocalGlassBackdrops provides io.github.ntvien.liquidglass.GlassBackdrops(sceneBackdrop,sceneBackdrop,samplesContent=true),
         LocalAppBackdrop provides backdrop,
         LocalPreviewBackdrop provides backdrop,
         LocalLiquidGlassEnabled provides (useLiquidGlass && isLiquidGlassSupported()),
@@ -92,7 +98,7 @@ fun NavigationBarPreview(
                 modifier = Modifier
                     .matchParentSize()
                     .hazeSource(haze)
-                    .layerBackdrop(backdrop)
+                    .layerBackdrop(backdrop).modernLayerBackdrop(modernBackdrop)
             ) {
                 drawRect(bg)
                 val w = size.width

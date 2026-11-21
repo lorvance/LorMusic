@@ -1,0 +1,27 @@
+Liquid Glass for Jetpack Compose
+Copyright 2026 ntvien
+
+This product includes software developed by Kyant:
+  AndroidLiquidGlass, library "backdrop" 2.0.1 (io.github.kyant0:backdrop)
+  https://github.com/Kyant0/AndroidLiquidGlass
+  Licensed under the Apache License, Version 2.0.
+
+The copied engine lives in liquidglass/src/main/kotlin/io/github/ntvien/liquidglass/internal/backdrop.
+GlassInteraction.kt and Droplet.kt are ported from the AndroidLiquidGlass catalog
+(InteractiveHighlight.kt, DragGestureInspector.kt, LiquidButton.kt, DampedDragAnimation.kt, LiquidBottomTabs.kt).
+
+Changes made to the original code:
+  1. Package renamed (com.kyant.backdrop -> io.github.ntvien.liquidglass.internal.backdrop), expect/actual merged
+     (Android only), every declaration made internal.
+  2. DrawBackdropModifier.kt: the backdrop is re-recorded only when the element's position in the window changes,
+     not on every relayout.
+  3. ShadowModifier.kt, InnerShadowModifier.kt, HighlightModifier.kt: shadow, inner shadow and highlight layers are
+     recorded only when size, shape or parameters other than alpha change (internal/RecordKey.kt, new file); alpha
+     is set on the layer without re-recording.
+  4. RuntimeShaderCache.kt: AGSL shaders are compiled once per key and shared by all glass elements.
+  5. internal/Paint.kt: deprecated asFrameworkPaint() replaced by nativePaint.
+  6. GlassInteraction.kt, Droplet.kt: spring parameters exposed, optional blur on the droplet, wrapped for reuse.
+  7. highlight/HighlightStyle.kt: corner radii of continuous shapes (RoundedRectangularShape) are read from the shape
+     instead of falling back to a capsule.
+  8. effects/Lens.kt, internal/Shaders.kt: the refraction shaders take a saturation uniform, so the vibrancy color
+     filter (effects/ColorFilter.kt) is applied inside the lens pass instead of as a separate pass before it.

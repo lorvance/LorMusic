@@ -921,9 +921,8 @@ private fun YtSignInRequiredGate(
                     modifier = Modifier
                         .align(Alignment.CenterStart)
                         .size(46.dp)
-                        .clip(CircleShape)
-                        .clickable { onBackToLocal() }
-                        .then(bubbleModifier(CircleShape)),
+                        .then(bubbleModifier(CircleShape))
+                        .clickable { onBackToLocal() },
                     contentAlignment = Alignment.Center
                 ) {
                     IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
@@ -1507,9 +1506,8 @@ private fun YtHomeTab(
                         modifier = Modifier
                             .align(Alignment.CenterStart)
                             .size(46.dp)
-                            .clip(CircleShape)
-                            .clickable { onBackToLocal() }
-                            .then(bubbleModifier(CircleShape)),
+                            .then(bubbleModifier(CircleShape))
+                            .clickable { onBackToLocal() },
                         contentAlignment = Alignment.Center
                     ) {
                         IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
@@ -1562,9 +1560,8 @@ private fun YtHomeTab(
                                 Box(
                                     modifier = Modifier
                                         .size(46.dp)
-                                        .clip(CircleShape)
-                                        .clickable { onOpenTopSearch() }
-                                        .then(bubbleModifier(CircleShape)),
+                                        .then(bubbleModifier(CircleShape))
+                                        .clickable { onOpenTopSearch() },
                                     contentAlignment = Alignment.Center
                                 ) {
                                     Icon(
@@ -1579,9 +1576,8 @@ private fun YtHomeTab(
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
-                                    .clip(CircleShape)
-                                    .clickable { onOpenGoogleAuth() }
-                                    .then(bubbleModifier(CircleShape)),
+                                    .then(bubbleModifier(CircleShape))
+                                    .clickable { onOpenGoogleAuth() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 if (googleAccount != null) {
@@ -1675,9 +1671,8 @@ private fun YtHomeTab(
                             Box(
                                 modifier = Modifier
                                     .size(46.dp)
-                                    .clip(CircleShape)
-                                    .clickable { onOpenTopSearch() }
-                                    .then(bubbleModifier(CircleShape)),
+                                    .then(bubbleModifier(CircleShape))
+                                    .clickable { onOpenTopSearch() },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -1692,9 +1687,8 @@ private fun YtHomeTab(
                         Box(
                             modifier = Modifier
                                 .size(46.dp)
-                                .clip(CircleShape)
-                                .clickable { onOpenGoogleAuth() }
-                                .then(bubbleModifier(CircleShape)),
+                                .then(bubbleModifier(CircleShape))
+                                .clickable { onOpenGoogleAuth() },
                             contentAlignment = Alignment.Center
                         ) {
                             if (googleAccount != null) {
@@ -2155,9 +2149,9 @@ private fun YtLibrariesTab(
                     Box(
                         modifier = Modifier
                             .size(46.dp)
+                            .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer, CircleShape) else bubbleModifier(CircleShape))
                             .clip(CircleShape)
-                            .clickable { selectedPlaylist = null }
-                            .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer, CircleShape) else bubbleModifier(CircleShape)),
+                            .clickable { selectedPlaylist = null },
                         contentAlignment = Alignment.Center
                     ) {
                         IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
@@ -2263,8 +2257,10 @@ private fun YtLibrariesTab(
 
                     Spacer(Modifier.width(10.dp))
 
-                    Box(Modifier.size(46.dp).clip(CircleShape)
-                        .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer, CircleShape) else bubbleModifier(CircleShape)).clickable { showCreateDialog = true },
+                    Box(Modifier.size(46.dp)
+                        .then(if (LocalExpressiveServiceStyle.current) Modifier.background(MaterialTheme.colorScheme.secondaryContainer, CircleShape) else bubbleModifier(CircleShape))
+                        .clip(CircleShape)
+                        .clickable { showCreateDialog = true },
                         contentAlignment = Alignment.Center) {
                         Icon(Icons.Filled.Add, strings.newPlaylistDialogTitle, tint = MaterialTheme.colorScheme.primary)
                     }

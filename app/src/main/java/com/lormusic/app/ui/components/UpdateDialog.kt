@@ -33,7 +33,6 @@ import com.lormusic.app.data.UpdateState
 import com.lormusic.app.model.AppAccentColor
 import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
-import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.model.betaText
 import com.lormusic.app.ui.theme.deepToneColor
@@ -1045,45 +1044,6 @@ fun AccentColorAutoUpdaterDialog(
 }
 
 @Composable
-fun SearchPlacementAutoUpdaterDialog(
-    currentPlacement: SearchBarPlacement,
-    enableBlur: Boolean = true,
-    onSelectPlacement: (SearchBarPlacement) -> Unit,
-    onDismiss: () -> Unit
-) {
-    val strings = LocalStrings.current
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        shape = RoundedCornerShape(28.dp),
-        containerColor = if (enableBlur) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surface,
-        icon = { Icon(Icons.Filled.Search, null) },
-        title = { Text(strings.searchPlacementTitle) },
-        text = {
-            Column(Modifier.fillMaxWidth().heightIn(max = 360.dp)
-                .verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                SearchBarPlacement.entries.forEach { option ->
-                    val selected = currentPlacement == option
-                    Surface(
-                        onClick = { onSelectPlacement(option); onDismiss() },
-                        shape = RoundedCornerShape(18.dp),
-                        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerLowest,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically,
-                            horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                            RadioButton(selected = selected, onClick = null)
-                            Text(option.getDisplayName(strings), modifier = Modifier.weight(1f),
-                                style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text(strings.close) } }
-    )
-}
-
-@Composable
 fun PlaybackSpeedAutoUpdaterDialog(
     currentSpeed: Float,
     enableBlur: Boolean = true,
@@ -1236,143 +1196,6 @@ fun PlaybackSpeedAutoUpdaterDialog(
                             .height(52.dp)
                     ) {
                         Text(strings.close, style = MaterialTheme.typography.titleSmall)
-                    }
-                }
-            }
-        }
-    }
-}
-
-@Composable
-fun AboutAutoUpdaterDialog(
-    aboutText: String,
-    enableBlur: Boolean = true,
-    onDismiss: () -> Unit
-) {
-    val strings = LocalStrings.current
-    FullWindowDialog(
-        onDismissRequest = onDismiss,
-        properties = DialogProperties(
-            usePlatformDefaultWidth = false,
-            decorFitsSystemWindows = false,
-            dismissOnBackPress = true,
-            dismissOnClickOutside = true
-        )
-    ) {
-        val surfaceContainerHigh = MaterialTheme.colorScheme.surfaceContainerHigh
-        val outlineVariant = MaterialTheme.colorScheme.outlineVariant
-        val backdropColor = if (enableBlur) Color.Black.copy(alpha = 0.55f) else Color.Black.copy(alpha = 0.75f)
-
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(backdropColor)
-                .clickable(
-                    interactionSource = remember { MutableInteractionSource() },
-                    indication = null
-                ) { onDismiss() },
-            contentAlignment = Alignment.BottomCenter
-        ) {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                    .padding(bottom = LocalDialogBottomInset.current)
-                    .heightIn(max = androidx.compose.ui.platform.LocalConfiguration.current.screenHeightDp.dp - 64.dp)
-                    .height(500.dp)
-                    .clip(RoundedCornerShape(28.dp))
-                    .background(
-                        if (enableBlur) surfaceContainerHigh.copy(alpha = 0.96f)
-                        else surfaceContainerHigh
-                    )
-                    .border(
-                        1.dp,
-                        if (enableBlur) Color.White.copy(alpha = 0.18f)
-                        else outlineVariant.copy(alpha = 0.35f),
-                        RoundedCornerShape(28.dp)
-                    )
-                    .clickable(
-                        interactionSource = remember { MutableInteractionSource() },
-                        indication = null
-                    ) {}
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .verticalScroll(rememberScrollState())
-                        .padding(22.dp),
-                    verticalArrangement = Arrangement.SpaceBetween
-                ) {
-                    Row(
-                        verticalAlignment = Alignment.CenterVertically,
-                        horizontalArrangement = Arrangement.spacedBy(16.dp),
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Box(
-                            modifier = Modifier
-                                .size(52.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primaryContainer),
-                            contentAlignment = Alignment.Center
-                        ) {
-                            Icon(
-                                imageVector = Icons.Filled.Info,
-                                contentDescription = null,
-                                tint = MaterialTheme.colorScheme.onPrimaryContainer,
-                                modifier = Modifier.size(26.dp)
-                            )
-                        }
-
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = "LorMusic",
-                                style = MaterialTheme.typography.titleMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                            Text(
-                                text = "v${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}",
-                                style = MaterialTheme.typography.headlineSmall,
-                                fontWeight = FontWeight.Bold,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(18.dp))
-
-                    Surface(
-                        shape = RoundedCornerShape(18.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLowest,
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .weight(1f, fill = false)
-                            .heightIn(max = 280.dp)
-                            .clip(RoundedCornerShape(18.dp))
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .verticalScroll(rememberScrollState())
-                                .padding(16.dp)
-                        ) {
-                            Text(
-                                text = aboutText,
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurface
-                            )
-                        }
-                    }
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Button(
-                        onClick = onDismiss,
-                        shape = RoundedCornerShape(20.dp),
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .height(52.dp)
-                    ) {
-                        Text(strings.great, style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
                     }
                 }
             }

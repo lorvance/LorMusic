@@ -1,5 +1,7 @@
 package com.lormusic.app.ui.screens
 
+import androidx.compose.material3.Slider
+
 import android.content.ClipData
 import android.content.ClipboardManager
 import android.content.Context
@@ -59,6 +61,7 @@ import com.lormusic.app.ui.components.backdrop.backdrops.layerBackdrop
 import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
+import com.kyant.backdrop.backdrops.layerBackdrop as playerLayerBackdrop
 
 private enum class LyricsDisplayMode {
     SYNCED,
@@ -173,18 +176,18 @@ fun NowPlayingScreen(
     val effectiveAccentColor = if (useDynamicPlayerColors) ensureReadableAccent(cachedDominant) else accentColor
     val playButtonContentColor = if (useDynamicPlayerColors) getContrastingContentColor(effectiveAccentColor) else MaterialTheme.colorScheme.onPrimary
 
+    val playerChromeHaze = remember { HazeState() }
+    val playerChromeBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    val playerGlassSource = remember(playerChromeBackdrop) {
+        com.lormusic.app.ui.components.NtBackdropAdapter(playerChromeBackdrop)
+    }
+    val playerGlassBackdrops = remember(playerGlassSource) {
+        io.github.ntvien.liquidglass.GlassBackdrops(playerGlassSource, playerGlassSource, samplesContent = true)
+    }
+
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .then(
-                if (useAlbumArtGradient) {
-                    Modifier.background(
-                        Brush.verticalGradient(gradientColors)
-                    )
-                } else {
-                    Modifier.background(MaterialTheme.colorScheme.background)
-                }
-            )
             .then(
                 if (showSleepDialog && enableBlur && android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
                     Modifier.blur(24.dp)
@@ -195,20 +198,22 @@ fun NowPlayingScreen(
     ) {
 
         Box(
-            modifier = Modifier
-                .fillMaxWidth()
-                .height(420.dp)
-                .align(Alignment.TopCenter)
-                .blur(90.dp)
-                .background(
-                    Brush.radialGradient(
-                        colors = listOf(
-                            accentColor.copy(alpha = if (showLyrics) 0.14f else 0.24f),
-                            Color.Transparent
+            Modifier.matchParentSize()
+                .then(if (useLiquidGlass && isLiquidGlassSupported()) {
+                    Modifier.playerLayerBackdrop(playerChromeBackdrop)
+                } else Modifier.hazeSource(playerChromeHaze))
+                .background(Brush.verticalGradient(gradientColors))
+        ) {
+            Box(
+                Modifier.fillMaxWidth().height(420.dp).align(Alignment.TopCenter)
+                    .blur(90.dp)
+                    .background(
+                        Brush.radialGradient(
+                            listOf(accentColor.copy(alpha = if (showLyrics) .14f else .24f), Color.Transparent)
                         )
                     )
-                )
-        )
+            )
+        }
 
         AnimatedContent(
             targetState = showLyrics,
@@ -266,9 +271,12 @@ fun NowPlayingScreen(
                     Box(
                         modifier = Modifier.fillMaxWidth()
                     ) {
-                        IconButton(
+                        PlayerHeaderBubble(
                             onClick = onClose,
-                            modifier = Modifier.align(Alignment.CenterStart)
+                            modifier = Modifier.align(Alignment.CenterStart),
+                            backdrops = playerGlassBackdrops,
+                            hazeState = playerChromeHaze,
+                            useLiquidGlass = useLiquidGlass,
                         ) {
                             Icon(Icons.Filled.KeyboardArrowDown, contentDescription = strings.collapse)
                         }
@@ -315,9 +323,12 @@ fun NowPlayingScreen(
                                     .padding(horizontal = 56.dp)
                             )
                         }
-                        IconButton(
+                        PlayerHeaderBubble(
                             onClick = onOpenSongActions,
-                            modifier = Modifier.align(Alignment.CenterEnd)
+                            modifier = Modifier.align(Alignment.CenterEnd),
+                            backdrops = playerGlassBackdrops,
+                            hazeState = playerChromeHaze,
+                            useLiquidGlass = useLiquidGlass,
                         ) {
                             Icon(Icons.Filled.Menu, contentDescription = strings.songActions)
                         }
@@ -1882,5 +1893,25 @@ private fun getDynamicPlaybackContextLabels(
                 strings.singleTrack to songTitle
             }
         }
+    }
+}
+
+
+@Composable
+private fun PlayerHeaderBubble(
+    onClick: () -> Unit,
+    modifier: Modifier,
+    backdrops: io.github.ntvien.liquidglass.GlassBackdrops,
+    hazeState: HazeState,
+    useLiquidGlass: Boolean,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(io.github.ntvien.liquidglass.LocalGlassBackdrops provides backdrops) {
+        Box(
+            modifier.size(48.dp)
+                .liquidGlassBubble(CircleShape, hazeState, enableBlur = true, isLiquidGlass = useLiquidGlass)
+                .clickable(role = androidx.compose.ui.semantics.Role.Button, onClick = onClick),
+            contentAlignment = Alignment.Center,
+        ) { content() }
     }
 }

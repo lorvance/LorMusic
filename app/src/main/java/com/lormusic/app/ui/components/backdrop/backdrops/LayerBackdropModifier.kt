@@ -25,10 +25,7 @@ private class LayerBackdropElement(
     }
 
     override fun update(node: LayerBackdropNode) {
-        if (node.backdrop != backdrop) {
-            node.backdrop.layerCoordinates = null
-            node.backdrop = backdrop
-        }
+        node.replaceBackdrop(backdrop)
         node.invalidateDraw()
     }
 
@@ -56,6 +53,14 @@ private class LayerBackdropNode(
 ) : DrawModifierNode, GlobalPositionAwareModifierNode, Modifier.Node() {
 
     private var lastCoordinates: LayoutCoordinates? = null
+
+    fun replaceBackdrop(next: LayerBackdrop) {
+        if (backdrop === next) return
+        if (backdrop.layerCoordinates === lastCoordinates) backdrop.layerCoordinates = null
+        backdrop = next
+        next.layerCoordinates = lastCoordinates?.takeIf { it.isAttached }
+    }
+
 
     override fun ContentDrawScope.draw() {
         drawContent()

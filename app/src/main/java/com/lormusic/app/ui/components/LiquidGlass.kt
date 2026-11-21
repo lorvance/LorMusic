@@ -10,6 +10,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Modifier
+import com.kyant.backdrop.backdrops.layerBackdrop as modernLayerBackdrop
+import io.github.ntvien.liquidglass.liquidGlass as modernLiquidGlass
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
@@ -29,7 +31,7 @@ import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 
-val LocalLiquidGlassTransparency = compositionLocalOf { 65 }
+val LocalLiquidGlassTransparency = compositionLocalOf { com.lormusic.app.data.GlassStrength.DEFAULT_TRANSPARENCY }
 
 internal fun glassBlurDp(percent: Int): Float = 80f * (1f - percent.coerceIn(0, 100) / 100f)
 internal fun glassTintAlpha(percent: Int): Float = .02f + .70f * (1f - percent.coerceIn(0, 100) / 100f)
@@ -61,7 +63,7 @@ fun Modifier.appBackdropSource(): Modifier {
     val isGlassActive = LocalLiquidGlassEnabled.current && isLiquidGlassSupported()
     val backdrop = LocalAppBackdrop.current as? LayerBackdrop
     return if (isGlassActive && backdrop != null) {
-        this.layerBackdrop(backdrop)
+        this.layerBackdrop(backdrop).then(LocalModernBackdrop.current?.let { Modifier.modernLayerBackdrop(it as com.kyant.backdrop.backdrops.LayerBackdrop) } ?: Modifier)
     } else {
         this
     }
@@ -74,43 +76,29 @@ fun Modifier.liquidGlass(
     enableBlur: Boolean = true,
     exportedBackdrop: LayerBackdrop? = null
 ): Modifier {
-    val backdrop = LocalAppBackdrop.current ?: return this
-    val glassExport = exportedBackdrop ?: LocalGlassExport.current
-    val transparency = LocalLiquidGlassTransparency.current
-    val blurRadius = glassBlurDp(transparency).dp
-    val surfaceOpacity = glassTintAlpha(transparency)
-    val surfaceColor = MaterialTheme.colorScheme.surface
-    val isLight = surfaceColor.luminance() > 0.5f
+    return this.modernLiquidGlass(
+        style = headerGlassStyle(enableBlur),
+        shape = shape,
+        interaction = io.github.ntvien.liquidglass.rememberGlassInteraction(),
+    )
+}
 
-    return this.drawBackdrop(
-        backdrop = backdrop,
-        shape = { shape },
-        effects = {
-            colorControls(
-                brightness = if (isLight) 0.05f else -0.05f,
-                contrast = 1.3f,
-                saturation = 1.6f,
-            )
-            if (enableBlur) {
-                blur(blurRadius.toPx())
-            }
-            lens(
-                refractionHeight = minOf(REFRACTION_HEIGHT.toPx(), size.minDimension * .45f),
-                refractionAmount = REFRACTION_AMOUNT.toPx(),
-                chromaticAberration = true,
-            )
-        },
-        highlight = { Highlight.Default.copy(width = .9.dp, blurRadius = .4.dp) },
-        shadow = { Shadow.Default },
-        exportedBackdrop = glassExport,
-        onDrawSurface = {
-            drawRect(surfaceColor.copy(alpha = surfaceOpacity))
-            drawRect(Brush.verticalGradient(listOf(
-                Color.White.copy(alpha = if (isLight) .18f else .12f),
-                Color.Transparent,
-                Color.White.copy(alpha = .025f)
-            )))
-        },
+/** Shared optical treatment for the title and action bubbles in screen headers. */
+@Composable
+fun headerGlassStyle(enableBlur: Boolean = true): io.github.ntvien.liquidglass.GlassStyle {
+    val surface = MaterialTheme.colorScheme.surface
+    val power = 1f - LocalLiquidGlassTransparency.current.coerceIn(0, 100) / 100f
+    return io.github.ntvien.liquidglass.GlassDefaults.card().copy(
+        blur = if (enableBlur) 36.dp else 0.dp,
+        lensHeight = 24.dp,
+        lensAmount = 64.dp,
+        chromaticAberration = false,
+        vibrancy = false,
+        surface = surface.copy(alpha = .04f + .12f * power),
+        fallbackSurface = surface.copy(alpha = .86f),
+        shadowRadius = 0.dp,
+        highlightWidth = .65.dp,
+        highlightAlpha = .65f,
     )
 }
 
@@ -140,9 +128,7 @@ fun Modifier.liquidGlassBubble(
 
     if (useGlass && backdrop != null) {
         return this
-            .clip(shape)
             .liquidGlass(shape = shape, hazeState = hazeState, enableBlur = effectiveBlur)
-            .border(GLASS_EDGE_WIDTH, GLASS_EDGE_COLOR, shape)
     }
 
     val blurModifier = if (hazeState != null && effectiveBlur) {

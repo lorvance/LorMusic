@@ -128,21 +128,7 @@ fun SoundCloudScreen(
             .background(MaterialTheme.colorScheme.background)
     ) {
         ServiceScreenShell(expressiveHeader || LocalPureMaterialYou.current, "SoundCloud", activeTab.getDisplayName(strings), profile?.avatarUrl, { if(activeTab!=ScTab.HOME)onSelectTab(ScTab.HOME)else onSwitchToLocal() }, { if(profile==null)showWebLoginDialog=true else showAccountMenuDialog=true }, showHeader = activeTab == ScTab.HOME) {
-        if (profile == null) {
-            ScSignInRequiredGate(
-                hazeState = null,
-                enableBlur = enableBlur,
-                useLiquidGlass = false,
-                betaSeparateHeaderBubbles = betaSeparateHeaderBubbles,
-                onWebLoginClick = { showWebLoginDialog = true },
-                onTokenLoginClick = {
-                    forceTokenInput = ""
-                    tokenError = null
-                    showForceTokenDialog = true
-                },
-                onBackToLocal = onSwitchToLocal
-            )
-        } else {
+        run {
             Column(
                 modifier = Modifier
                     .fillMaxSize()

@@ -70,6 +70,7 @@ val StringsDe = AppStrings(
     plainLyrics = "Einfach",
     libraryTitle = "Mediathek",
     hiddenFolderName = "Ausgeblendet",
+    hiddenTracksPlaylist = "Ausgeblendete Titel",
     noTracksInHidden = "Noch keine Titel unter „Ausgeblendet“",
     noTracksInFavorites = "Noch keine Titel in den Favoriten",
     noTracksLocal = "Keine lokalen Audiodateien gefunden",

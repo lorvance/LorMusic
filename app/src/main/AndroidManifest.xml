@@ -76,6 +76,20 @@
         </activity-alias>
 
         <activity-alias
+            android:name=".MainActivityAliasPulse"
+            android:enabled="false"
+            android:exported="true"
+            android:icon="@mipmap/ic_launcher_pulse"
+            android:roundIcon="@mipmap/ic_launcher_pulse"
+            android:label="LorMusic"
+            android:targetActivity=".MainActivity">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity-alias>
+
+        <activity-alias
             android:name=".MainActivityAliasMinimal"
             android:enabled="false"
             android:exported="true"

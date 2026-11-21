@@ -31,6 +31,8 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
@@ -54,19 +56,20 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import com.lormusic.app.data.GlassStrength
 import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.LocalStrings
-import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
-import com.lormusic.app.ui.components.AboutAutoUpdaterDialog
 import com.lormusic.app.ui.components.AppIconVectorPreview
 import com.lormusic.app.ui.components.PlaybackSpeedAutoUpdaterDialog
-import com.lormusic.app.ui.components.SearchPlacementAutoUpdaterDialog
 import com.lormusic.app.ui.components.ThemeAutoUpdaterDialog
 import com.lormusic.app.ui.components.appBackdropSource
 import com.lormusic.app.ui.components.formatDurationShort
@@ -78,6 +81,7 @@ import dev.chrisbanes.haze.hazeSource
 
 enum class SettingsCategory {
     APPEARANCE,
+    LIQUID_GLASS,
     NAVIGATION,
     MATERIAL_YOU,
     PLAYBACK,
@@ -111,7 +115,7 @@ fun ProfileScreen(
     pureMaterialYou: Boolean = false,
     showNavBarLabels: Boolean = false,
     useLiquidGlass: Boolean = false,
-    glassTransparency: Int = 65,
+    glassTransparency: Int = GlassStrength.DEFAULT_TRANSPARENCY,
     onGlassTransparencyChange: (Int) -> Unit = {},
     hazeState: HazeState? = null,
     enableBetaUpdates: Boolean = false,
@@ -120,6 +124,10 @@ fun ProfileScreen(
     betaDynamicPlaybackContext: Boolean = true,
     betaAutoHideNavBar: Boolean = false,
     betaCategorizedSettings: Boolean = true,
+    betaTesterJokes: Boolean = false,
+    betaTesterJokesUnlocked: Boolean = false,
+    onUnlockBetaTesterJokes: (String) -> Boolean = { false },
+    onToggleBetaTesterJokes: (Boolean) -> Unit = {},
     betaHideDividers: Boolean = false,
     useAlbumArtGradient: Boolean = true,
     useMyWaveCoverGradient: Boolean = false,
@@ -127,7 +135,6 @@ fun ProfileScreen(
     autoTagFixEnabled: Boolean = false,
     classicLibraryDesign: Boolean = false,
     appLanguage: com.lormusic.app.model.AppLanguage = com.lormusic.app.model.AppLanguage.SYSTEM,
-    searchBarPlacement: SearchBarPlacement,
     enablePlayerSwipe: Boolean,
     hideDemoTracks: Boolean,
     selectedAppIcon: AppIconOption,
@@ -154,7 +161,6 @@ fun ProfileScreen(
     onToggleAutoTagFix: (Boolean) -> Unit = {},
     onToggleClassicLibraryDesign: (Boolean) -> Unit = {},
     onSelectLanguage: (com.lormusic.app.model.AppLanguage) -> Unit = {},
-    onChangeSearchBarPlacement: (SearchBarPlacement) -> Unit,
     onTogglePlayerSwipe: (Boolean) -> Unit,
     onToggleHideDemoTracks: (Boolean) -> Unit,
     onSelectAppIcon: (AppIconOption) -> Unit,
@@ -175,17 +181,17 @@ fun ProfileScreen(
     var easterEggStage by remember { mutableIntStateOf(0) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAccentColorDialog by remember { mutableStateOf(false) }
-    var showSearchPlacementDialog by remember { mutableStateOf(false) }
     var showSpeedDialog by remember { mutableStateOf(false) }
     var showSleepDialog by remember { mutableStateOf(false) }
-    var showAboutDialog by remember { mutableStateOf(false) }
     var showEqualizerSheet by remember { mutableStateOf(false) }
     var showLanguageDialog by remember { mutableStateOf(false) }
     var showLiquidGlassWarning by remember { mutableStateOf<String?>(null) }
     val isLiquidGlassSupported = Build.VERSION.SDK_INT >= 33
     var showBackupDialog by remember { mutableStateOf(false) }
+    var showBetaTesterPassword by remember { mutableStateOf(false) }
     val iconChoices = remember {
         listOf(
+            AppIconOption.PULSE,
             AppIconOption.MINIMAL,
             AppIconOption.REGULAR,
             AppIconOption.OLD
@@ -213,7 +219,7 @@ fun ProfileScreen(
                 .fillMaxSize()
                 .background(MaterialTheme.colorScheme.background)
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
-                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showAccentColorDialog || showSpeedDialog || showAboutDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
+                .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showAccentColorDialog || showSpeedDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
         ) {
             Column(
@@ -443,33 +449,6 @@ fun ProfileScreen(
                             SettingsDivider()
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.liquidGlassTitle) },
-                                supportingContent = {
-                                    Text(
-                                        if (isLiquidGlassSupported) {
-                                            strings.liquidGlassDescSupported
-                                        } else {
-                                            "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
-                                        }
-                                    )
-                                },
-                                leadingContent = { Icon(Icons.Filled.AutoFixNormal, contentDescription = null) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = useLiquidGlass,
-                                        onCheckedChange = { checked ->
-                                            if (!isLiquidGlassSupported) {
-                                                showLiquidGlassWarning = "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
-                                            } else {
-                                                onToggleLiquidGlass(checked)
-                                            }
-                                        }
-                                    )
-                                }
-                            )
-                            SettingsDivider()
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.dynamicCoverGradientTitle) },
                                 supportingContent = { Text(strings.dynamicCoverGradientDesc) },
                                 leadingContent = { Icon(Icons.Filled.Gradient, contentDescription = null) },
@@ -561,10 +540,10 @@ fun ProfileScreen(
                                         useExpressive = expressiveNavigation,
                                         tabOrder = navTabOrder,
                                         backgroundColor = cardBg,
-                                        enableBlur = enableBlur && !pureMaterialYou && !showSearchPlacementDialog,
-                                        useLiquidGlass = useLiquidGlass && !pureMaterialYou && !showSearchPlacementDialog,
+                                        enableBlur = enableBlur && !pureMaterialYou,
+                                        useLiquidGlass = useLiquidGlass && !pureMaterialYou,
                                         showLabels = showNavBarLabels,
-                                        showSearchButton = !searchBarPlacement.localAtTop
+                                        showSearchButton = true
                                     )
                                 }
                             }
@@ -607,10 +586,10 @@ fun ProfileScreen(
                         com.lormusic.app.ui.components.NavigationBarPreview(
                             useExpressive = expressiveNavigation,
                             tabOrder = navTabOrder,
-                            enableBlur = enableBlur && !pureMaterialYou && !showSearchPlacementDialog,
-                            useLiquidGlass = useLiquidGlass && !pureMaterialYou && !showSearchPlacementDialog,
+                            enableBlur = enableBlur && !pureMaterialYou,
+                            useLiquidGlass = useLiquidGlass && !pureMaterialYou,
                             showLabels = showNavBarLabels,
-                            showSearchButton = !searchBarPlacement.localAtTop
+                            showSearchButton = true
                         )
                     }
                     Spacer(Modifier.height(12.dp))
@@ -759,14 +738,6 @@ fun ProfileScreen(
                             }
                             SettingsDivider()
 
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.searchBarPlacementTitle) },
-                                supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
-                                leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
-                                modifier = Modifier.clickable { showSearchPlacementDialog = true }
-                            )
-                            SettingsDivider()
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { Text(strings.showNavBarLabelsTitle) },
@@ -927,6 +898,48 @@ fun ProfileScreen(
                 }
 
                 @Composable
+                fun LiquidGlassContent() {
+                    if (!betaCategorizedSettings) Text("Liquid Glass", style=MaterialTheme.typography.titleMedium, color=MaterialTheme.colorScheme.primary)
+                    Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) { Column {
+                            ListItem(
+                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                headlineContent = { Text(strings.liquidGlassTitle) },
+                                supportingContent = {
+                                    Text(
+                                        if (isLiquidGlassSupported) {
+                                            strings.liquidGlassDescSupported
+                                        } else {
+                                            "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
+                                        }
+                                    )
+                                },
+                                leadingContent = { Icon(Icons.Filled.AutoFixNormal, contentDescription = null) },
+                                trailingContent = {
+                                    Switch(
+                                        checked = useLiquidGlass,
+                                        onCheckedChange = { checked ->
+                                            if (!isLiquidGlassSupported) {
+                                                showLiquidGlassWarning = "${strings.liquidGlassUnavailableTitle}. Android ${Build.VERSION.RELEASE}"
+                                            } else {
+                                                onToggleLiquidGlass(checked)
+                                            }
+                                        }
+                                    )
+                                }
+                            )
+                    } }
+                    Spacer(Modifier.height(12.dp))
+                    com.lormusic.app.ui.components.GlassTransparencySettings(
+                        percent = glassTransparency,
+                        onPercentChange = onGlassTransparencyChange,
+                        tabOrder = navTabOrder,
+                        showLabels = showNavBarLabels,
+                        showSearchButton = true
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
+
+                @Composable
                 fun BetaContent() {
                     if (!betaCategorizedSettings) {
                     Text(
@@ -937,19 +950,41 @@ fun ProfileScreen(
                     )
                     }
                     Spacer(Modifier.height(8.dp))
-                    com.lormusic.app.ui.components.GlassTransparencySettings(
-                        percent = glassTransparency,
-                        onPercentChange = onGlassTransparencyChange,
-                        tabOrder = navTabOrder,
-                        showLabels = showNavBarLabels,
-                        showSearchButton = !searchBarPlacement.localAtTop
-                    )
-                    Spacer(Modifier.height(12.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
+                            if (betaTesterJokesUnlocked) {
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                    headlineContent = { Text("приколы для бета тестеров") },
+                                    supportingContent = { Text("сурге лох лорванс топ") },
+                                    leadingContent = {
+                                        Icon(painterResource(R.drawable.ic_beta_clawd), contentDescription = null)
+                                    },
+                                    trailingContent = {
+                                        Switch(checked = betaTesterJokes, onCheckedChange = onToggleBetaTesterJokes)
+                                    },
+                                )
+                            } else {
+                                val accessStrings = if (strings === com.lormusic.app.model.StringsRandom) {
+                                    com.lormusic.app.model.StringsRu
+                                } else {
+                                    strings
+                                }
+                                ListItem(
+                                    colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                    headlineContent = { Text(accessStrings.betaText("betaJokesAccess")) },
+                                    leadingContent = { Icon(Icons.Filled.Lock, contentDescription = null) },
+                                    trailingContent = {
+                                        Switch(checked = false, onCheckedChange = { showBetaTesterPassword = true })
+                                    },
+                                    modifier = Modifier.clickable { showBetaTesterPassword = true },
+                                )
+                            }
+                            SettingsDivider()
+
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                 headlineContent = { BetaHeadline(strings.betaAutoHideNavBarTitle) },
@@ -1034,8 +1069,6 @@ fun ProfileScreen(
                                     } else if (aboutClickCount >= 20) {
                                         playScreamSound()
                                         easterEggStage = 2
-                                    } else {
-                                        showAboutDialog = true
                                     }
                                 }
                             )
@@ -1124,6 +1157,21 @@ fun ProfileScreen(
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                            headlineContent = { Text("Liquid Glass", fontWeight = FontWeight.SemiBold) },
+                                            supportingContent = { Text(strings.betaText("glassCategoryDesc")) },
+                                            leadingContent = {
+                                                Image(
+                                                    painter = androidx.compose.ui.res.painterResource(com.lormusic.app.R.drawable.ic_liquid_glass_settings),
+                                                    contentDescription = null,
+                                                    modifier = Modifier.size(44.dp)
+                                                )
+                                            },
+                                            trailingContent = { Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = .5f)) },
+                                            modifier = Modifier.clickable { activeCategory = SettingsCategory.LIQUID_GLASS }
+                                        )
+                                        SettingsDivider()
+                                        ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { Text(strings.betaText("materialDesign"), fontWeight = FontWeight.SemiBold) },
                                             supportingContent = { Text(strings.betaText("materialDesignDesc")) },
@@ -1203,6 +1251,7 @@ fun ProfileScreen(
                         } else {
                             Column {
                                 when (category) {
+                                    SettingsCategory.LIQUID_GLASS -> LiquidGlassContent()
                                     SettingsCategory.APPEARANCE -> AppearanceContent(includeIconSelector = true)
                                     SettingsCategory.MATERIAL_YOU -> MaterialYouContent()
                                     SettingsCategory.NAVIGATION -> NavigationContent()
@@ -1215,6 +1264,8 @@ fun ProfileScreen(
                     }
                 } else {
                     AppIconSelectorContent()
+                    Spacer(Modifier.height(20.dp))
+                    LiquidGlassContent()
                     Spacer(Modifier.height(20.dp))
                     AppearanceContent(includeIconSelector = false)
                     Spacer(Modifier.height(20.dp))
@@ -1240,6 +1291,7 @@ fun ProfileScreen(
                 .onSizeChanged { size -> profileHeaderHeight = with(headerDensity) { size.height.toDp() } }
         ) {
             val title = if (betaCategorizedSettings && activeCategory != null) when (activeCategory) {
+                SettingsCategory.LIQUID_GLASS -> "Liquid Glass"
                 SettingsCategory.APPEARANCE -> strings.settingsCategoryAppearance
                 SettingsCategory.MATERIAL_YOU -> strings.betaText("materialDesign")
                 SettingsCategory.NAVIGATION -> strings.settingsCategoryNavigation
@@ -1280,14 +1332,6 @@ fun ProfileScreen(
             onSelectDynamicColor = { onToggleDynamicColor(true) },
             onSelectAccent = { onChangeAccentColor(it) },
             onDismiss = { showAccentColorDialog = false }
-        )
-    }
-    if (showSearchPlacementDialog) {
-        SearchPlacementAutoUpdaterDialog(
-            currentPlacement = searchBarPlacement,
-            enableBlur = enableBlur,
-            onSelectPlacement = { onChangeSearchBarPlacement(it) },
-            onDismiss = { showSearchPlacementDialog = false }
         )
     }
     if (showSpeedDialog) {
@@ -1424,55 +1468,6 @@ fun ProfileScreen(
                 }
             }
         }
-    }
-    if (showAboutDialog) {
-        val aboutBody = when (strings) {
-            com.lormusic.app.model.StringsEn ->
-                "Music player styled with Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                    "• Redesigned YouTube Music with floating bubbles and 4-row recents scroll\n" +
-                    "• Smooth launch animation with the selected app icon\n" +
-                    "• Strict sequential track playback order when shuffle is off\n" +
-                    "• Liquid Glass (Apple) design on Android 13+\n" +
-                    "• Markdown update changelog and Auto-Updater\n" +
-                    "• Automatic TagFix and Shazam track recognition\n" +
-                    "• Dynamic album art backdrop gradient and direct track downloads"
-            com.lormusic.app.model.StringsUk ->
-                "Музичний плеєр у стилі Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                    "• Новий дизайн YouTube Music з плаваючими баблами та 4-рядковим скролом недавніх\n" +
-                    "• Плавна анімація запуску з вибраною іконкою застосунку\n" +
-                    "• Виправлено випадковий порядок треків при вимкненому перемішуванні\n" +
-                    "• Дизайн Liquid Glass (Apple) для Android 13+\n" +
-                    "• Вікно автоапдейтера з Markdown\n" +
-                    "• Автоматичний TagFix та розпізнавання через Shazam\n" +
-                    "• Динамічний градієнт обкладинки та завантаження треків"
-            com.lormusic.app.model.StringsDe ->
-                "Musikplayer mit Material 3 Expressive und Liquid Glass.\n\n" +
-                    "Lokale Musik, YouTube Music und SoundCloud in einer Mediathek. " +
-                    "Mit gemeinsamen Playlists, synchronisierten Liedtexten, TagFix, Equalizer " +
-                    "und anpassbarem Liquid Glass."
-            com.lormusic.app.model.StringsPl ->
-                "Odtwarzacz muzyczny w stylu Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                    "• Integracja z YouTube Music oraz SoundCloud i wspólnymi playlistami\n" +
-                    "• Nowoczesny interfejs z pływającymi bąbelkami i efektami Liquid Glass\n" +
-                    "• Wiele źródeł tekstów piosenek z synchronizacją i tłumaczeniem\n" +
-                    "• Automatyczny TagFix oraz rozpoznawanie utworów przez Shazam\n" +
-                    "• Dynamiczny gradient okładki w odtwarzaczu i bezpośrednie pobieranie"
-            else ->
-                "Музыкальный плеер в стиле Material 3 Expressive + Apple Liquid Glass.\n\n" +
-                    "• Интеграция SoundCloud с чартами, поиском и общими плейлистами с YouTube Music\n" +
-                    "• Новый дизайн YouTube Music с плавающими баблами и 4-строчным скроллом недавних (22 трека)\n" +
-                    "• Плавная анимация запуска с выбранной иконкой приложения\n" +
-                    "• Исправлен случайный порядок треков при выключенном перемешивании (строгий линейный порядок)\n" +
-                    "• Дизайн Liquid Glass (Apple) для Android 13+ с физическими бликами и переключателем\n" +
-                    "• Редизайн окна автоапдейтера с Markdown\n" +
-                    "• Автоматический TagFix и индивидуальное распознавание треков через Shazam\n" +
-                    "• Динамический градиент обложки в плеере «Сейчас играет» и кнопка скачивания трека"
-        }
-        AboutAutoUpdaterDialog(
-            aboutText = aboutBody,
-            enableBlur = enableBlur,
-            onDismiss = { showAboutDialog = false }
-        )
     }
     if (easterEggStage == 1) {
         FullWindowDialog(
@@ -1621,6 +1616,12 @@ fun ProfileScreen(
             }
         }
     }
+    if (showBetaTesterPassword && !betaTesterJokesUnlocked) {
+        BetaTesterPasswordDialog(
+            onUnlock = onUnlockBetaTesterJokes,
+            onDismiss = { showBetaTesterPassword = false },
+        )
+    }
     if (showBackupDialog) {
         com.lormusic.app.ui.components.BackupDialogs(
             onExport = onExportBackup, onImport = onImportBackup,
@@ -1670,4 +1671,52 @@ private fun playScreamSound() {
         track.play()
     } catch (_: Exception) {
     }
+}
+
+
+@Composable
+private fun BetaTesterPasswordDialog(onUnlock: (String) -> Boolean, onDismiss: () -> Unit) {
+    val localStrings = LocalStrings.current
+    val strings = if (localStrings === com.lormusic.app.model.StringsRandom) {
+        com.lormusic.app.model.StringsRu
+    } else {
+        localStrings
+    }
+    var password by remember { mutableStateOf("") }
+    var rejected by remember { mutableStateOf(false) }
+
+    fun submit() {
+        if (password.isEmpty()) return
+        if (onUnlock(password)) onDismiss() else rejected = true
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(strings.betaText("betaJokesPasswordTitle")) },
+        text = {
+            OutlinedTextField(
+                value = password,
+                onValueChange = {
+                    password = it
+                    rejected = false
+                },
+                modifier = Modifier.fillMaxWidth(),
+                label = { Text(strings.betaText("betaJokesPasswordLabel")) },
+                singleLine = true,
+                isError = rejected,
+                supportingText = {
+                    if (rejected) Text(strings.betaText("betaJokesPasswordError"))
+                },
+                visualTransformation = PasswordVisualTransformation(),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password, imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { submit() }),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { submit() }, enabled = password.isNotEmpty()) {
+                Text(strings.betaText("betaJokesUnlock"))
+            }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(strings.cancel) } },
+    )
 }

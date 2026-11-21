@@ -43,9 +43,9 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
+import com.lormusic.app.model.betaText
 import com.lormusic.app.model.AppLanguage
 import com.lormusic.app.model.LocalStrings
-import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.Song
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.model.resolveStrings
@@ -137,6 +137,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     var selectedTab by remember { mutableStateOf(LorTab.LIBRARY) }
     var showNowPlaying by remember { mutableStateOf(false) }
     var songForActionsSheet by remember { mutableStateOf<Song?>(null) }
+    var pendingTrackVisibility by remember { mutableStateOf<Pair<Song, Boolean>?>(null) }
     var songForTagEditor by remember { mutableStateOf<Song?>(null) }
     var showTagFixSheet by remember { mutableStateOf(false) }
     var showEqualizerSheet by remember { mutableStateOf(false) }
@@ -166,7 +167,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     val useSquigglySlider by playerViewModel.useSquigglySlider
     val enableBlur by playerViewModel.enableBlur
     val pureMaterialYou by playerViewModel.pureMaterialYou
-    val searchBarPlacement by playerViewModel.searchBarPlacement
     val enablePlayerSwipe by playerViewModel.enablePlayerSwipe
     val hideDemoTracks by playerViewModel.hideDemoTracks
     val currentLyrics by playerViewModel.currentLyrics
@@ -175,11 +175,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     val availableUpdateInfo by playerViewModel.availableUpdateInfo
     val updateState by playerViewModel.updateState
     val statusMessage by playerViewModel.statusMessage
-
-    val isLocalSearchTop = searchBarPlacement == SearchBarPlacement.LOCAL_TOP_YT_BOTTOM ||
-        searchBarPlacement == SearchBarPlacement.ALWAYS_TOP
-    val isYtSearchTop = searchBarPlacement == SearchBarPlacement.LOCAL_BOTTOM_YT_TOP ||
-        searchBarPlacement == SearchBarPlacement.ALWAYS_TOP
 
     val isYtMusicMode by playerViewModel.isYtMusicMode
     val isSoundCloudMode by playerViewModel.isSoundCloudMode
@@ -281,6 +276,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         }
     }
 
+    com.lormusic.app.ui.components.ModernGlassProviders(sourceKey=appBackdrop) {
     CompositionLocalProvider(
         LocalAppBackdrop provides appBackdrop,
         LocalLiquidGlassEnabled provides isGlassActive,
@@ -349,7 +345,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     useLiquidGlass = effectiveUseLiquidGlass,
                                     betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value,
                                     useMyWaveCoverGradient = playerViewModel.useMyWaveCoverGradient.value,
-                                    showTopSearchBar = isYtSearchTop,
                                     recentsViewMode = playerViewModel.recentsViewMode.value,
                                     onToggleRecentsViewMode = playerViewModel::setRecentsViewMode,
                                     onSelectTab = playerViewModel::selectYtTab,
@@ -483,12 +478,13 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                             shuffleOn = shuffleOn,
                                             favoriteIds = favoriteIds,
                                             hiddenSongIds = hiddenSongIds,
+                                            betaTesterJokes = playerViewModel.betaTesterJokes.value,
                                             hideDemoTracks = hideDemoTracks,
                                             enableBlur = effectiveEnableBlur,
                                             useLiquidGlass = effectiveUseLiquidGlass,
                                             betaExpandingSearch = playerViewModel.betaExpandingSearch.value,
                                             onCloseExternalSearch = { isBottomLocalSearchActive = false },
-                                            showTopSearchBar = isLocalSearchTop,
+                                            showTopSearchBar = false,
                                             externalSearchActive = isBottomLocalSearchActive,
                                             selectedFilter = selectedFilter,
                                             selectedSort = selectedSort,
@@ -516,7 +512,8 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
                                         LorTab.PLAYLISTS -> PlaylistsScreen(
                                             expressiveHeader = playerViewModel.expressiveHeader.value,
-                                            playlists = playlists,
+                                            playlists = playlists + listOfNotNull(playerViewModel.hiddenTracksPlaylist()),
+                                            onRestoreHiddenSong = { pendingTrackVisibility = it to false },
                                             allSongs = allSongs.filter { !hiddenSongIds.contains(it.id) },
                                             currentSong = currentSong,
                                             isPlaying = isPlaying,
@@ -584,12 +581,15 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
                                                 betaAutoHideNavBar = betaAutoHideNavBar,
                                                 betaCategorizedSettings = playerViewModel.betaCategorizedSettings.value,
+                                                betaTesterJokes = playerViewModel.betaTesterJokes.value,
+                                                betaTesterJokesUnlocked = playerViewModel.betaTesterJokesUnlocked.value,
+                                                onUnlockBetaTesterJokes = playerViewModel::unlockBetaTesterJokes,
+                                                onToggleBetaTesterJokes = playerViewModel::setBetaTesterJokes,
                                                 betaHideDividers = playerViewModel.betaHideDividers.value,
                                                 useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                                                 useMyWaveCoverGradient = playerViewModel.useMyWaveCoverGradient.value,
                                                 autoTagFixEnabled = playerViewModel.autoTagFixEnabled.value,
                                                 appLanguage = appLanguage,
-                                                searchBarPlacement = searchBarPlacement,
                                                 enablePlayerSwipe = enablePlayerSwipe,
                                                 hideDemoTracks = hideDemoTracks,
                                                 selectedAppIcon = selectedAppIcon,
@@ -615,7 +615,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onToggleMyWaveCoverGradient = playerViewModel::setUseMyWaveCoverGradient,
                                                 onToggleAutoTagFix = playerViewModel::setAutoTagFixEnabled,
                                                 onSelectLanguage = playerViewModel::setAppLanguage,
-                                                onChangeSearchBarPlacement = playerViewModel::setSearchBarPlacement,
                                                 onTogglePlayerSwipe = playerViewModel::setEnablePlayerSwipe,
                                                 onToggleHideDemoTracks = playerViewModel::setHideDemoTracks,
                                                 onSelectAppIcon = playerViewModel::setAppIconOption,
@@ -871,7 +870,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     hazeState = hazeState,
                                     enableBlur = effectiveEnableBlur,
                                     useLiquidGlass = effectiveUseLiquidGlass,
-                                    showBottomSearchButton = !isYtSearchTop,
+                                    showBottomSearchButton = true,
                                     showLabels = playerViewModel.showNavBarLabels.value
                                 )
                             } else if (isSoundCloudMode) {
@@ -899,9 +898,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     hazeState = hazeState,
                                     enableBlur = effectiveEnableBlur,
                                     useLiquidGlass = effectiveUseLiquidGlass,
-                                    showBottomSearchButton = !isLocalSearchTop,
+                                    showBottomSearchButton = true,
                                     showLabels = playerViewModel.showNavBarLabels.value,
-                                    isLocalSearchActive = !isLocalSearchTop && isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
+                                    isLocalSearchActive = isBottomLocalSearchActive && selectedTab == LorTab.LIBRARY,
                                     onToggleLocalSearch = {
                                         if (selectedTab != LorTab.LIBRARY) {
                                             selectedTab = LorTab.LIBRARY
@@ -1029,7 +1028,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                         playerViewModel.downloadYtSongWithTags(targetSong)
                     }
                 },
-                onToggleHidden = { playerViewModel.toggleHiddenSong(targetSong) },
+                onToggleHidden = { pendingTrackVisibility = targetSong to (targetSong.id !in hiddenSongIds) },
                 onDeleteFromDevice = {
                     playerViewModel.deleteSongFromDevice(targetSong) { intentSender ->
                         deleteIntentLauncher.launch(IntentSenderRequest.Builder(intentSender).build())
@@ -1052,6 +1051,35 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                     songForActionsSheet = null
                     showSpeedDialog = true
                 }
+            )
+        }
+
+        pendingTrackVisibility?.let { (song, hide) ->
+            val strings = if (currentStrings === com.lormusic.app.model.StringsRandom) {
+                com.lormusic.app.model.StringsRu
+            } else {
+                currentStrings
+            }
+            AlertDialog(
+                onDismissRequest = { pendingTrackVisibility = null },
+                title = { Text(strings.betaText(if (hide) "hideTrackTitle" else "restoreTrackTitle")) },
+                text = {
+                    Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                        Text(song.title, style = MaterialTheme.typography.titleSmall)
+                        Text(if (hide) strings.hideSubtitle else strings.unhideSubtitle)
+                    }
+                },
+                confirmButton = {
+                    TextButton(onClick = {
+                        pendingTrackVisibility = null
+                        playerViewModel.setSongHidden(song, hide)
+                    }) {
+                        Text(strings.betaText(if (hide) "hide" else "restoreTrackAction"))
+                    }
+                },
+                dismissButton = {
+                    TextButton(onClick = { pendingTrackVisibility = null }) { Text(strings.cancel) }
+                },
             )
         }
 
@@ -1189,7 +1217,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 enableBlur = enableBlur,
                 useLiquidGlass = playerViewModel.useLiquidGlass.value,
                 showNavBarLabels = playerViewModel.showNavBarLabels.value,
-                searchBarPlacement = searchBarPlacement,
                 useAlbumArtGradient = playerViewModel.useAlbumArtGradient.value,
                 useDynamicPlayerColors = playerViewModel.useDynamicPlayerColors.value,
                 betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
@@ -1199,7 +1226,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 onToggleBlur = playerViewModel::setEnableBlur,
                 onToggleLiquidGlass = playerViewModel::setUseLiquidGlass,
                 onToggleShowNavBarLabels = playerViewModel::setShowNavBarLabels,
-                onChangeSearchBarPlacement = playerViewModel::setSearchBarPlacement,
                 onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                 onToggleDynamicPlayerColors = playerViewModel::setUseDynamicPlayerColors,
                 onToggleBetaDynamicPlaybackContext = playerViewModel::setBetaDynamicPlaybackContext,
@@ -1209,5 +1235,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 }
             )
         }
+    }
     }
 }

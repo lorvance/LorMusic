@@ -67,6 +67,8 @@ data class LyricLine(
     val isInstrumental: Boolean = false
 )
 
+const val HIDDEN_TRACKS_PLAYLIST_ID = "sys_hidden_tracks"
+
 data class Playlist(
     val id: String,
     val name: String,
@@ -135,12 +137,14 @@ enum class AppAccentColor(val baseName: String, val primaryHex: Long, val isDefa
 }
 
 enum class AppIconOption(val label: String, val subtitle: String, val aliasClassName: String) {
-    MINIMAL("Минимализм", "Лавандовый цветок с нотой", "com.lormusic.app.MainActivityAliasMinimal"),
+    PULSE("LorMusic Pulse", "Минималистичная иконка с буквой L и символом воспроизведения в голубых оттенках", "com.lormusic.app.MainActivityAliasPulse"),
+    MINIMAL("Минимализм", "Голубой цветок с двойной нотой", "com.lormusic.app.MainActivityAliasMinimal"),
     REGULAR("Стандартная", "Объёмный цветок с эквалайзером", "com.lormusic.app.MainActivityAliasRegular"),
     OLD("Классическая", "Классическая старая иконка", "com.lormusic.app.MainActivityAliasOld");
 
     fun getDisplayName(strings: AppStrings): String {
         return when (this) {
+            PULSE -> "LorMusic Pulse"
             MINIMAL -> strings.iconStyleMinimal
             REGULAR -> strings.iconStyleDefault
             OLD -> strings.iconStyleClassic
@@ -149,11 +153,18 @@ enum class AppIconOption(val label: String, val subtitle: String, val aliasClass
 
     fun getDisplaySubtitle(strings: AppStrings): String {
         return when (this) {
+            PULSE -> when(strings) {
+                StringsEn -> "Minimalist blue L with a play symbol"
+                StringsDe -> "Minimalistisches blaues L mit Wiedergabesymbol"
+                StringsUk -> "Мінімалістична блакитна L із символом відтворення"
+                StringsPl -> "Minimalistyczna niebieska litera L z symbolem odtwarzania"
+                else -> subtitle
+            }
             MINIMAL -> when (strings) {
-                StringsEn -> "Lavender flower with note"
-                StringsUk -> "Лавандова квітка з нотою"
-                StringsDe -> "Lavendelfarbene Blume mit Note"
-                StringsPl -> "Lawendowy kwiat z nutą"
+                StringsEn -> "Light blue flower with a double note"
+                StringsUk -> "Блакитна квітка з подвійною нотою"
+                StringsDe -> "Hellblaue Blume mit Doppelnote"
+                StringsPl -> "Błękitny kwiat z podwójną nutą"
                 else -> subtitle
             }
             REGULAR -> when (strings) {
@@ -204,92 +215,6 @@ enum class LibraryFilter(val label: String) {
             LOCAL -> strings.deviceMusicTitle
             HIDDEN -> strings.hiddenFolderName
             DEMO -> "Demo"
-        }
-    }
-}
-
-enum class SearchBarPlacement(
-    val label: String,
-    val subtitle: String,
-    val localAtTop: Boolean,
-    val ytAtTop: Boolean
-) {
-    LOCAL_TOP_YT_BOTTOM(
-        label = "Сверху в локальной, снизу в YT Music",
-        subtitle = "В шапке локальной медиатеки и отдельной кнопкой снизу в YT Music (по умолчанию)",
-        localAtTop = true,
-        ytAtTop = false
-    ),
-    LOCAL_BOTTOM_YT_TOP(
-        label = "Снизу в локальной, сверху в YT Music",
-        subtitle = "Отдельной кнопкой снизу в локальной музыке и в верхней шапке YT Music",
-        localAtTop = false,
-        ytAtTop = true
-    ),
-    ALWAYS_BOTTOM(
-        label = "Везде снизу (отдельно от навбара)",
-        subtitle = "Круглая кнопка поиска справа от нижней панели во всех режимах",
-        localAtTop = false,
-        ytAtTop = false
-    ),
-    ALWAYS_TOP(
-        label = "Везде сверху (в шапке экрана)",
-        subtitle = "Строка поиска всегда находится в верхней шапке",
-        localAtTop = true,
-        ytAtTop = true
-    );
-
-    fun getDisplayName(strings: AppStrings): String {
-        return when (this) {
-            LOCAL_TOP_YT_BOTTOM -> when (strings) {
-                StringsEn -> "Top in Library, bottom in YT Music"
-                StringsUk -> "Зверху в медіатеці, знизу в YT Music"
-                StringsDe -> "In der Mediathek oben, bei YT Music unten"
-                StringsPl -> "U góry w bibliotece, na dole w YT Music"
-                else -> label
-            }
-            LOCAL_BOTTOM_YT_TOP -> when (strings) {
-                StringsEn -> "Bottom in Library, top in YT Music"
-                StringsUk -> "Знизу в медіатеці, зверху в YT Music"
-                StringsDe -> "In der Mediathek unten, bei YT Music oben"
-                StringsPl -> "Na dole w bibliotece, u góry w YT Music"
-                else -> label
-            }
-            ALWAYS_BOTTOM -> strings.searchPlacementBottom
-            ALWAYS_TOP -> strings.searchPlacementTop
-        }
-    }
-
-    fun getDisplaySubtitle(strings: AppStrings): String {
-        return when (this) {
-            LOCAL_TOP_YT_BOTTOM -> when (strings) {
-                StringsEn -> "In header of local library and separate bottom button in YT Music (default)"
-                StringsUk -> "У шапці локальної медіатеки та окремою кнопкою знизу в YT Music (за замовчуванням)"
-                StringsDe -> "In der Kopfzeile der lokalen Mediathek und als eigene Taste unten bei YT Music (Standard)"
-                StringsPl -> "W nagłówku biblioteki lokalnej i osobny przycisk na dole w YT Music (domyślnie)"
-                else -> subtitle
-            }
-            LOCAL_BOTTOM_YT_TOP -> when (strings) {
-                StringsEn -> "Separate bottom button in local music and in top header of YT Music"
-                StringsUk -> "Окремою кнопкою знизу в локальній музиці та у верхній шапці YT Music"
-                StringsDe -> "Eigene Taste unten für lokale Musik und in der Kopfzeile bei YT Music"
-                StringsPl -> "Osobny przycisk na dole w muzyce lokalnej i w górnym nagłówku YT Music"
-                else -> subtitle
-            }
-            ALWAYS_BOTTOM -> when (strings) {
-                StringsEn -> "Round search button next to bottom navigation bar in all modes"
-                StringsUk -> "Кругла кнопка пошуку праворуч від нижньої панелі в усіх режимах"
-                StringsDe -> "Runde Suchtaste neben der unteren Navigationsleiste in allen Modi"
-                StringsPl -> "Okrągły przycisk wyszukiwania obok dolnego paska nawigacji we wszystkich trybach"
-                else -> subtitle
-            }
-            ALWAYS_TOP -> when (strings) {
-                StringsEn -> "Search bar is always located in top header"
-                StringsUk -> "Рядок пошуку завжди знаходиться у верхній шапці"
-                StringsDe -> "Die Suchleiste befindet sich immer in der oberen Kopfzeile"
-                StringsPl -> "Pasek wyszukiwania znajduje się zawsze w górnym nagłówku"
-                else -> subtitle
-            }
         }
     }
 }

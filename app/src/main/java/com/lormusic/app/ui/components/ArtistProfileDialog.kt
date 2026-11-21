@@ -521,7 +521,6 @@ fun ArtistProfileDialog(
                                 Box(
                                     modifier = Modifier
                                         .size(44.dp)
-                                        .clip(CircleShape)
                                         .liquidGlassBubble(CircleShape, albumHazeState, enableBlur, useLiquidGlass)
                                         .clickable { selectedAlbum = null },
                                     contentAlignment = Alignment.Center

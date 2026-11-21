@@ -174,6 +174,7 @@ val StringsRandom: AppStrings =
         plainLyrics = RandomRussian.text("plainLyrics", StringsRu.plainLyrics),
         libraryTitle = RandomRussian.text("libraryTitle", StringsRu.libraryTitle),
         hiddenFolderName = RandomRussian.text("hiddenFolderName", StringsRu.hiddenFolderName),
+        hiddenTracksPlaylist = StringsRu.hiddenTracksPlaylist,
         noTracksInHidden = RandomRussian.text("noTracksInHidden", StringsRu.noTracksInHidden),
         noTracksInFavorites =
             RandomRussian.text("noTracksInFavorites", StringsRu.noTracksInFavorites),

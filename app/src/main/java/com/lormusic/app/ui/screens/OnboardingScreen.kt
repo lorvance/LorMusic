@@ -41,10 +41,8 @@ import androidx.core.content.ContextCompat
 import com.lormusic.app.R
 import com.lormusic.app.model.AppIconOption
 import com.lormusic.app.model.LocalStrings
-import com.lormusic.app.model.SearchBarPlacement
 import com.lormusic.app.model.ThemeMode
 import com.lormusic.app.ui.components.AppIconVectorPreview
-import com.lormusic.app.ui.components.SearchPlacementAutoUpdaterDialog
 import com.lormusic.app.ui.components.ThemeAutoUpdaterDialog
 
 enum class OnboardingStep {
@@ -63,7 +61,6 @@ fun OnboardingScreen(
     enableBlur: Boolean,
     useLiquidGlass: Boolean,
     showNavBarLabels: Boolean,
-    searchBarPlacement: SearchBarPlacement,
     useAlbumArtGradient: Boolean,
     useDynamicPlayerColors: Boolean,
     betaDynamicPlaybackContext: Boolean,
@@ -73,7 +70,6 @@ fun OnboardingScreen(
     onToggleBlur: (Boolean) -> Unit,
     onToggleLiquidGlass: (Boolean) -> Unit,
     onToggleShowNavBarLabels: (Boolean) -> Unit,
-    onChangeSearchBarPlacement: (SearchBarPlacement) -> Unit,
     onToggleAlbumArtGradient: (Boolean) -> Unit,
     onToggleDynamicPlayerColors: (Boolean) -> Unit,
     onToggleBetaDynamicPlaybackContext: (Boolean) -> Unit,
@@ -191,7 +187,6 @@ fun OnboardingScreen(
                             enableBlur = enableBlur,
                             useLiquidGlass = useLiquidGlass,
                             showNavBarLabels = showNavBarLabels,
-                            searchBarPlacement = searchBarPlacement,
                             useAlbumArtGradient = useAlbumArtGradient,
                             useDynamicPlayerColors = useDynamicPlayerColors,
                             betaDynamicPlaybackContext = betaDynamicPlaybackContext,
@@ -201,7 +196,6 @@ fun OnboardingScreen(
                             onToggleBlur = onToggleBlur,
                             onToggleLiquidGlass = onToggleLiquidGlass,
                             onToggleShowNavBarLabels = onToggleShowNavBarLabels,
-                            onChangeSearchBarPlacement = onChangeSearchBarPlacement,
                             onToggleAlbumArtGradient = onToggleAlbumArtGradient,
                             onToggleDynamicPlayerColors = onToggleDynamicPlayerColors,
                             onToggleBetaDynamicPlaybackContext = onToggleBetaDynamicPlaybackContext,
@@ -828,7 +822,6 @@ private fun QuickSettingsStepContent(
     enableBlur: Boolean,
     useLiquidGlass: Boolean,
     showNavBarLabels: Boolean,
-    searchBarPlacement: SearchBarPlacement,
     useAlbumArtGradient: Boolean,
     useDynamicPlayerColors: Boolean,
     betaDynamicPlaybackContext: Boolean,
@@ -838,7 +831,6 @@ private fun QuickSettingsStepContent(
     onToggleBlur: (Boolean) -> Unit,
     onToggleLiquidGlass: (Boolean) -> Unit,
     onToggleShowNavBarLabels: (Boolean) -> Unit,
-    onChangeSearchBarPlacement: (SearchBarPlacement) -> Unit,
     onToggleAlbumArtGradient: (Boolean) -> Unit,
     onToggleDynamicPlayerColors: (Boolean) -> Unit,
     onToggleBetaDynamicPlaybackContext: (Boolean) -> Unit,
@@ -847,7 +839,6 @@ private fun QuickSettingsStepContent(
 ) {
     val strings = LocalStrings.current
     var showThemeDialog by remember { mutableStateOf(false) }
-    var showSearchPlacementDialog by remember { mutableStateOf(false) }
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -956,13 +947,6 @@ private fun QuickSettingsStepContent(
             ) {
                 Column {
                     ListItem(
-                        headlineContent = { Text(strings.searchBarPlacementTitle) },
-                        supportingContent = { Text(searchBarPlacement.getDisplayName(strings)) },
-                        leadingContent = { Icon(Icons.Filled.Search, contentDescription = null) },
-                        modifier = Modifier.clickable { showSearchPlacementDialog = true }
-                    )
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                    ListItem(
                         headlineContent = { Text(strings.showNavBarLabelsTitle) },
                         supportingContent = { Text(strings.showNavBarLabelsDesc) },
                         leadingContent = { Icon(Icons.AutoMirrored.Filled.Label, contentDescription = null) },
@@ -1058,14 +1042,4 @@ private fun QuickSettingsStepContent(
         )
     }
 
-    if (showSearchPlacementDialog) {
-        SearchPlacementAutoUpdaterDialog(
-            currentPlacement = searchBarPlacement,
-            onSelectPlacement = {
-                onChangeSearchBarPlacement(it)
-                showSearchPlacementDialog = false
-            },
-            onDismiss = { showSearchPlacementDialog = false }
-        )
-    }
 }

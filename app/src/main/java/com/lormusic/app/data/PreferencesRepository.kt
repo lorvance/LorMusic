@@ -22,8 +22,9 @@ class PreferencesRepository(context: Context) {
         KEY_FAVORITES to "StringSet",
         KEY_YT_FAVORITES to "StringSet",
         KEY_HIDDEN_SONGS to "StringSet",
+        KEY_HIDDEN_REMOTE_TRACKS to "String",
+        KEY_BETA_TESTER_JOKES to "Boolean",
         KEY_ENABLE_BLUR to "Boolean",
-        KEY_SEARCH_PLACEMENT to "String",
         KEY_ENABLE_PLAYER_SWIPE to "Boolean",
         KEY_HIDE_DEMO_TRACKS to "Boolean",
         KEY_THEME_MODE to "String",
@@ -193,8 +194,29 @@ class PreferencesRepository(context: Context) {
         return prefs.getStringSet(KEY_HIDDEN_SONGS, emptySet())?.toSet() ?: emptySet()
     }
 
-    fun saveHiddenSongIds(ids: Set<String>) {
-        prefs.edit().putStringSet(KEY_HIDDEN_SONGS, ids).apply()
+    fun getHiddenRemoteTracks(): List<Song> = readSavedTracks(KEY_HIDDEN_REMOTE_TRACKS)
+
+    fun saveHiddenTracks(ids: Set<String>, remoteTracks: List<Song>) {
+        prefs.edit()
+            .putStringSet(KEY_HIDDEN_SONGS, ids)
+            .putString(KEY_HIDDEN_REMOTE_TRACKS, encodeSavedTracks(remoteTracks))
+            .apply()
+    }
+
+    fun areBetaTesterJokesUnlocked(): Boolean = prefs.getBoolean(KEY_BETA_TESTER_JOKES_UNLOCKED, false)
+
+    fun getBetaTesterJokes(): Boolean =
+        areBetaTesterJokesUnlocked() && prefs.getBoolean(KEY_BETA_TESTER_JOKES, false)
+
+    fun unlockBetaTesterJokes() {
+        prefs.edit()
+            .putBoolean(KEY_BETA_TESTER_JOKES_UNLOCKED, true)
+            .putBoolean(KEY_BETA_TESTER_JOKES, true)
+            .apply()
+    }
+
+    fun saveBetaTesterJokes(enabled: Boolean) {
+        prefs.edit().putBoolean(KEY_BETA_TESTER_JOKES, enabled).apply()
     }
 
     fun getEnableBlur(): Boolean {
@@ -203,16 +225,6 @@ class PreferencesRepository(context: Context) {
 
     fun saveEnableBlur(enabled: Boolean) {
         prefs.edit().putBoolean(KEY_ENABLE_BLUR, enabled).apply()
-    }
-
-    fun getSearchBarPlacement(): SearchBarPlacement {
-        val raw = prefs.getString(KEY_SEARCH_PLACEMENT, SearchBarPlacement.LOCAL_TOP_YT_BOTTOM.name)
-            ?: SearchBarPlacement.LOCAL_TOP_YT_BOTTOM.name
-        return SearchBarPlacement.entries.find { it.name == raw } ?: SearchBarPlacement.LOCAL_TOP_YT_BOTTOM
-    }
-
-    fun saveSearchBarPlacement(placement: SearchBarPlacement) {
-        prefs.edit().putString(KEY_SEARCH_PLACEMENT, placement.name).apply()
     }
 
     fun getEnablePlayerSwipe(): Boolean {
@@ -494,8 +506,10 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putStringSet(KEY_UNIFIED_FAVORITES, ids).apply()
     }
 
-    fun getSavedScSongs(): List<Song> {
-        val json = prefs.getString(KEY_SAVED_SC_SONGS, null) ?: return emptyList()
+    fun getSavedScSongs(): List<Song> = readSavedTracks(KEY_SAVED_SC_SONGS)
+
+    private fun readSavedTracks(key: String): List<Song> {
+        val json = prefs.getString(key, null) ?: return emptyList()
         return try {
             val arr = JSONArray(json)
             buildList {
@@ -519,7 +533,8 @@ class PreferencesRepository(context: Context) {
                             dateAddedSec = obj.optLong("dateAddedSec", System.currentTimeMillis() / 1000L),
                             genre = obj.optString("genre", ""),
                             year = obj.optString("year", ""),
-                            isRemoteSc = !local
+                            isRemoteYt = !local && obj.optBoolean("isRemoteYt", false),
+                            isRemoteSc = !local && obj.optBoolean("isRemoteSc", key == KEY_SAVED_SC_SONGS)
                         )
                     )
                 }
@@ -530,8 +545,12 @@ class PreferencesRepository(context: Context) {
     }
 
     fun saveScSongs(songs: List<Song>) {
+        prefs.edit().putString(KEY_SAVED_SC_SONGS, encodeSavedTracks(songs.take(120))).apply()
+    }
+
+    private fun encodeSavedTracks(songs: List<Song>): String {
         val arr = JSONArray()
-        songs.take(120).forEach { s ->
+        songs.forEach { s ->
             val obj = JSONObject()
             obj.put("id", s.id)
             obj.put("title", s.title)
@@ -539,7 +558,9 @@ class PreferencesRepository(context: Context) {
             obj.put("album", s.album)
             obj.put("durationMs", s.durationMs)
             obj.put("uri", s.uri)
-            obj.put("isLocal",s.isLocal)
+            obj.put("isLocal", s.isLocal)
+            obj.put("isRemoteYt", s.isRemoteYt)
+            obj.put("isRemoteSc", s.isRemoteSc || s.id.startsWith("sc_") || s.uri.startsWith("sc://"))
             obj.put("filePath",s.filePath ?: "")
             obj.put("folderName",s.folderName)
             obj.put("coverColorSeed", s.coverColorSeed)
@@ -549,7 +570,7 @@ class PreferencesRepository(context: Context) {
             obj.put("year", s.year)
             arr.put(obj)
         }
-        prefs.edit().putString(KEY_SAVED_SC_SONGS, arr.toString()).apply()
+        return arr.toString()
     }
 
     fun getScProfile(): SoundCloudUserProfile? {
@@ -642,10 +663,18 @@ class PreferencesRepository(context: Context) {
         prefs.edit().putString(KEY_CUSTOM_PLAYLISTS, arr.toString()).apply()
     }
 
-    fun getGlassTransparency(): Int = prefs.getInt(KEY_GLASS_TRANSPARENCY, 65).coerceIn(0, 100)
+    fun getGlassTransparency(): Int {
+        val strength = KEY_GLASS_STRENGTH.takeIf(prefs::contains)?.let {
+            prefs.getInt(it, GlassStrength.DEFAULT)
+        }
+        val legacyTransparency = KEY_GLASS_TRANSPARENCY.takeIf(prefs::contains)?.let {
+            prefs.getInt(it, GlassStrength.DEFAULT_TRANSPARENCY)
+        }
+        return GlassStrength.transparency(GlassStrength.resolve(strength, legacyTransparency))
+    }
 
     fun saveGlassTransparency(percent: Int) {
-        prefs.edit().putInt(KEY_GLASS_TRANSPARENCY, percent.coerceIn(0, 100)).apply()
+        prefs.edit().putInt(KEY_GLASS_STRENGTH, GlassStrength.transparency(percent)).apply()
     }
 
     fun getUseLiquidGlass(): Boolean {
@@ -1024,7 +1053,7 @@ class PreferencesRepository(context: Context) {
             // Collections stored as JSON strings must also be valid before committing.
             if (converted is String) {
                 when (key) {
-                    KEY_TAG_OVERRIDES, KEY_SAVED_YT_SONGS, KEY_SAVED_SC_SONGS, KEY_CUSTOM_PLAYLISTS, KEY_RECENTLY_PLAYED -> JSONArray(converted)
+                    KEY_TAG_OVERRIDES, KEY_SAVED_YT_SONGS, KEY_SAVED_SC_SONGS, KEY_HIDDEN_REMOTE_TRACKS, KEY_CUSTOM_PLAYLISTS, KEY_RECENTLY_PLAYED -> JSONArray(converted)
                     KEY_SONG_PLAY_COUNTS, KEY_SONG_META_MAP, KEY_ALBUM_PLAY_COUNTS, KEY_SC_USER_PROFILE -> JSONObject(converted)
                 }
             }
@@ -1069,9 +1098,11 @@ class PreferencesRepository(context: Context) {
         private const val KEY_SHOW_NAVIGATION_PREVIEW = "show_navigation_preview"
         private const val KEY_BETA_EXPANDING_SEARCH = "beta_expanding_search"
         private const val KEY_FAVORITES = "favorite_song_ids"
+        private const val KEY_HIDDEN_REMOTE_TRACKS = "hidden_remote_tracks_json"
+        private const val KEY_BETA_TESTER_JOKES = "beta_tester_jokes"
+        private const val KEY_BETA_TESTER_JOKES_UNLOCKED = "beta_tester_jokes_unlocked"
         private const val KEY_HIDDEN_SONGS = "hidden_song_ids"
         private const val KEY_ENABLE_BLUR = "enable_backdrop_blur"
-        private const val KEY_SEARCH_PLACEMENT = "search_bar_placement"
         private const val KEY_ENABLE_PLAYER_SWIPE = "enable_player_swipe_gesture"
         private const val KEY_HIDE_DEMO_TRACKS = "hide_demo_tracks"
         private const val KEY_THEME_MODE = "theme_mode"
@@ -1094,6 +1125,7 @@ class PreferencesRepository(context: Context) {
         private const val KEY_SAVED_YT_SONGS = "saved_yt_music_songs_json"
         private const val KEY_CUSTOM_PLAYLISTS = "custom_playlists_json"
         private const val KEY_LIQUID_GLASS = "use_liquid_glass"
+        private const val KEY_GLASS_STRENGTH = "liquid_glass_strength"
         private const val KEY_GLASS_TRANSPARENCY = "liquid_glass_transparency"
         private const val KEY_BETA_UPDATES = "enable_beta_updates"
         private const val KEY_ALBUM_ART_GRADIENT = "use_album_art_gradient_v2"

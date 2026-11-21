@@ -19,7 +19,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
-import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.*
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 
@@ -29,6 +29,13 @@ fun PhysicsSwitch(checked: Boolean, onCheckedChange: ((Boolean) -> Unit)?,
     modifier: Modifier = Modifier, enabled: Boolean = true,
     thumbContent: (@Composable () -> Unit)? = null,
     colors: SwitchColors = SwitchDefaults.colors()) {
+    val modernBackdrop=rememberControlBackdrop()
+    if(LocalLiquidGlassEnabled.current && isLiquidGlassSupported() && enabled && onCheckedChange!=null && modernBackdrop!=null) {
+        val current by rememberUpdatedState(checked)
+        val change by rememberUpdatedState(onCheckedChange)
+        com.kyant.backdrop.catalog.components.LiquidToggle(selected={current},onSelect={change?.invoke(it)},backdrop=modernBackdrop,colors=colors,thumbContent=thumbContent,modifier=modifier.minimumInteractiveComponentSize().semantics{this.role=Role.Switch;toggleableState=if(checked)androidx.compose.ui.state.ToggleableState.On else androidx.compose.ui.state.ToggleableState.Off;onClick{change?.invoke(!current);true}})
+        return
+    }
     val callback by rememberUpdatedState(onCheckedChange)
     val currentChecked by rememberUpdatedState(checked)
     val travel = with(LocalDensity.current) { 20.dp.toPx() }

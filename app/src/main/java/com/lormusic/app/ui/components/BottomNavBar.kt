@@ -151,6 +151,11 @@ fun LorBottomNavBar(
             searchActive = isLocalSearchActive, onSearch = onToggleLocalSearch, modifier = modifier, applyInsets = applyNavigationInsets )
         return
     }
+    if (useLiquidGlass && !LocalPureMaterialYou.current && isLiquidGlassSupported() && LocalModernBackdrop.current != null) {
+        val strings=com.lormusic.app.model.LocalStrings.current
+        ModernGlassNavigation(tabs,selected,onSelect,{it.getDisplayName(strings)},{if(it==selected)it.filled else it.outline},showBottomSearchButton,isLocalSearchActive,onToggleLocalSearch,showLabels,applyNavigationInsets,modifier)
+        return
+    }
     if (!useLiquidGlass) {
         val strings = com.lormusic.app.model.LocalStrings.current
         JoinedBlurNavigationBar(tabs, selected, onSelect, { it.getDisplayName(strings) }, { if(it==selected)it.filled else it.outline }, hazeState, enableBlur,
@@ -421,7 +426,6 @@ fun LorBottomNavBar(
                         ambientColor = Color.Black.copy(alpha = 0.6f),
                         spotColor = Color.Black.copy(alpha = 0.6f)
                     )
-                    .clip(CircleShape)
                     .then(
                         if (isPureMy) {
                             Modifier
@@ -431,7 +435,7 @@ fun LorBottomNavBar(
                             Modifier.liquidGlass(CircleShape, hazeState = hazeState, enableBlur = enableBlur)
                         } else {
                             val previewBackdrop = LocalPreviewBackdrop.current
-                            val baseMod = if (enableBlur && previewBackdrop != null) {
+                            val baseMod = Modifier.clip(CircleShape).then(if (enableBlur && previewBackdrop != null) {
                                 Modifier.drawPlainBackdrop(
                                     backdrop = previewBackdrop,
                                     shape = { CircleShape },
@@ -447,7 +451,7 @@ fun LorBottomNavBar(
                                 }
                             } else {
                                 Modifier.background(baseSurface.copy(alpha = 0.96f))
-                            }
+                            })
                             baseMod.border(
                                 width = 1.dp,
                                 brush = Brush.verticalGradient(
@@ -460,6 +464,7 @@ fun LorBottomNavBar(
                             )
                         }
                     )
+                    .clip(CircleShape)
                     .background(searchBg.copy(alpha = if (isLocalSearchActive) 0.88f else 0f))
                     .border(
                         width = 1.dp,
@@ -510,6 +515,11 @@ fun YtMusicBottomNavBar(
         ExpressiveNavigationBar(items = orderedTabs, selectedItem = selected, onSelect = onSelect,
             label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
             searchActive = selected == YtMusicTab.SEARCH, onSearch = { onSelect(YtMusicTab.SEARCH) }, modifier = modifier )
+        return
+    }
+    if (useLiquidGlass && !LocalPureMaterialYou.current && isLiquidGlassSupported() && LocalModernBackdrop.current != null) {
+        val strings=com.lormusic.app.model.LocalStrings.current
+        ModernGlassNavigation(orderedTabs,selected,onSelect,{it.getDisplayName(strings)},{if(it==selected)it.filled else it.outline},showBottomSearchButton,selected == YtMusicTab.SEARCH,{ onSelect(YtMusicTab.SEARCH) },showLabels,true,modifier)
         return
     }
     if (!useLiquidGlass) {
@@ -784,7 +794,6 @@ fun YtMusicBottomNavBar(
                         ambientColor = Color.Black.copy(alpha = 0.6f),
                         spotColor = Color.Black.copy(alpha = 0.6f)
                     )
-                    .clip(CircleShape)
                     .then(
                         if (isPureMy) {
                             Modifier
@@ -794,7 +803,7 @@ fun YtMusicBottomNavBar(
                             Modifier.liquidGlass(CircleShape, hazeState = hazeState, enableBlur = enableBlur)
                         } else {
                             val previewBackdrop = LocalPreviewBackdrop.current
-                            val baseMod = if (enableBlur && previewBackdrop != null) {
+                            val baseMod = Modifier.clip(CircleShape).then(if (enableBlur && previewBackdrop != null) {
                                 Modifier.drawPlainBackdrop(
                                     backdrop = previewBackdrop,
                                     shape = { CircleShape },
@@ -810,7 +819,7 @@ fun YtMusicBottomNavBar(
                                 }
                             } else {
                                 Modifier.background(baseSurface.copy(alpha = 0.96f))
-                            }
+                            })
                             baseMod.border(
                                 width = 1.dp,
                                 brush = Brush.verticalGradient(
@@ -823,6 +832,7 @@ fun YtMusicBottomNavBar(
                             )
                         }
                     )
+                    .clip(CircleShape)
                     .background(searchBg.copy(alpha = if (searchSelected) 0.88f else 0f))
                     .border(
                         width = 1.dp,
@@ -873,6 +883,11 @@ fun ScMusicBottomNavBar(
         ExpressiveNavigationBar(items = orderedTabs, selectedItem = selected, onSelect = onSelect,
             label = { it.getDisplayName(strings) }, icon = { if (it == selected) it.filled else it.outline }, showSearch = showBottomSearchButton,
             searchActive = selected == ScTab.SEARCH, onSearch = { onSelect(ScTab.SEARCH) }, modifier = modifier )
+        return
+    }
+    if (useLiquidGlass && !LocalPureMaterialYou.current && isLiquidGlassSupported() && LocalModernBackdrop.current != null) {
+        val strings=com.lormusic.app.model.LocalStrings.current
+        ModernGlassNavigation(orderedTabs,selected,onSelect,{it.getDisplayName(strings)},{if(it==selected)it.filled else it.outline},showBottomSearchButton,selected == ScTab.SEARCH,{ onSelect(ScTab.SEARCH) },showLabels,true,modifier)
         return
     }
     if (!useLiquidGlass) {

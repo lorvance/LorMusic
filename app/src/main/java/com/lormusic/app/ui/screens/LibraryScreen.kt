@@ -1,6 +1,13 @@
 package com.lormusic.app.ui.screens
 
 import com.lormusic.app.ui.components.LocalBottomControlsHeight
+import com.lormusic.app.ui.components.BetaTesterJoke
+import com.lormusic.app.ui.components.BetaTesterJokeDialog
+import com.lormusic.app.ui.components.BetaTesterJokeIcon
+import com.lormusic.app.ui.components.headerGlassStyle
+import io.github.ntvien.liquidglass.component.LiquidMenuDivider
+import io.github.ntvien.liquidglass.component.LiquidMenuItem
+import io.github.ntvien.liquidglass.component.LiquidMenuButton
 
 import com.lormusic.app.ui.components.AnchoredBubbleMenu
 import androidx.activity.compose.BackHandler
@@ -76,6 +83,7 @@ fun LibraryScreen(
     shuffleOn: Boolean = false,
     favoriteIds: Set<String>,
     hiddenSongIds: Set<String> = emptySet(),
+    betaTesterJokes: Boolean = false,
     hideDemoTracks: Boolean = false,
     enableBlur: Boolean = true,
     useLiquidGlass: Boolean = false,
@@ -108,6 +116,10 @@ fun LibraryScreen(
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var activeJoke by remember { mutableStateOf<BetaTesterJoke?>(null) }
+    if (betaTesterJokes) {
+        activeJoke?.let { BetaTesterJokeDialog(it, onDismiss = { activeJoke = null }) }
+    }
     var isTopSearchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
 
@@ -455,21 +467,71 @@ fun LibraryScreen(
                                 },
                                 enabled = !isScanningLocal
                             )
+                            if (betaTesterJokes) {
+                                HorizontalDivider()
+                                BetaTesterJoke.entries.forEach { joke ->
+                                    DropdownMenuItem(
+                                        text = { Text(joke.label) },
+                                        leadingIcon = { BetaTesterJokeIcon(joke) },
+                                        onClick = {
+                                            showMoreMenu = false
+                                            activeJoke = joke
+                                        },
+                                    )
+                                }
+                            }
                         }
                     }
                 }
 
                 @Composable
                 fun MoreButtonBubble() {
+                    if(useLiquidGlass && !com.lormusic.app.ui.components.LocalPureMaterialYou.current && com.lormusic.app.ui.components.isLiquidGlassSupported()) {
+                        LiquidMenuButton(
+                            items = buildList {
+                                add(LiquidMenuItem(strings.playAll, Icons.Filled.PlayArrow, enabled = filteredSongs.isNotEmpty()) {
+                                    val context = if (selectedFilter == LibraryFilter.FAVORITES) {
+                                        PlaybackContext(PlaybackContextType.FAVORITES)
+                                    } else null
+                                    onPlayQueue(filteredSongs, 0, false, context)
+                                })
+                                add(LiquidMenuItem(strings.shuffleAll, Icons.Filled.Shuffle, enabled = filteredSongs.isNotEmpty()) {
+                                    val context = if (selectedFilter == LibraryFilter.FAVORITES) {
+                                        PlaybackContext(PlaybackContextType.FAVORITES)
+                                    } else null
+                                    onPlayQueue(filteredSongs, 0, true, context)
+                                })
+                                add(LiquidMenuDivider)
+                                add(LiquidMenuItem(strings.rescan, Icons.Filled.Refresh, enabled = !isScanningLocal) {
+                                    onRequestPermissionAndScan()
+                                })
+                                if (betaTesterJokes) {
+                                    add(LiquidMenuDivider)
+                                    BetaTesterJoke.entries.forEach { joke ->
+                                        add(LiquidMenuItem(joke.label, iconContent = { BetaTesterJokeIcon(joke, it) }) {
+                                            activeJoke = joke
+                                        })
+                                    }
+                                }
+                            },
+                            contentDescription = strings.actions,
+                            style = headerGlassStyle(enableBlur),
+                            modifier = Modifier.size(44.dp),
+                        ) {
+                            Icon(Icons.Filled.MoreVert, contentDescription = null)
+                        }
+                        return
+                    }
+
                     Box(
                         modifier = Modifier
                             .size(44.dp)
+                            .then(bubbleModifier(CircleShape))
                             .clip(CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 showMoreMenu = true
-                            }
-                            .then(bubbleModifier(CircleShape)),
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -484,16 +546,24 @@ fun LibraryScreen(
 
                 @Composable
                 fun SortButtonBubble() {
+                    if(useLiquidGlass && !com.lormusic.app.ui.components.LocalPureMaterialYou.current && com.lormusic.app.ui.components.isLiquidGlassSupported()) {
+                        LiquidMenuButton(
+                            items=SortOption.entries.map { option -> LiquidMenuItem(option.getDisplayName(strings),if(option==selectedSort)Icons.Filled.Check else null){onSelectSort(option)} },
+                            contentDescription = strings.sorting, style = headerGlassStyle(enableBlur), modifier = Modifier.size(if (expressiveHeader) 52.dp else 44.dp)
+                        ){Box(Modifier.fillMaxSize(),contentAlignment=Alignment.Center){Icon(Icons.AutoMirrored.Filled.Sort,null)}}
+                        return
+                    }
+
                     val sortShape = RoundedCornerShape(topStart = 26.dp, topEnd = 16.dp, bottomEnd = 26.dp, bottomStart = 16.dp)
                     Box(
                         modifier = Modifier
                             .size(if (expressiveHeader) 52.dp else 44.dp)
+                            .then(if (expressiveHeader) Modifier.background(chrome.primaryContainer, sortShape) else bubbleModifier(CircleShape))
                             .clip(if (expressiveHeader) sortShape else CircleShape)
                             .clickable {
                                 view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                 showSortMenu = true
-                            }
-                            .then(if (expressiveHeader) Modifier.background(chrome.primaryContainer, sortShape) else bubbleModifier(CircleShape)),
+                            },
                         contentAlignment = Alignment.Center
                     ) {
                         Icon(
@@ -564,13 +634,13 @@ fun LibraryScreen(
                             Box(
                                 modifier = Modifier
                                     .size(44.dp)
+                                    .then(bubbleModifier(CircleShape))
                                     .clip(CircleShape)
                                     .clickable {
                                         view.performHapticFeedback(HapticFeedbackConstants.CONTEXT_CLICK)
                                         isTopSearchExpanded = !isTopSearchExpanded
                                         if (!isTopSearchExpanded) searchQuery = ""
-                                    }
-                                    .then(bubbleModifier(CircleShape)),
+                                    },
                                 contentAlignment = Alignment.Center
                             ) {
                                 Icon(
@@ -605,7 +675,7 @@ fun LibraryScreen(
                                     .height(44.dp)
                                     .clip(searchShape)
                                     .then(bubbleModifier(searchShape))
-                                    .clickable(enabled = betaExpandingSearch && !isSearchVisible) {
+                                    .clickable(enabled = showTopSearchBar && betaExpandingSearch && !isSearchVisible) {
                                         isTopSearchExpanded = true
                                     }
                                     .padding(horizontal = if (betaExpandingSearch) 14.dp else 20.dp),
