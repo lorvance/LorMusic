@@ -14,13 +14,14 @@ import android.os.Build
 import android.content.Context
 import android.content.Intent
 import android.os.PowerManager
-import androidx.activity.compose.BackHandler
+import com.lormusic.app.ui.components.PreviewBackHandler as BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.gestures.detectDragGesturesAfterLongPress
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.foundation.background
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
@@ -84,6 +85,7 @@ enum class SettingsCategory {
     LIQUID_GLASS,
     NAVIGATION,
     MATERIAL_YOU,
+    ACHIEVEMENTS,
     PLAYBACK,
     BETA,
     SYSTEM
@@ -123,7 +125,6 @@ fun ProfileScreen(
     betaSeparateHeaderBubbles: Boolean = false,
     betaDynamicPlaybackContext: Boolean = true,
     betaAutoHideNavBar: Boolean = false,
-    betaCategorizedSettings: Boolean = true,
     betaTesterJokes: Boolean = false,
     betaTesterJokesUnlocked: Boolean = false,
     onUnlockBetaTesterJokes: (String) -> Boolean = { false },
@@ -153,7 +154,6 @@ fun ProfileScreen(
     onToggleBetaSeparateHeaderBubbles: (Boolean) -> Unit = {},
     onToggleBetaDynamicPlaybackContext: (Boolean) -> Unit = {},
     onToggleBetaAutoHideNavBar: (Boolean) -> Unit = {},
-    onToggleBetaCategorizedSettings: (Boolean) -> Unit = {},
     onToggleBetaHideDividers: (Boolean) -> Unit = {},
     onToggleAlbumArtGradient: (Boolean) -> Unit = {},
     onToggleMyWaveCoverGradient: (Boolean) -> Unit = {},
@@ -176,8 +176,14 @@ fun ProfileScreen(
 ) {
     val strings = LocalStrings.current
     val context = LocalContext.current
+    val awards = com.lormusic.app.Achievements.of(context)
     val prefs = remember(context) { com.lormusic.app.data.PreferencesRepository(context) }
     var aboutClickCount by remember { mutableIntStateOf(0) }
+    var logoTaps by remember { mutableIntStateOf(0) }
+    var developerMenu by remember { mutableStateOf(false) }
+    var penguin by remember { mutableStateOf(false) }
+    if (developerMenu) AlertDialog(onDismissRequest = { developerMenu = false }, title = { Text("Меню разработчика") }, text = { Text("LorMusic " + com.lormusic.app.BuildConfig.VERSION_NAME) }, confirmButton = { TextButton(onClick = { developerMenu = false; penguin = true; awards.award(37) }) { Text("🐧") } }, dismissButton = { TextButton(onClick = { developerMenu = false }) { Text("Закрыть") } })
+    if (penguin) AlertDialog(onDismissRequest = { penguin = false }, title = { Text("Сочный пингвин 🐧") }, confirmButton = { TextButton(onClick = { penguin = false }) { Text("Закрыть") } })
     var easterEggStage by remember { mutableIntStateOf(0) }
     var showThemeDialog by remember { mutableStateOf(false) }
     var showAccentColorDialog by remember { mutableStateOf(false) }
@@ -189,18 +195,10 @@ fun ProfileScreen(
     val isLiquidGlassSupported = Build.VERSION.SDK_INT >= 33
     var showBackupDialog by remember { mutableStateOf(false) }
     var showBetaTesterPassword by remember { mutableStateOf(false) }
-    val iconChoices = remember {
-        listOf(
-            AppIconOption.PULSE,
-            AppIconOption.MINIMAL,
-            AppIconOption.REGULAR,
-            AppIconOption.OLD
-        )
-    }
     var activeCategory by rememberSaveable { mutableStateOf<SettingsCategory?>(null) }
     var showNavigationPreview by rememberSaveable { mutableStateOf(prefs.getShowNavigationPreview()) }
-    LaunchedEffect(activeCategory, betaCategorizedSettings) {
-        onCategoryOpenChange(betaCategorizedSettings && activeCategory != null)
+    LaunchedEffect(activeCategory) {
+        onCategoryOpenChange(activeCategory != null)
     }
     DisposableEffect(Unit) { onDispose { onCategoryOpenChange(false) } }
     val headerDensity = LocalDensity.current
@@ -209,10 +207,17 @@ fun ProfileScreen(
     LaunchedEffect(activeCategory) {
         scrollState.scrollTo(0)
     }
-    BackHandler(enabled = betaCategorizedSettings && activeCategory != null) {
+    BackHandler(enabled = activeCategory != null) {
         activeCategory = null
     }
 
+    val systemLabels = com.lormusic.app.ui.components.systemLabels(strings)
+    val glow = when (selectedAppIcon) {
+        AppIconOption.REGULAR -> Color(0xFF5489F2)
+        AppIconOption.PULSE -> Color(0xFF415DFF)
+        AppIconOption.MINIMAL -> Color(0xFF71B9F6)
+        AppIconOption.OLD -> Color(0xFF8B62DE)
+    }
     Box(modifier = Modifier.fillMaxSize()) {
         Box(
             modifier = Modifier
@@ -221,6 +226,16 @@ fun ProfileScreen(
                 .then(if (hazeState != null) Modifier.hazeSource(state = hazeState) else Modifier)
                 .then(if ((showLanguageDialog || showSleepDialog || showThemeDialog || showAccentColorDialog || showSpeedDialog || showEqualizerSheet || easterEggStage > 0) && enableBlur && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) Modifier.blur(24.dp) else Modifier)
                 .appBackdropSource()
+                .drawBehind {
+                    if (activeCategory == SettingsCategory.SYSTEM) {
+                        val radius = maxOf(size.width * 1.05f, size.height * .72f)
+                        drawRect(androidx.compose.ui.graphics.Brush.radialGradient(
+                            colors = listOf(glow.copy(alpha = .58f), glow.copy(alpha = .21f), Color.Transparent),
+                            center = androidx.compose.ui.geometry.Offset(size.width * .52f, size.height * .25f),
+                            radius = radius
+                        ))
+                    }
+                }
         ) {
             Column(
                 modifier = Modifier
@@ -269,7 +284,7 @@ fun ProfileScreen(
                     }
                 }
 
-                val currentAppVersion = "${com.lormusic.app.BuildConfig.VERSION_NAME} | ${com.lormusic.app.BuildConfig.VERSION_CODE}"
+                val currentAppVersion = "${com.lormusic.app.BuildConfig.VERSION_NAME} | ${systemLabels.build} ${com.lormusic.app.BuildConfig.VERSION_CODE}"
                 val powerManager = remember { context.getSystemService(Context.POWER_SERVICE) as? PowerManager }
                 val isIgnoringBattery = remember(context) {
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -294,81 +309,9 @@ fun ProfileScreen(
 
                 @Composable
                 fun AppIconSelectorContent() {
-                    Text(
-                        text = strings.appIconSectionTitle,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    com.lormusic.app.ui.components.AppIconCarousel(
+                        strings, selectedAppIcon, onSelectAppIcon
                     )
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        text = strings.appIconSectionDesc,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                    )
-                    Spacer(Modifier.height(10.dp))
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow,
-                        modifier = Modifier.fillMaxWidth()
-                    ) {
-                        Column(
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(10.dp),
-                            verticalArrangement = Arrangement.spacedBy(8.dp)
-                        ) {
-                            iconChoices.forEach { option ->
-                                val isSelected = selectedAppIcon == option
-                                val borderColor = if (isSelected) {
-                                    MaterialTheme.colorScheme.primary
-                                } else {
-                                    Color.Transparent
-                                }
-                                val cardBg = if (isSelected) {
-                                    MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.55f)
-                                } else {
-                                    MaterialTheme.colorScheme.surface.copy(alpha = 0.45f)
-                                }
-                                Row(
-                                    verticalAlignment = Alignment.CenterVertically,
-                                    modifier = Modifier
-                                        .fillMaxWidth()
-                                        .clip(RoundedCornerShape(18.dp))
-                                        .background(cardBg)
-                                        .border(2.dp, borderColor, RoundedCornerShape(18.dp))
-                                        .clickable { onSelectAppIcon(option) }
-                                        .padding(horizontal = 14.dp, vertical = 10.dp)
-                                ) {
-                                    AppIconVectorPreview(
-                                        option = option,
-                                        size = 52.dp,
-                                        cornerRadius = 14.dp
-                                    )
-                                    Spacer(Modifier.width(14.dp))
-                                    Column(modifier = Modifier.weight(1f)) {
-                                        Text(
-                                            text = option.getDisplayName(strings),
-                                            style = MaterialTheme.typography.titleMedium,
-                                            fontWeight = if (isSelected) FontWeight.ExtraBold else FontWeight.SemiBold,
-                                            color = if (isSelected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface
-                                        )
-                                        Spacer(Modifier.height(2.dp))
-                                        Text(
-                                            text = option.getDisplaySubtitle(strings),
-                                            style = MaterialTheme.typography.bodySmall,
-                                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.65f)
-                                        )
-                                    }
-                                    Spacer(Modifier.width(8.dp))
-                                    RadioButton(
-                                        selected = isSelected,
-                                        onClick = { onSelectAppIcon(option) }
-                                    )
-                                }
-                            }
-                        }
-                    }
                 }
 
                 @Composable
@@ -376,14 +319,6 @@ fun ProfileScreen(
                     if (includeIconSelector) {
                         AppIconSelectorContent()
                         Spacer(Modifier.height(20.dp))
-                    }
-                    if (!betaCategorizedSettings) {
-                    Text(
-                        text = strings.settingsCategoryAppearance,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
                     }
                     Spacer(Modifier.height(8.dp))
                     Surface(
@@ -478,9 +413,6 @@ fun ProfileScreen(
 
                 @Composable
                 fun MaterialYouContent() {
-                    if (!betaCategorizedSettings) Text(strings.betaText("materialDesign"),
-                        style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary)
                     Spacer(Modifier.height(8.dp))
                     Surface(shape = RoundedCornerShape(24.dp), color = MaterialTheme.colorScheme.surfaceContainerLow) {
                         Column {
@@ -561,14 +493,6 @@ fun ProfileScreen(
 
                 @Composable
                 fun NavigationContent() {
-                    if (!betaCategorizedSettings) {
-                    Text(
-                        text = strings.settingsCategoryNavigation,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    }
                     Spacer(Modifier.height(8.dp))
                     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically,
                         horizontalArrangement = Arrangement.SpaceBetween) {
@@ -750,24 +674,7 @@ fun ProfileScreen(
                                     )
                                 }
                             )
-                            SettingsDivider()
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.betaCategorizedSettingsTitle) },
-                                supportingContent = { Text(strings.betaCategorizedSettingsDesc) },
-                                leadingContent = { Icon(Icons.Filled.Category, contentDescription = null) },
-                                trailingContent = {
-                                    Switch(
-                                        checked = betaCategorizedSettings,
-                                        onCheckedChange = { checked ->
-                                            if (!checked) {
-                                                activeCategory = null
-                                            }
-                                            onToggleBetaCategorizedSettings(checked)
-                                        }
-                                    )
-                                }
-                            )
+
                         }
                     }
                     Spacer(Modifier.height(16.dp))
@@ -782,14 +689,6 @@ fun ProfileScreen(
 
                 @Composable
                 fun PlaybackContent() {
-                    if (!betaCategorizedSettings) {
-                    Text(
-                        text = strings.settingsCategoryPlayback,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    }
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
@@ -899,7 +798,6 @@ fun ProfileScreen(
 
                 @Composable
                 fun LiquidGlassContent() {
-                    if (!betaCategorizedSettings) Text("Liquid Glass", style=MaterialTheme.typography.titleMedium, color=MaterialTheme.colorScheme.primary)
                     Surface(shape=RoundedCornerShape(24.dp),color=MaterialTheme.colorScheme.surfaceContainerLow) { Column {
                             ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -941,20 +839,28 @@ fun ProfileScreen(
 
                 @Composable
                 fun BetaContent() {
-                    if (!betaCategorizedSettings) {
-                    Text(
-                        text = strings.settingsCategoryBeta,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
-                    )
-                    }
+                    val predictiveBack = remember { com.lormusic.app.ui.components.predictiveBackPreference(context) }
+
+
                     Spacer(Modifier.height(8.dp))
                     Surface(
                         shape = RoundedCornerShape(24.dp),
                         color = MaterialTheme.colorScheme.surfaceContainerLow
                     ) {
                         Column {
+                            ListItem(
+                        colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                        headlineContent = { Text("Predictive Back") },
+                        supportingContent = { Text("Предпросмотр перехода во время жеста «Назад»") },
+                        leadingContent = { Icon(Icons.Filled.ChevronLeft, null) },
+                        trailingContent = {
+                            Switch(predictiveBack.value, { enabled ->
+                                predictiveBack.value = enabled
+                                com.lormusic.app.ui.components.backPreferences(context).edit().putBoolean("enabled", enabled).apply()
+                            }, enabled = Build.VERSION.SDK_INT >= 34)
+                        }
+                    )
+                            SettingsDivider()
                             if (betaTesterJokesUnlocked) {
                                 ListItem(
                                     colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
@@ -1016,67 +922,87 @@ fun ProfileScreen(
 
                 @Composable
                 fun SystemContent() {
-                    if (!betaCategorizedSettings) {
-                    Text(
-                        text = strings.settingsCategorySystem,
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold,
-                        color = MaterialTheme.colorScheme.primary
+                    var confirmGithub by rememberSaveable { mutableStateOf(false) }
+                    var document by rememberSaveable { mutableStateOf<com.lormusic.app.ui.components.SystemDocument?>(null) }
+                    val repository = com.lormusic.app.ui.components.LOR_MUSIC_REPOSITORY
+                    val scheme = MaterialTheme.colorScheme
+                    val tint = androidx.compose.ui.graphics.lerp(scheme.primary, glow, .55f)
+                    val card = androidx.compose.ui.graphics.lerp(scheme.surfaceContainer, glow, .10f).copy(alpha = .85f)
+
+                    if (confirmGithub) AlertDialog(
+                        onDismissRequest = { confirmGithub = false },
+                        title = { Text(systemLabels.openGithub) },
+                        text = { Text(repository) },
+                        dismissButton = { TextButton({ confirmGithub = false }) { Text(systemLabels.cancel) } },
+                        confirmButton = { TextButton({
+                            confirmGithub = false
+                            runCatching {
+                                context.startActivity(Intent(Intent.ACTION_VIEW, android.net.Uri.parse(repository)))
+                            }.onFailure {
+                                android.widget.Toast.makeText(context, systemLabels.openError, android.widget.Toast.LENGTH_SHORT).show()
+                            }
+                        }) { Text(systemLabels.open) } }
                     )
+                    document?.let { com.lormusic.app.ui.components.SystemDocumentDialog(it) { document = null } }
+
+                    @Composable
+                    fun Entry(title: String, icon: androidx.compose.ui.graphics.vector.ImageVector, detail: String? = null, githubMark: Boolean = false, action: () -> Unit) {
+                        ListItem(
+                            headlineContent = { Text(title, fontWeight = FontWeight.SemiBold) },
+                            supportingContent = detail?.let { { Text(it) } },
+                            leadingContent = {
+                                if (githubMark) Icon(painterResource(R.drawable.ic_github_mark), null, tint = tint)
+                                else Icon(icon, null, tint = tint)
+                            },
+                            trailingContent = { Icon(Icons.Filled.ChevronRight, null) },
+                            colors = ListItemDefaults.colors(containerColor = Color.Transparent),
+                            modifier = Modifier.clickable(onClick = action)
+                        )
                     }
-                    Spacer(Modifier.height(8.dp))
-                    Surface(
-                        shape = RoundedCornerShape(24.dp),
-                        color = MaterialTheme.colorScheme.surfaceContainerLow
-                    ) {
-                        Column {
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.languageTitle) },
-                                supportingContent = { Text(appLanguage.getLabel(strings)) },
-                                leadingContent = { Icon(Icons.Filled.Language, contentDescription = null) },
-                                modifier = Modifier.clickable { showLanguageDialog = true }
-                            )
-                            SettingsDivider()
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.backupTitle) },
-                                supportingContent = { Text(strings.backupDesc) },
-                                leadingContent = { Icon(Icons.Filled.Backup, contentDescription = null) },
-                                modifier = Modifier.clickable { showBackupDialog = true }
-                            )
-                            SettingsDivider()
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.checkForUpdatesTitle) },
-                                supportingContent = { Text(currentAppVersion) },
-                                leadingContent = { Icon(Icons.Filled.SystemUpdate, contentDescription = null) },
-                                modifier = Modifier.clickable {
-                                    onCheckForUpdates()
+
+                    Column(Modifier.fillMaxWidth(), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                        Column(
+                            Modifier.fillMaxWidth().padding(vertical = 32.dp),
+                            horizontalAlignment = Alignment.CenterHorizontally
+                        ) {
+                            AppIconVectorPreview(selectedAppIcon, size = 112.dp, cornerRadius = 27.dp, modifier = Modifier.clickable {
+                                logoTaps++
+                                if (logoTaps == 10) awards.award(32)
+                                if (logoTaps == 12) { developerMenu = true; awards.award(39); logoTaps = 0 }
+                            })
+                            Spacer(Modifier.height(14.dp))
+                            Text("LorMusic", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
+                            Text(currentAppVersion, color = scheme.onSurfaceVariant, modifier = Modifier.clickable {
+                                aboutClickCount++
+                                if (aboutClickCount == 10 || aboutClickCount == 20) {
+                                    playScreamSound()
+                                    easterEggStage = if (aboutClickCount == 10) 1 else 2
                                 }
-                            )
-                            SettingsDivider()
-                            ListItem(
-                                colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
-                                headlineContent = { Text(strings.aboutAppSection) },
-                                supportingContent = { Text(currentAppVersion) },
-                                leadingContent = { Icon(Icons.Filled.Info, contentDescription = null) },
-                                modifier = Modifier.clickable {
-                                    aboutClickCount++
-                                    if (aboutClickCount == 10) {
-                                        playScreamSound()
-                                        easterEggStage = 1
-                                    } else if (aboutClickCount >= 20) {
-                                        playScreamSound()
-                                        easterEggStage = 2
-                                    }
-                                }
-                            )
+                            })
+                        }
+                        Surface(shape = RoundedCornerShape(24.dp), color = card) {
+                            Entry(strings.checkForUpdatesTitle, Icons.Filled.Sync, action = onCheckForUpdates)
+                        }
+                        Surface(shape = RoundedCornerShape(24.dp), color = card) {
+                            Column {
+                                Entry(strings.languageTitle, Icons.Filled.Language, appLanguage.getLabel(strings)) { showLanguageDialog = true }
+                                SettingsDivider()
+                                Entry(strings.backupTitle, Icons.Filled.Backup, strings.backupDesc) { showBackupDialog = true }
+                            }
+                        }
+                        Surface(shape = RoundedCornerShape(24.dp), color = card) {
+                            Column {
+                                Entry("GitHub", Icons.Filled.Code, systemLabels.source, githubMark = true) { confirmGithub = true }
+                                SettingsDivider()
+                                Entry(systemLabels.license, Icons.Filled.Balance, "GNU General Public License v3.0") { document = com.lormusic.app.ui.components.SystemDocument.LICENSE }
+                                SettingsDivider()
+                                Entry(systemLabels.history, Icons.Filled.Description, systemLabels.whatsNew) { document = com.lormusic.app.ui.components.SystemDocument.CHANGELOG }
+                            }
                         }
                     }
                 }
 
-                if (betaCategorizedSettings) {
+                run {
                     AnimatedContent(
                         targetState = activeCategory,
                         transitionSpec = {
@@ -1164,7 +1090,8 @@ fun ProfileScreen(
                                                 Image(
                                                     painter = androidx.compose.ui.res.painterResource(com.lormusic.app.R.drawable.ic_liquid_glass_settings),
                                                     contentDescription = null,
-                                                    modifier = Modifier.size(44.dp)
+                                                    modifier = Modifier.size(44.dp),
+                                                    colorFilter = androidx.compose.ui.graphics.ColorFilter.tint(primary, androidx.compose.ui.graphics.BlendMode.Modulate)
                                                 )
                                             },
                                             trailingContent = { Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = .5f)) },
@@ -1217,6 +1144,17 @@ fun ProfileScreen(
                                         )
                                         SettingsDivider()
                                         ListItem(
+                                            colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
+                                            headlineContent = { Text("Достижения", fontWeight = FontWeight.SemiBold) },
+                                            supportingContent = { Text("Награды и статистика прослушивания") },
+                                            leadingContent = {
+                                                CategoryIconBadge(Icons.Filled.EmojiEvents, primary, androidx.compose.ui.graphics.lerp(primary, secondary, .35f))
+                                            },
+                                            trailingContent = { Icon(Icons.Filled.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurface.copy(alpha = .5f)) },
+                                            modifier = Modifier.clickable { activeCategory = SettingsCategory.ACHIEVEMENTS }
+                                        )
+                                        SettingsDivider()
+                                        ListItem(
                                 colors = ListItemDefaults.colors(containerColor = MaterialTheme.colorScheme.surfaceContainerLow),
                                             headlineContent = { BetaHeadline(strings.settingsCategoryBeta) },
                                             supportingContent = { Text(strings.settingsCategoryBetaDesc) },
@@ -1256,28 +1194,13 @@ fun ProfileScreen(
                                     SettingsCategory.MATERIAL_YOU -> MaterialYouContent()
                                     SettingsCategory.NAVIGATION -> NavigationContent()
                                     SettingsCategory.PLAYBACK -> PlaybackContent()
+                                    SettingsCategory.ACHIEVEMENTS -> com.lormusic.app.AchievementSettings(awards)
                                     SettingsCategory.BETA -> BetaContent()
                                     SettingsCategory.SYSTEM -> SystemContent()
                                 }
                             }
                         }
                     }
-                } else {
-                    AppIconSelectorContent()
-                    Spacer(Modifier.height(20.dp))
-                    LiquidGlassContent()
-                    Spacer(Modifier.height(20.dp))
-                    AppearanceContent(includeIconSelector = false)
-                    Spacer(Modifier.height(20.dp))
-                    MaterialYouContent()
-                    Spacer(Modifier.height(20.dp))
-                    NavigationContent()
-                    Spacer(Modifier.height(20.dp))
-                    PlaybackContent()
-                    Spacer(Modifier.height(20.dp))
-                    BetaContent()
-                    Spacer(Modifier.height(20.dp))
-                    SystemContent()
                 }
 
                 Spacer(Modifier.height(210.dp))
@@ -1290,28 +1213,31 @@ fun ProfileScreen(
                 .clipToBounds()
                 .onSizeChanged { size -> profileHeaderHeight = with(headerDensity) { size.height.toDp() } }
         ) {
-            val title = if (betaCategorizedSettings && activeCategory != null) when (activeCategory) {
+            val title = if (activeCategory != null) when (activeCategory) {
                 SettingsCategory.LIQUID_GLASS -> "Liquid Glass"
                 SettingsCategory.APPEARANCE -> strings.settingsCategoryAppearance
                 SettingsCategory.MATERIAL_YOU -> strings.betaText("materialDesign")
                 SettingsCategory.NAVIGATION -> strings.settingsCategoryNavigation
                 SettingsCategory.PLAYBACK -> strings.settingsCategoryPlayback
+                SettingsCategory.ACHIEVEMENTS -> "Достижения"
                 SettingsCategory.BETA -> strings.settingsCategoryBeta
                 SettingsCategory.SYSTEM -> strings.settingsCategorySystem
                 null -> strings.navSettings
             } else strings.navSettings
-            if (expressiveHeader) {
+            val plainHeader = activeCategory == SettingsCategory.SYSTEM
+            if (expressiveHeader && !plainHeader) {
                 com.lormusic.app.ui.components.ExpressiveScreenHeader(
                     title = title,
-                    onBack = { if (betaCategorizedSettings && activeCategory != null) activeCategory = null else onBackToLibrary() },
+                    onBack = { if (activeCategory != null) activeCategory = null else onBackToLibrary() },
                     onAction = { showBackupDialog = true }
                 )
             } else {
                 com.lormusic.app.ui.components.LegacyScreenHeader(
                     title = title,
-                    onBack = { if (betaCategorizedSettings && activeCategory != null) activeCategory = null else onBackToLibrary() },
+                    onBack = { if (activeCategory != null) activeCategory = null else onBackToLibrary() },
                     onAction = { showBackupDialog = true },
-                    hazeState = hazeState, enableBlur = enableBlur, useLiquidGlass = useLiquidGlass
+                    hazeState = hazeState, enableBlur = enableBlur && !plainHeader,
+                    useLiquidGlass = useLiquidGlass && !plainHeader, plainHeader = plainHeader
                 )
             }
         }

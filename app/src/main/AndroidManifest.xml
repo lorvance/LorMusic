@@ -8,6 +8,7 @@
     <uses-permission
         android:name="android.permission.WRITE_EXTERNAL_STORAGE"
         android:maxSdkVersion="29" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
@@ -17,6 +18,7 @@
 
     <application
         android:name=".LorMusicApp"
+        android:enableOnBackInvokedCallback="true"
         android:allowBackup="true"
         android:icon="@mipmap/ic_launcher"
         android:roundIcon="@mipmap/ic_launcher_round"
@@ -24,6 +26,18 @@
         android:theme="@style/Theme.LorMusic"
         android:usesCleartextTraffic="true"
         android:supportsRtl="true">
+
+        <activity android:name=".ExternalVideoActivity" android:exported="true"
+            android:excludeFromRecents="true" android:taskAffinity="${applicationId}.externalVideo"
+            android:theme="@style/Theme.LorMusic.ExternalAudio">
+            <intent-filter>
+                <action android:name="android.intent.action.VIEW" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:scheme="content" />
+                <data android:scheme="file" />
+                <data android:mimeType="video/*" />
+            </intent-filter>
+        </activity>
 
         <activity
             android:name=".ExternalAudioActivity"

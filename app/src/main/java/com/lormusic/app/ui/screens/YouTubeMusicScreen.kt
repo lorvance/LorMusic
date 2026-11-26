@@ -2861,6 +2861,7 @@ private fun YtSearchTab(
     onDownloadSong: (Song) -> Unit,
     onSongMoreClick: (Song) -> Unit
 ) {
+    val awardStore = com.lormusic.app.Achievements.of(androidx.compose.ui.platform.LocalContext.current)
     val focusManager = LocalFocusManager.current
     val strings = LocalStrings.current
     var query by remember { mutableStateOf("") }
@@ -2881,38 +2882,38 @@ private fun YtSearchTab(
         )
         Spacer(Modifier.height(10.dp))
 
-        OutlinedTextField(
-            value = query,
-            onValueChange = {
-                query = it
-                onSearch(it)
-            },
-            placeholder = { Text(strings.ytSearchPlaceholder, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = null) },
-            trailingIcon = {
-                if (isSearching) {
-                    ExpressiveLoadingIndicator(size = 24.dp)
-                } else if (query.isNotEmpty()) {
-                    IconButton(onClick = {
-                        query = ""
-                        onSearch("")
-                    }) {
+        Surface(shape = RoundedCornerShape(percent = 50), color = MaterialTheme.colorScheme.surfaceContainerHigh) {
+            Row(Modifier.fillMaxWidth().heightIn(min = 48.dp).padding(horizontal = 12.dp),
+                verticalAlignment = Alignment.CenterVertically) {
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) { Icon(Icons.Filled.Search, null) }
+                androidx.compose.foundation.text.BasicTextField(
+                    value = query,
+                    onValueChange = { query = it; onSearch(it) },
+                    singleLine = true,
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(
+                        color = MaterialTheme.colorScheme.onSurface,
+                        textAlign = androidx.compose.ui.text.style.TextAlign.Center
+                    ),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+                    keyboardActions = KeyboardActions(onSearch = { onSearch(query); focusManager.clearFocus() }),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        Box(contentAlignment = Alignment.Center) {
+                            if (query.isEmpty()) Text(strings.ytSearchPlaceholder, style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            inner()
+                        }
+                    }
+                )
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    if (isSearching) ExpressiveLoadingIndicator(size = 20.dp)
+                    else if (query.isNotEmpty()) IconButton(onClick = { query = ""; onSearch("") }) {
                         Icon(Icons.Filled.Clear, contentDescription = strings.clear)
                     }
                 }
-            },
-            singleLine = true,
-            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
-            keyboardActions = KeyboardActions(
-                onSearch = {
-                    onSearch(query)
-                    focusManager.clearFocus()
-                }
-            ),
-            shape = RoundedCornerShape(22.dp),
-            modifier = Modifier.fillMaxWidth()
-        )
+            }
+        }
 
         Spacer(Modifier.height(12.dp))
 
@@ -2931,7 +2932,7 @@ private fun YtSearchTab(
                     isPlaying = isPlaying,
                     isFavorite = favoriteIds.contains(song.id),
                     isDownloading = downloadingSongIds.contains(song.id),
-                    onClick = { onPlayQueue(displayed, index, false, null) },
+                    onClick = { awardStore.selectSearchResult(displayed[index]); onPlayQueue(displayed, index, false, null) },
                     onToggleFavorite = { onToggleFavorite(song) },
                     onDownload = { onDownloadSong(song) },
                     onMoreClick = { onSongMoreClick(song) }

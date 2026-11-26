@@ -114,14 +114,23 @@ enum class ThemeMode(val label: String) {
     }
 }
 
-enum class AppAccentColor(val baseName: String, val primaryHex: Long, val isDefault: Boolean = false) {
+enum class AppAccentColor(
+    val baseName: String,
+    val primaryHex: Long,
+    val isDefault: Boolean = false,
+    val lightHex: Long? = null,
+    val deepHex: Long? = null
+) {
     PIXEL_BLUE("Pixel Blue", 0xFF6489D8, isDefault = true),
     SOFT_LAVENDER("Soft Lavender", 0xFFA18BD4),
     SAGE_GREEN("Sage Green", 0xFF719B83),
     PEACH_CORAL("Peach Coral", 0xFFD98B79),
     GOLDEN_SAND("Golden Sand", 0xFFC6A15D),
     DUSTY_TEAL("Dusty Teal", 0xFF5D9EAA),
-    DUSTY_ROSE("Dusty Rose", 0xFFC47FA3);
+    DUSTY_ROSE("Dusty Rose", 0xFFC47FA3),
+    CHERRY_WINE("Cherry Wine", 0xFFB65D70, lightHex = 0xFFE8A3B2, deepHex = 0xFF713344),
+    SMOKY_INDIGO("Smoky Indigo", 0xFF6469AD, lightHex = 0xFFB2B5EF, deepHex = 0xFF393C76),
+    BURNT_AMBER("Burnt Amber", 0xFFC48250, lightHex = 0xFFF0B98F, deepHex = 0xFF80502F);
 
     fun getDisplayName(strings: AppStrings): String {
         if (!isDefault) return baseName

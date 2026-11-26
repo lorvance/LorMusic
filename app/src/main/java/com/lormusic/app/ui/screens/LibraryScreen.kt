@@ -113,15 +113,19 @@ fun LibraryScreen(
 ) {
     val strings = LocalStrings.current
     val view = LocalView.current
+    val awards = com.lormusic.app.Achievements.of(view.context)
     var selectedFolder by remember { mutableStateOf<String?>(null) }
     var showSortMenu by remember { mutableStateOf(false) }
     var showMoreMenu by remember { mutableStateOf(false) }
+    var converter by rememberSaveable { mutableStateOf(false) }
+    if (converter) com.lormusic.app.ConverterDialog { converter = false }
     var activeJoke by remember { mutableStateOf<BetaTesterJoke?>(null) }
     if (betaTesterJokes) {
         activeJoke?.let { BetaTesterJokeDialog(it, onDismiss = { activeJoke = null }) }
     }
     var isTopSearchExpanded by rememberSaveable { mutableStateOf(false) }
     var searchQuery by rememberSaveable { mutableStateOf("") }
+    LaunchedEffect(searchQuery) { if (searchQuery.trim().equals("кириешки",true)) awards.award(31) }
 
     val isSearchVisible = if (showTopSearchBar) isTopSearchExpanded else externalSearchActive || (betaExpandingSearch && isTopSearchExpanded)
     LaunchedEffect(isSearchVisible) {
@@ -341,7 +345,7 @@ fun LibraryScreen(
                             isCurrentSong = currentSong?.id == song.id,
                             isPlaying = isPlaying,
                             isFavorite = favoriteIds.contains(song.id),
-                            onClick = { val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null; onPlayQueue(filteredSongs, index, false, ctx) },
+                            onClick = { if (searchQuery.isNotBlank()) awards.selectSearchResult(filteredSongs[index]); val ctx = if (selectedFilter == LibraryFilter.FAVORITES) PlaybackContext(PlaybackContextType.FAVORITES) else null; onPlayQueue(filteredSongs, index, false, ctx) },
                             onToggleFavorite = { onToggleFavorite(song) },
                             onMoreClick = { onSongMoreClick(song) }
                         )
@@ -467,6 +471,7 @@ fun LibraryScreen(
                                 },
                                 enabled = !isScanningLocal
                             )
+                            DropdownMenuItem(text = { Text("Видео в аудио") }, onClick = { showMoreMenu = false; converter = true })
                             if (betaTesterJokes) {
                                 HorizontalDivider()
                                 BetaTesterJoke.entries.forEach { joke ->
@@ -475,6 +480,7 @@ fun LibraryScreen(
                                         leadingIcon = { BetaTesterJokeIcon(joke) },
                                         onClick = {
                                             showMoreMenu = false
+                                            if (joke == BetaTesterJoke.DOORS) awards.award(28)
                                             activeJoke = joke
                                         },
                                     )
@@ -505,10 +511,12 @@ fun LibraryScreen(
                                 add(LiquidMenuItem(strings.rescan, Icons.Filled.Refresh, enabled = !isScanningLocal) {
                                     onRequestPermissionAndScan()
                                 })
+                                add(LiquidMenuItem("Видео в аудио", Icons.Filled.MusicNote) { converter = true })
                                 if (betaTesterJokes) {
                                     add(LiquidMenuDivider)
                                     BetaTesterJoke.entries.forEach { joke ->
                                         add(LiquidMenuItem(joke.label, iconContent = { BetaTesterJokeIcon(joke, it) }) {
+                                            if (joke == BetaTesterJoke.DOORS) awards.award(28)
                                             activeJoke = joke
                                         })
                                     }

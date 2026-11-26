@@ -40,11 +40,11 @@ val LocalMaterialArrows = staticCompositionLocalOf { false }
 fun LegacyScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
     hazeState: HazeState?, enableBlur: Boolean, useLiquidGlass: Boolean,
     actionIcon: ImageVector = Icons.Filled.MoreVert, actionLabel: String = LocalStrings.current.actions,
-    applyStatusInsets: Boolean = true) {
+    applyStatusInsets: Boolean = true, plainHeader: Boolean = false) {
     val topScrimColor = MaterialTheme.colorScheme.background
     val pureMy = LocalPureMaterialYou.current
     Box(Modifier.fillMaxWidth()) {
-        if (enableBlur && !pureMy && hazeState != null) {
+        if (!plainHeader && enableBlur && !pureMy && hazeState != null) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -64,7 +64,7 @@ fun LegacyScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
                         )
                     )
             )
-        } else {
+        } else if (!plainHeader) {
             Box(
                 modifier = Modifier
                     .matchParentSize()
@@ -98,7 +98,16 @@ fun LegacyScreenHeader(title: String, onBack: () -> Unit, onAction: () -> Unit,
                 IosBackChevron(color = MaterialTheme.colorScheme.onSurface)
             }
             Box(Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                Box(
+                if (plainHeader) {
+                    Text(
+                        text = title,
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.ExtraBold,
+                        textAlign = TextAlign.Center,
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis
+                    )
+                } else Box(
                     Modifier
                         .height(44.dp)
                         .widthIn(max = 260.dp)

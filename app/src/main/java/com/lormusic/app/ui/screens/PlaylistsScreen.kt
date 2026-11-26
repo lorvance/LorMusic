@@ -10,7 +10,7 @@ import com.lormusic.app.ui.components.FullWindowDialog
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
 import androidx.compose.animation.animateContentSize
-import androidx.activity.compose.BackHandler
+import com.lormusic.app.ui.components.PreviewBackHandler as BackHandler
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
@@ -80,6 +80,7 @@ import dev.chrisbanes.haze.hazeSource
 
 @Composable
 fun PlaylistsScreen(
+    onBackdropPage: (String?) -> Unit = {},
     playlists: List<Playlist>,
     allSongs: List<Song>,
     currentSong: Song?,
@@ -133,11 +134,20 @@ fun PlaylistsScreen(
     }
 
     val activePlaylist = playlists.find { it.id == selectedPlaylistId }
+    val reportBackdropPage by androidx.compose.runtime.rememberUpdatedState(onBackdropPage)
+    androidx.compose.runtime.DisposableEffect(activePlaylist?.id) {
+        reportBackdropPage(activePlaylist?.id)
+        onDispose { reportBackdropPage(null) }
+    }
 
+
+    val sampleLiveGlass = com.lormusic.app.ui.components.LocalLiquidGlassEnabled.current
     AnimatedContent(
         targetState = activePlaylist,
         transitionSpec = {
-            if (targetState != null) {
+            if (sampleLiveGlass) {
+                androidx.compose.animation.EnterTransition.None togetherWith androidx.compose.animation.ExitTransition.None
+            } else if (targetState != null) {
                 (slideInHorizontally(tween(260)) { it / 4 } + fadeIn(tween(220)))
                     .togetherWith(slideOutHorizontally(tween(220)) { -it / 4 } + fadeOut(tween(180)))
             } else {

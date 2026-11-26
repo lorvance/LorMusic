@@ -6,7 +6,8 @@ import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
 import androidx.activity.ComponentActivity
-import androidx.activity.compose.BackHandler
+import com.lormusic.app.ui.components.backPreviewTransform
+import com.lormusic.app.ui.components.PreviewBackHandler as BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -216,9 +217,11 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     var lastBackPressTime by remember { androidx.compose.runtime.mutableLongStateOf(0L) }
 
+    var backProgress by remember { mutableFloatStateOf(0f) }
+    var playlistBackdropKey by remember { mutableStateOf<String?>(null) }
     val selectedArtist = playerViewModel.selectedArtistProfile.value
 
-    BackHandler(enabled = (selectedArtist != null || isYtMusicMode || isSoundCloudMode) && !showNowPlaying) {
+    BackHandler(previewOverride = { backProgress = it }, enabled = (selectedArtist != null || isYtMusicMode || isSoundCloudMode) && !showNowPlaying) {
         if (selectedArtist != null) {
             playerViewModel.closeArtistProfile()
         } else if (isSoundCloudMode) {
@@ -246,7 +249,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     }
     // A fresh page source prevents the previous section's retained layer
     // from being reused while switching to Settings.
-    val appBackdrop = key(selectedTab, isYtMusicMode, isSoundCloudMode, selectedArtist) {
+    val appBackdrop = key(selectedTab, isYtMusicMode, isSoundCloudMode, selectedArtist, playlistBackdropKey, activeScTab, activeYtTab) {
         rememberLayerBackdrop(onDraw = paintBackdrop)
     }
     val useLiquidGlass = playerViewModel.useLiquidGlass.value
@@ -269,6 +272,9 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
     }
 
     val snackbarHostState = remember { SnackbarHostState() }
+    LaunchedEffect(playerViewModel) {
+        for (message in playerViewModel.achievements.notifications) snackbarHostState.showSnackbar(message, duration = SnackbarDuration.Short)
+    }
     LaunchedEffect(statusMessage) {
         statusMessage?.let { msg ->
             snackbarHostState.showSnackbar(msg, duration = SnackbarDuration.Short)
@@ -278,6 +284,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
 
     com.lormusic.app.ui.components.ModernGlassProviders(sourceKey=appBackdrop) {
     CompositionLocalProvider(
+        com.lormusic.app.ui.components.LocalBackPreview provides { backProgress = it },
         LocalAppBackdrop provides appBackdrop,
         LocalLiquidGlassEnabled provides isGlassActive,
         LocalBottomControlsHeight provides bottomControlsHeight,
@@ -286,6 +293,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
         LocalMaterialArrows provides playerViewModel.materialArrows.value,
         LocalStrings provides currentStrings
     ) {
+    Box(Modifier.fillMaxSize().backPreviewTransform { backProgress }) {
         Surface(
             modifier = Modifier
                 .fillMaxSize()
@@ -511,6 +519,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                         )
 
                                         LorTab.PLAYLISTS -> PlaylistsScreen(
+                                            onBackdropPage = { playlistBackdropKey = it },
                                             expressiveHeader = playerViewModel.expressiveHeader.value,
                                             playlists = playlists + listOfNotNull(playerViewModel.hiddenTracksPlaylist()),
                                             onRestoreHiddenSong = { pendingTrackVisibility = it to false },
@@ -580,7 +589,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 betaSeparateHeaderBubbles = playerViewModel.betaSeparateHeaderBubbles.value,
                                                 betaDynamicPlaybackContext = playerViewModel.betaDynamicPlaybackContext.value,
                                                 betaAutoHideNavBar = betaAutoHideNavBar,
-                                                betaCategorizedSettings = playerViewModel.betaCategorizedSettings.value,
                                                 betaTesterJokes = playerViewModel.betaTesterJokes.value,
                                                 betaTesterJokesUnlocked = playerViewModel.betaTesterJokesUnlocked.value,
                                                 onUnlockBetaTesterJokes = playerViewModel::unlockBetaTesterJokes,
@@ -609,7 +617,6 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                                 onToggleBetaSeparateHeaderBubbles = playerViewModel::setBetaSeparateHeaderBubbles,
                                                 onToggleBetaDynamicPlaybackContext = playerViewModel::setBetaDynamicPlaybackContext,
                                                 onToggleBetaAutoHideNavBar = playerViewModel::setBetaAutoHideNavBar,
-                                                onToggleBetaCategorizedSettings = playerViewModel::setBetaCategorizedSettings,
                                                 onToggleBetaHideDividers = playerViewModel::setBetaHideDividers,
                                                 onToggleAlbumArtGradient = playerViewModel::setUseAlbumArtGradient,
                                                 onToggleMyWaveCoverGradient = playerViewModel::setUseMyWaveCoverGradient,
@@ -667,7 +674,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                                     horizontalArrangement = Arrangement.spacedBy(12.dp)
                                 ) {
                                     Icon(
-                                        imageVector = Icons.Filled.Info,
+                                        imageVector = if (data.visuals.message.startsWith("Достижение открыто · ")) Icons.Filled.EmojiEvents else Icons.Filled.Info,
                                         contentDescription = null,
                                         tint = MaterialTheme.colorScheme.primary,
                                         modifier = Modifier.size(22.dp)
@@ -1235,6 +1242,7 @@ fun LorMusicMainContent(playerViewModel: PlayerViewModel) {
                 }
             )
         }
+    }
     }
     }
 }

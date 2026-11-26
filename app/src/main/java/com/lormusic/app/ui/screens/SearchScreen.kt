@@ -30,6 +30,8 @@ fun SearchScreen(
     onSongMoreClick: (Song) -> Unit
 ) {
     var query by remember { mutableStateOf("") }
+    val awards = com.lormusic.app.Achievements.of(androidx.compose.ui.platform.LocalContext.current)
+    LaunchedEffect(query) { if (query.trim().equals("кириешки",true)) awards.award(31) }
     val strings = LocalStrings.current
 
     val artists = remember(songs) {
@@ -142,7 +144,7 @@ fun SearchScreen(
                             isCurrentSong = currentSong?.id == song.id,
                             isPlaying = isPlaying,
                             isFavorite = favoriteIds.contains(song.id),
-                            onClick = { onPlayQueue(results, index, false) },
+                            onClick = { if(query.isNotBlank()) awards.selectSearchResult(results[index]); onPlayQueue(results, index, false) },
                             onToggleFavorite = { onToggleFavorite(song) },
                             onMoreClick = { onSongMoreClick(song) }
                         )

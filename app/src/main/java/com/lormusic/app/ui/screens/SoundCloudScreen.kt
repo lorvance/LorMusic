@@ -16,7 +16,7 @@ import android.graphics.Bitmap
 import android.view.HapticFeedbackConstants
 import android.view.ViewGroup
 import android.webkit.*
-import androidx.activity.compose.BackHandler
+import com.lormusic.app.ui.components.PreviewBackHandler as BackHandler
 import androidx.compose.animation.*
 import androidx.compose.animation.core.tween
 import androidx.compose.foundation.basicMarquee
@@ -1370,12 +1370,13 @@ private fun ScSearchTab(
     onSearch: (String) -> Unit,
     hazeState: HazeState? = null
 ) {
+    val awardStore = com.lormusic.app.Achievements.of(androidx.compose.ui.platform.LocalContext.current)
     val strings = LocalStrings.current
     var query by remember { mutableStateOf("") }
 
     Column(modifier = Modifier.fillMaxSize()) {
         Surface(
-            shape = RoundedCornerShape(24.dp),
+            shape = RoundedCornerShape(percent = 50),
             color = MaterialTheme.colorScheme.surfaceContainerHigh,
             modifier = Modifier
                 .fillMaxWidth()
@@ -1384,7 +1385,8 @@ private fun ScSearchTab(
             Row(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 14.dp, vertical = 4.dp),
+                    .heightIn(min = 48.dp)
+                    .padding(horizontal = 14.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.spacedBy(10.dp)
             ) {
@@ -1393,28 +1395,22 @@ private fun ScSearchTab(
                     contentDescription = null,
                     tint = MaterialTheme.colorScheme.onSurfaceVariant
                 )
-                OutlinedTextField(
+                androidx.compose.foundation.text.BasicTextField(
                     value = query,
-                    onValueChange = {
-                        query = it
-                        onSearch(it)
-                    },
-                    placeholder = { Text(strings.soundCloudPlaceholder, modifier = Modifier.fillMaxWidth(), textAlign = androidx.compose.ui.text.style.TextAlign.Center) },
-            textStyle = MaterialTheme.typography.bodyLarge.copy(textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    onValueChange = { query = it; onSearch(it) },
                     singleLine = true,
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = Color.Transparent,
-                        unfocusedBorderColor = Color.Transparent,
-                        focusedContainerColor = Color.Transparent,
-                        unfocusedContainerColor = Color.Transparent
-                    ),
-                    modifier = Modifier.weight(1f)
+                    textStyle = MaterialTheme.typography.bodyMedium.copy(color = MaterialTheme.colorScheme.onSurface, textAlign = androidx.compose.ui.text.style.TextAlign.Center),
+                    cursorBrush = androidx.compose.ui.graphics.SolidColor(MaterialTheme.colorScheme.primary),
+                    modifier = Modifier.weight(1f),
+                    decorationBox = { inner ->
+                        Box(contentAlignment = Alignment.Center) {
+                            if (query.isEmpty()) Text(strings.soundCloudPlaceholder, color = MaterialTheme.colorScheme.onSurfaceVariant, style = MaterialTheme.typography.bodyMedium)
+                            inner()
+                        }
+                    }
                 )
-                if (query.isNotEmpty()) {
-                    IconButton(onClick = {
-                        query = ""
-                        onSearch("")
-                    }) {
+                Box(Modifier.size(40.dp), contentAlignment = Alignment.Center) {
+                    if (query.isNotEmpty()) IconButton(onClick = { query = ""; onSearch("") }) {
                         Icon(Icons.Filled.Clear, contentDescription = strings.clear)
                     }
                 }
@@ -1439,7 +1435,7 @@ private fun ScSearchTab(
                         isPlaying = isPlaying && currentSong?.id == song.id,
                         isCurrentSong = currentSong?.id == song.id,
                         isFavorite = isFavorite(song.id),
-                        onClick = { onPlayQueue(searchResults, idx, false, PlaybackContext(PlaybackContextType.SINGLE, searchResults.getOrNull(idx)?.title)) },
+                        onClick = { awardStore.selectSearchResult(searchResults[idx]); onPlayQueue(searchResults, idx, false, PlaybackContext(PlaybackContextType.SINGLE, searchResults.getOrNull(idx)?.title)) },
                         onToggleFavorite = { onToggleFavorite(song) },
                         onMoreClick = { onSongMoreClick(song) }
                     )

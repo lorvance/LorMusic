@@ -1953,7 +1953,8 @@ object YouTubeMusicRepository {
         album: String,
         genre: String,
         year: String,
-        coverBytes: ByteArray?
+        coverBytes: ByteArray?,
+        extraTags: Map<String, String> = emptyMap()
     ) {
         val fileBytes = m4aFile.readBytes()
         if (fileBytes.size < 32) return
@@ -1961,7 +1962,15 @@ object YouTubeMusicRepository {
         val ilstPayload = ByteArrayOutputStream()
         writeItunesTextAtom(ilstPayload, "\u00A9nam", title)
         writeItunesTextAtom(ilstPayload, "\u00A9ART", artist)
-        writeItunesTextAtom(ilstPayload, "aART", artist)
+        writeItunesTextAtom(ilstPayload, "aART", extraTags["AART"].orEmpty().ifBlank { artist })
+        val extraAtoms = mapOf("ICMT" to "©cmt", "ICOP" to "cprt", "COMP" to "©wrt", "LYRI" to "©lyr")
+        for ((key, atom) in extraAtoms) {
+            extraTags[key]?.takeIf { it.isNotBlank() }?.let { writeItunesTextAtom(ilstPayload, atom, it) }
+        }
+        extraTags["ITRK"]?.substringBefore('/')?.trim()?.toIntOrNull()?.takeIf { it in 1..65535 }?.let { number ->
+            val track = ByteBuffer.allocate(8).putShort(0).putShort(number.toShort()).putShort(0).putShort(0).array()
+            writeItunesDataAtom(ilstPayload, "trkn", 0, track)
+        }
         writeItunesTextAtom(ilstPayload, "\u00A9alb", album)
         if (genre.isNotBlank()) writeItunesTextAtom(ilstPayload, "\u00A9gen", genre)
         if (year.isNotBlank()) writeItunesTextAtom(ilstPayload, "\u00A9day", year)

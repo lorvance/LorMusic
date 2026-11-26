@@ -741,35 +741,7 @@ fun AccentColorSwatchPreview(
     val main = accent.seedColor
     val light = accent.lightToneColor
     val deep = accent.deepToneColor
-    Canvas(
-        modifier = modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .border(1.5.dp, Color.White.copy(alpha = 0.28f), CircleShape)
-    ) {
-        drawArc(
-            color = main,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = true
-        )
-        drawArc(
-            color = light,
-            startAngle = 90f,
-            sweepAngle = 90f,
-            useCenter = true
-        )
-        drawArc(
-            color = deep,
-            startAngle = 0f,
-            sweepAngle = 90f,
-            useCenter = true
-        )
-        drawCircle(
-            color = main,
-            radius = size.minDimension * 0.28f
-        )
-    }
+    ThreeToneSwatch(main, light, deep, modifier)
 }
 
 @Composable
@@ -786,34 +758,15 @@ fun DynamicWallpaperSwatchPreview(
     val main = scheme.primary
     val light = scheme.primaryContainer
     val deep = scheme.tertiary
-    Canvas(
-        modifier = modifier
-            .size(28.dp)
-            .clip(CircleShape)
-            .border(1.5.dp, Color.White.copy(alpha = 0.28f), CircleShape)
-    ) {
-        drawArc(
-            color = main,
-            startAngle = 180f,
-            sweepAngle = 180f,
-            useCenter = true
-        )
-        drawArc(
-            color = light,
-            startAngle = 90f,
-            sweepAngle = 90f,
-            useCenter = true
-        )
-        drawArc(
-            color = deep,
-            startAngle = 0f,
-            sweepAngle = 90f,
-            useCenter = true
-        )
-        drawCircle(
-            color = main,
-            radius = size.minDimension * 0.28f
-        )
+    ThreeToneSwatch(main, light, deep, modifier)
+}
+
+@Composable
+private fun ThreeToneSwatch(main: Color, light: Color, deep: Color, modifier: Modifier) {
+    Canvas(modifier.size(28.dp)) {
+        drawArc(main, 180f, 180f, useCenter = true)
+        drawArc(deep, 90f, 90f, useCenter = true)
+        drawArc(light, 0f, 90f, useCenter = true)
     }
 }
 

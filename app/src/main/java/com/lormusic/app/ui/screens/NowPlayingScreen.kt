@@ -7,7 +7,7 @@ import android.content.ClipboardManager
 import android.content.Context
 import android.view.HapticFeedbackConstants
 import android.widget.Toast
-import androidx.activity.compose.BackHandler
+import com.lormusic.app.ui.components.PreviewBackHandler as BackHandler
 import androidx.collection.LruCache
 import androidx.compose.animation.*
 import androidx.compose.animation.core.*
@@ -62,6 +62,8 @@ import com.lormusic.app.ui.components.backdrop.backdrops.rememberLayerBackdrop
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import com.kyant.backdrop.backdrops.layerBackdrop as playerLayerBackdrop
+
+import io.github.ntvien.liquidglass.liquidGlass as modernLiquidGlass
 
 private enum class LyricsDisplayMode {
     SYNCED,
@@ -177,7 +179,9 @@ fun NowPlayingScreen(
     val playButtonContentColor = if (useDynamicPlayerColors) getContrastingContentColor(effectiveAccentColor) else MaterialTheme.colorScheme.onPrimary
 
     val playerChromeHaze = remember { HazeState() }
-    val playerChromeBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    val playerChromeBackdrop = androidx.compose.runtime.key(showLyrics) {
+        com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    }
     val playerGlassSource = remember(playerChromeBackdrop) {
         com.lormusic.app.ui.components.NtBackdropAdapter(playerChromeBackdrop)
     }
@@ -1255,6 +1259,11 @@ private fun FullScreenLyricsLayout(
     val listState = rememberLazyListState()
     val lyricsHazeState = remember { HazeState() }
     val lyricsBgColor = MaterialTheme.colorScheme.background
+    val lyricsModernBackdrop = com.kyant.backdrop.backdrops.rememberLayerBackdrop()
+    val lyricsGlassBackdrops = remember(lyricsModernBackdrop) {
+        val source = com.lormusic.app.ui.components.NtBackdropAdapter(lyricsModernBackdrop)
+        io.github.ntvien.liquidglass.GlassBackdrops(source, source, samplesContent = true)
+    }
     val lyricsBackdrop = rememberLayerBackdrop(onDraw = {
         drawRect(lyricsBgColor)
         drawContent()
@@ -1396,7 +1405,7 @@ private fun FullScreenLyricsLayout(
                     .hazeSource(state = lyricsHazeState)
                     .then(
                         if (useLiquidGlass && isLiquidGlassSupported()) {
-                            Modifier.layerBackdrop(lyricsBackdrop)
+                            Modifier.layerBackdrop(lyricsBackdrop).playerLayerBackdrop(lyricsModernBackdrop)
                         } else {
                             Modifier
                         }
@@ -1542,6 +1551,8 @@ private fun FullScreenLyricsLayout(
             }
 
             CompositionLocalProvider(
+                io.github.ntvien.liquidglass.LocalGlassBackdrops provides lyricsGlassBackdrops,
+                com.lormusic.app.ui.components.LocalModernBackdrop provides lyricsModernBackdrop,
                 LocalAppBackdrop provides lyricsBackdrop,
                 LocalLiquidGlassEnabled provides useLiquidGlass
             ) {
@@ -1557,7 +1568,7 @@ private fun FullScreenLyricsLayout(
                     Box(
                         modifier = Modifier
                             .size(46.dp)
-                            .liquidGlassBubble(
+                            .lyricsGlassBubble(
                                 shape = CircleShape,
                                 hazeState = lyricsHazeState,
                                 enableBlur = enableBlur,
@@ -1592,7 +1603,7 @@ private fun FullScreenLyricsLayout(
                         Box(
                             modifier = Modifier
                                 .size(46.dp)
-                                .liquidGlassBubble(
+                                .lyricsGlassBubble(
                                     shape = CircleShape,
                                     hazeState = lyricsHazeState,
                                     enableBlur = enableBlur,
@@ -1620,7 +1631,7 @@ private fun FullScreenLyricsLayout(
                         modifier = Modifier
                             .weight(1f)
                             .height(46.dp)
-                            .liquidGlassBubble(
+                            .lyricsGlassBubble(
                                 shape = CircleShape,
                                 hazeState = lyricsHazeState,
                                 enableBlur = enableBlur,
@@ -1914,4 +1925,23 @@ private fun PlayerHeaderBubble(
             contentAlignment = Alignment.Center,
         ) { content() }
     }
+}
+
+@Composable
+private fun Modifier.lyricsGlassBubble(
+    shape: androidx.compose.foundation.shape.CornerBasedShape,
+    hazeState: HazeState,
+    enableBlur: Boolean,
+    isLiquidGlass: Boolean
+): Modifier {
+    if (!isLiquidGlass || !isLiquidGlassSupported() || com.lormusic.app.ui.components.LocalPureMaterialYou.current) {
+        return liquidGlassBubble(shape, hazeState, enableBlur, isLiquidGlass)
+    }
+    val surface = MaterialTheme.colorScheme.surface
+    val style = com.lormusic.app.ui.components.headerGlassStyle(enableBlur)
+    return modernLiquidGlass(
+        style = style.copy(blur = 44.dp, surface = surface.copy(alpha = .78f), fallbackSurface = surface.copy(alpha = .96f)),
+        shape = shape,
+        interaction = io.github.ntvien.liquidglass.rememberGlassInteraction()
+    )
 }

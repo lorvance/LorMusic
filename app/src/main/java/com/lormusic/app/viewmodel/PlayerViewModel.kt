@@ -33,6 +33,22 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class PlayerViewModel(application: Application) : AndroidViewModel(application) {
+    internal val achievements = com.lormusic.app.Achievements.of(application)
+    private var pendingAchievementPlay = true
+    private var lastSkipTime = 0L
+    private var skipStreak = 0
+    private fun countSkip() {
+        val now = android.os.SystemClock.elapsedRealtime()
+        skipStreak = if (now - lastSkipTime < 10000) skipStreak + 1 else 1
+        lastSkipTime = now
+        if (skipStreak >= 5) achievements.award(34)
+    }
+    private fun creditPlayback() {
+        val song = currentSong.value ?: return
+        if (!pendingAchievementPlay || !exoPlayer.isPlaying || exoPlayer.currentMediaItem?.mediaId != song.id) return
+        pendingAchievementPlay = false
+        achievements.played(song,currentPlaybackContext.value?.takeIf { it.type == PlaybackContextType.PLAYLIST }?.title)
+    }
 
     private val prefs = PreferencesRepository(application)
     private val exoPlayer: ExoPlayer = SharedPlayerHolder.getOrCreate(application)
@@ -57,6 +73,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         if (betaTesterJokesUnlocked.value) return true
         if (!com.lormusic.app.data.BetaTesterAccess.matches(password)) return false
         prefs.unlockBetaTesterJokes()
+        achievements.award(38)
         betaTesterJokes.value = true
         betaTesterJokesUnlocked.value = true
         return true
@@ -101,6 +118,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     val glassTransparency = mutableStateOf(prefs.getGlassTransparency())
     fun setGlassTransparency(percent: Int) {
         val bounded = percent.coerceIn(0, 100)
+        if (bounded == 0 && useLiquidGlass.value) achievements.award(22)
         glassTransparency.value = bounded
         prefs.saveGlassTransparency(bounded)
     }
@@ -116,11 +134,12 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
     val ytNavTabOrder = mutableStateOf(prefs.getYtNavTabOrder())
     val scNavTabOrder = mutableStateOf(prefs.getScNavTabOrder())
-    fun setYtNavTabOrder(order: List<YtMusicTab>) { val normalized=com.lormusic.app.ui.components.normalizeYtTabOrder(order);ytNavTabOrder.value=normalized;prefs.saveYtNavTabOrder(normalized) }
-    fun setScNavTabOrder(order: List<ScTab>) { val normalized=com.lormusic.app.ui.components.normalizeScTabOrder(order);scNavTabOrder.value=normalized;prefs.saveScNavTabOrder(normalized) }
+    fun setYtNavTabOrder(order: List<YtMusicTab>) { val normalized=com.lormusic.app.ui.components.normalizeYtTabOrder(order);if(ytNavTabOrder.value != normalized) achievements.award(27);ytNavTabOrder.value=normalized;prefs.saveYtNavTabOrder(normalized) }
+    fun setScNavTabOrder(order: List<ScTab>) { val normalized=com.lormusic.app.ui.components.normalizeScTabOrder(order);if(scNavTabOrder.value != normalized) achievements.award(27);scNavTabOrder.value=normalized;prefs.saveScNavTabOrder(normalized) }
     val navTabOrder = mutableStateOf(prefs.getNavTabOrder())
     fun setNavTabOrder(order: List<com.lormusic.app.ui.components.LorTab>) {
         val normalized = com.lormusic.app.ui.components.normalizeLorTabOrder(order)
+        if (navTabOrder.value != normalized) achievements.award(27)
         navTabOrder.value = normalized
         prefs.saveNavTabOrder(normalized)
     }
@@ -238,6 +257,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         override fun onIsPlayingChanged(playing: Boolean) {
             if (com.lormusic.app.service.ExternalPlaybackSession.active) return
             isPlaying.value = playing
+            if (playing) creditPlayback()
         }
 
         override fun onMediaItemTransition(mediaItem: MediaItem?, reason: Int) {
@@ -251,6 +271,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             if (found != null) {
                 val withTags = found.withOverride(tagOverrides.value[found.id])
                 currentSong.value = withTags
+                pendingAchievementPlay = true
+                creditPlayback()
                 durationMs.value = exoPlayer.duration.takeIf { it > 0 } ?: withTags.durationMs
                 positionMs.value = exoPlayer.currentPosition.coerceAtLeast(0L)
                 prefs.saveLastPlayedSongId(withTags.id)
@@ -302,6 +324,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val scannedLocal = withContext(Dispatchers.IO) {
                 LocalMusicScanner.scanDeviceMusic(context)
             }
+            if (scannedLocal.size >= 1000) achievements.award(11)
             localSongsCount.value = scannedLocal.size
             val comparator = AlphaNumericComparator()
             val combinedRaw = scannedLocal.sortedWith { a, b ->
@@ -310,6 +333,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             rawAllSongs = combinedRaw
             val overrides = tagOverrides.value
             val combined = combinedRaw.map { it.withOverride(overrides[it.id]) }
+            achievements.installation()
+            if (combined.isEmpty() && savedYtSongs.value.isEmpty() && savedScSongs.value.isEmpty() && androidx.core.content.ContextCompat.checkSelfPermission(context, if (android.os.Build.VERSION.SDK_INT >= 33) android.Manifest.permission.READ_MEDIA_AUDIO else android.Manifest.permission.READ_EXTERNAL_STORAGE) == android.content.pm.PackageManager.PERMISSION_GRANTED) achievements.award(33)
             allSongs.value = combined
             rebuildPlaylists(combined)
 
@@ -419,6 +444,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun saveSongTagOverride(override: SongTagOverride) {
+        achievements.award(14)
         val updatedMap = tagOverrides.value.toMutableMap()
         updatedMap[override.songId] = override
         prefs.saveTagOverrides(updatedMap)
@@ -479,6 +505,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setAppIconOption(option: AppIconOption) {
+        if (option != selectedAppIcon.value) achievements.count("icons",5,25)
+        if (option == AppIconOption.OLD) achievements.award(26)
         selectedAppIcon.value = option
         prefs.saveAppIconOption(option)
 
@@ -636,6 +664,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun searchYtMusic(query: String) {
+        if (query.trim().equals("кириешки",true)) achievements.award(31)
         ytSearchJob?.cancel()
         val cookie = ytMusicCookie.value
         if (query.isBlank()) {
@@ -764,6 +793,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             ytMusicCookie.value = cookie
             prefs.saveYtMusicCookie(cookie)
+            achievements.award(16)
+            if (!soundCloudAuthToken.value.isNullOrBlank()) achievements.award(18)
             prefs.saveYtWebClientVersion(YouTubeMusicRepository.currentClientVersion)
             googleAccount.value = profile
             prefs.saveGoogleAccount(profile.displayName, profile.email, profile.avatarUrl)
@@ -927,6 +958,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             val scannedLocal = withContext(Dispatchers.IO) {
                 LocalMusicScanner.scanDeviceMusic(context)
             }
+            if (scannedLocal.size >= 1000) achievements.award(11)
             localSongsCount.value = scannedLocal.size
             val comparator = AlphaNumericComparator()
             val combinedRaw = (scannedLocal + readyDemos).sortedWith { a, b ->
@@ -971,6 +1003,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     private fun persistPlaylists(playlists: List<Playlist>) {
+        if (playlists.any { p -> p.songs.any { it.isRemoteSc } && p.songs.any { it.isRemoteYt } }) achievements.award(20)
         prefs.saveCustomPlaylists(
             playlists.map { pl ->
                 StoredPlaylistData(
@@ -1214,6 +1247,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             false
         } else {
             updated.add(song.id)
+            achievements.favorite(song.id)
             prefs.removeUnfavoritedSongId(song.id)
             if (isYt) {
                 prefs.removeUnfavoritedSongId(song.id.removePrefix("yt_"))
@@ -1267,6 +1301,8 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             coverColorSeed = cleanName.hashCode(),
             isUnified = isUnified
         )
+        achievements.award(12)
+        achievements.count("playlists",5,13)
         val updated = customPlaylists.value + newPlaylist
         customPlaylists.value = updated
         persistPlaylists(updated)
@@ -1382,6 +1418,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun searchSoundCloud(query: String) {
+        if (query.trim().equals("кириешки",true)) achievements.award(31)
         scSearchJob?.cancel()
         if (query.isBlank()) {
             soundCloudSearchResults.value = emptyList()
@@ -1410,6 +1447,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             }
             val finalProfile = profile ?: SoundCloudUserProfile(username = "SoundCloud User", avatarUrl = null)
             soundCloudProfile.value = finalProfile
+            if (profile != null) { achievements.award(17); if (googleAccount.value != null) achievements.award(18) }
             prefs.saveScProfile(finalProfile)
             soundCloudLikes.value = SoundCloudRepository.fetchUserLikes(40)
             loadSoundCloudCharts()
@@ -1614,6 +1652,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
             positionMs.value = 0L
             seekTo(0L)
         } else {
+            if (nextIdx != idx) countSkip()
             if (nextIdx in 0 until exoPlayer.mediaItemCount) {
                 exoPlayer.seekToDefaultPosition(nextIdx)
                 exoPlayer.play()
@@ -1634,6 +1673,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
         val current = currentSong.value
         val idx = if (current != null) q.indexOfFirst { it.id == current.id } else exoPlayer.currentMediaItemIndex
         val prevIdx = if (idx > 0) idx - 1 else (if (repeatMode.value == RepeatMode.ALL) q.lastIndex else 0)
+        if (prevIdx != idx) countSkip()
         if (prevIdx in 0 until exoPlayer.mediaItemCount) {
             exoPlayer.seekToDefaultPosition(prevIdx)
             exoPlayer.play()
@@ -1735,11 +1775,13 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setThemeMode(mode: ThemeMode) {
+        if (mode == ThemeMode.DARK) achievements.award(35)
         themeMode.value = mode
         prefs.saveThemeMode(mode)
     }
 
     fun setAccentColor(color: AppAccentColor) {
+        if (accentColor.value != color) achievements.award(24)
         accentColor.value = color
         prefs.saveAccentColor(color)
         if (useDynamicColor.value) {
@@ -1759,6 +1801,7 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setEnableBlur(enabled: Boolean) {
+        if (!enabled && !useLiquidGlass.value) achievements.award(23)
         enableBlur.value = enabled
         prefs.saveEnableBlur(enabled)
     }
@@ -1920,6 +1963,9 @@ class PlayerViewModel(application: Application) : AndroidViewModel(application) 
     }
 
     fun setUseLiquidGlass(enabled: Boolean) {
+        if (enabled) achievements.award(21)
+        if (enabled && glassTransparency.value == 0) achievements.award(22)
+        if (!enabled && useLiquidGlass.value && 22 in achievements.unlocked) achievements.award(36)
         if(enabled) { setPureMaterialYou(false); setEnableBlur(true); setExpressiveNavigation(false) }
         useLiquidGlass.value = enabled
         prefs.saveUseLiquidGlass(enabled)

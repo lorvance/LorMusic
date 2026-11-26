@@ -57,10 +57,10 @@ val AppAccentColor.seedColor: Color
     get() = Color(primaryHex)
 
 val AppAccentColor.lightToneColor: Color
-    get() = lerp(seedColor, Color.White, 0.38f)
+    get() = lightHex?.let { Color(it) } ?: lerp(seedColor, Color.White, 0.38f)
 
 val AppAccentColor.deepToneColor: Color
-    get() = lerp(Color(0xFF10131A), seedColor, 0.48f)
+    get() = deepHex?.let { Color(it) } ?: lerp(Color(0xFF10131A), seedColor, 0.48f)
 
 fun buildAccentColorScheme(accent: AppAccentColor, darkTheme: Boolean): ColorScheme {
     val seed = accent.seedColor
@@ -68,14 +68,14 @@ fun buildAccentColorScheme(accent: AppAccentColor, darkTheme: Boolean): ColorSch
         darkColorScheme(
             primary = seed,
             onPrimary = lerp(Color(0xFF07090E), seed, 0.20f),
-            primaryContainer = lerp(Color(0xFF10131A), seed, 0.44f),
+            primaryContainer = accent.deepHex?.let { Color(it) } ?: lerp(Color(0xFF10131A), seed, 0.44f),
             onPrimaryContainer = lerp(seed, Color.White, 0.62f),
             inversePrimary = lerp(seed, Color(0xFF10131A), 0.35f),
             secondary = lerp(seed, Color.White, 0.18f),
             onSecondary = lerp(Color(0xFF080B10), seed, 0.22f),
             secondaryContainer = lerp(Color(0xFF12151D), seed, 0.32f),
             onSecondaryContainer = lerp(seed, Color.White, 0.54f),
-            tertiary = lerp(seed, Color.White, 0.30f),
+            tertiary = accent.lightHex?.let { Color(it) } ?: lerp(seed, Color.White, 0.30f),
             onTertiary = lerp(Color(0xFF090C12), seed, 0.24f),
             tertiaryContainer = lerp(Color(0xFF141820), seed, 0.38f),
             onTertiaryContainer = lerp(seed, Color.White, 0.66f),
@@ -98,7 +98,7 @@ fun buildAccentColorScheme(accent: AppAccentColor, darkTheme: Boolean): ColorSch
         lightColorScheme(
             primary = lerp(seed, Color(0xFF121620), 0.14f),
             onPrimary = Color.White,
-            primaryContainer = lerp(Color.White, seed, 0.28f),
+            primaryContainer = accent.lightHex?.let { Color(it) } ?: lerp(Color.White, seed, 0.28f),
             onPrimaryContainer = lerp(Color(0xFF0C1018), seed, 0.36f),
             inversePrimary = seed,
             secondary = lerp(seed, Color(0xFF222732), 0.22f),
