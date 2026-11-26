@@ -11,7 +11,7 @@ def write(name,content,mode=0o644):
  p=stage/name;p.parent.mkdir(parents=True,exist_ok=True);p.write_text(content);p.chmod(mode)
 size=sum(p.stat().st_size for p in (stage/'opt').rglob('*') if p.is_file())//1024
 write('DEBIAN/control',f'''Package: lormusic-desktop
-Version: 1.8.0
+Version: 1.8.3
 Architecture: amd64
 Maintainer: LorMusic maintainers <noreply@localhost>
 Installed-Size: {size}
@@ -31,13 +31,19 @@ Type=Application
 Name=LorMusic
 GenericName=Music Player
 GenericName[ru]=Музыкальный плеер
+GenericName[uk]=Музичний плеєр
+GenericName[pl]=Odtwarzacz muzyki
+GenericName[de]=Musikplayer
 Comment=Your collection, new discoveries, one expressive player
 Comment[ru]=Вся ваша коллекция, новые открытия и выразительный плеер
+Comment[uk]=Ваша колекція, нові відкриття та виразний плеєр
+Comment[pl]=Twoja kolekcja, nowe odkrycia i nowoczesny odtwarzacz
+Comment[de]=Deine Sammlung, neue Entdeckungen und ein ausdrucksstarker Player
 Exec=lormusic %F
 Icon=lormusic-desktop
 Terminal=false
 Categories=AudioVideo;Audio;Player;
-MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;audio/x-mpegurl;
+MimeType=audio/mpeg;audio/flac;audio/ogg;audio/opus;audio/x-wav;audio/mp4;audio/x-mpegurl;video/mp4;video/webm;video/x-matroska;video/quicktime;video/x-msvideo;
 StartupNotify=true
 StartupWMClass=com-lormusic-desktop-MainKt
 ''')
@@ -50,11 +56,14 @@ write('usr/share/metainfo/com.lormusic.desktop.metainfo.xml','''<?xml version="1
  <developer id="com.lormusic"><name>LorMusic contributors</name></developer>
  <summary>Music, beautifully organized</summary>
  <summary xml:lang="ru">Ваша музыка в выразительном интерфейсе Material 3</summary>
+ <summary xml:lang="uk">Ваша музика у виразному інтерфейсі Material 3</summary>
+ <summary xml:lang="pl">Twoja muzyka w interfejsie Material 3</summary>
+ <summary xml:lang="de">Deine Musik im ausdrucksstarken Material-3-Design</summary>
  <description><p>A desktop music player with a local library, playlists, synchronized lyrics, tag editor, equalizer, YouTube Music and SoundCloud.</p><p xml:lang="ru">Музыкальный плеер с локальной медиатекой, плейлистами, текстами, редактором тегов, эквалайзером, YouTube Music и SoundCloud.</p></description>
  <launchable type="desktop-id">com.lormusic.desktop.desktop</launchable>
  <url type="homepage">https://github.com/Lorvance/LorMusic</url>
  <provides><binary>lormusic</binary></provides>
- <releases><release version="1.8.0" date="2026-11-15"/></releases>
+ <releases><release version="1.8.3" date="2026-11-26"/></releases>
  <content_rating type="oars-1.1"/>
 </component>
 ''')
@@ -71,6 +80,6 @@ exit 0
 ''',0o755)
 write('DEBIAN/postrm',(stage/'DEBIAN/postinst').read_text(),0o755)
 args.output=args.output.resolve();args.output.mkdir(parents=True,exist_ok=True)
-package=args.output/'LorMusic-1.8.0-Linux-amd64.deb'
+package=args.output/'LorMusic-1.8.3-Linux-amd64.deb'
 subprocess.run(['dpkg-deb','--root-owner-group','--build',str(stage),str(package)],check=True)
 print(package)

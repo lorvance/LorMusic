@@ -222,6 +222,13 @@ class Player(val state: SavedState, val scope: CoroutineScope, val notify: (Stri
         notify(if (next) "Сыграет следующим" else "Добавлено в очередь")
     }
 
+    fun moveQueue(index: Int, delta: Int) {
+        val target = index + delta
+        if (index !in queue.indices || target !in queue.indices) return
+        queue = queue.toMutableList().apply { add(target, removeAt(index)) }
+        save()
+    }
+
     fun removeQueue(index: Int) {
         queue = queue.toMutableList().apply { removeAt(index) }
     }

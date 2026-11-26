@@ -16,8 +16,9 @@ val LocalLanguage = staticCompositionLocalOf { "ru" }
 private val dictionaries = mutableMapOf<String, Map<String, String>>()
 
 @Composable
-fun t(text: String): String {
-    val lang = LocalLanguage.current
+fun t(text: String): String = translate(LocalLanguage.current, text)
+
+internal fun translate(lang: String, text: String): String {
     if (lang == "ru") return text
     val map =
         dictionaries.getOrPut(lang) {

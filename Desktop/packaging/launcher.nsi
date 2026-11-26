@@ -6,10 +6,10 @@ RequestExecutionLevel user
 SilentInstall silent
 AutoCloseWindow true
 !include "FileFunc.nsh"
-VIProductVersion "1.8.0.0"
-VIAddVersionKey "ProductName" "LorMusic Desktop"
-VIAddVersionKey "FileDescription" "LorMusic Desktop Player"
-VIAddVersionKey "FileVersion" "1.8.0"
+VIProductVersion "1.8.3.0"
+VIAddVersionKey "ProductName" "LorMusic"
+VIAddVersionKey "FileDescription" "LorMusic Player"
+VIAddVersionKey "FileVersion" "1.8.3"
 VIAddVersionKey "LegalCopyright" "LorMusic contributors"
 Section
  ${GetParameters} $0

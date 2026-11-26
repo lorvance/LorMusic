@@ -1,18 +1,21 @@
 {
-  "version": "1.8.0",
-  "build_date": "2026-11-15",
-  "platform": "Ubuntu 26.10 x86_64",
-  "main_jar_sha256": "f227485d0d616dc625dfead4aacdbd2141a6f9487dfc6397f679b02b87b3f22d",
+  "version": "1.8.2",
+  "date": "2026-11-19",
+  "update": "Liquid Glass Update companion",
+  "main_jar_sha256": "8bc7c62060eeb126e3c22fb60acc34770f8d29a1832b21f9ea57999f35468c0c",
   "installers": {
-    "LorMusic-1.8.0-Linux-amd64.deb": {
-      "sha256": "688e4f506c66cd7ea6e77c88afa12445ec663941cdd9f0555734ba7fcbacfc99",
-      "bytes": 104526212
+    "LorMusic-1.8.2-Linux-amd64.deb": {
+      "sha256": "5179f14db53abe8e002a26ddde5e1a36c197067d2810cea90d3737f25c89cf10",
+      "bytes": 104817676
     },
-    "LorMusic-1.8.0-Windows-x64-Setup.exe": {
-      "sha256": "9917bf6f7da069d65ed12049137fb9145aa9ffb4c367b3fa18786bdf3a466da0",
-      "bytes": 155321502
+    "LorMusic-1.8.2-Linux-x86_64.AppImage": {
+      "sha256": "4e58404df3a91ed6046f31c2c372113c072ce60ae70dc88587eea5c722794d41",
+      "bytes": 211352056
+    },
+    "LorMusic-1.8.2-Windows-x64-Setup.exe": {
+      "sha256": "44c80c789fda4ecb08993a13b42a8134c3bc36f52729ee334e6cb13f36c06849",
+      "bytes": 155635607
     }
   },
-  "windows_execution_tested": false,
-  "personal_accounts_tested": false
+  "verification": "See VALIDATION.md; physical Android/Windows and personal Google sign-in not verified."
 }

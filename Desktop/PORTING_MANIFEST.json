@@ -1,9 +1,9 @@
 {
-  "android_source": "LorMusic 1.8.0 local workspace",
+  "android_source": "LorMusic 1.8.2 Liquid Glass Update; desktop JVM adaptations retained",
   "repositories": [
     {
       "file": "model/Song.kt",
-      "android_source_sha256": "d0c93fdbd90218e2cddd9efc238555892510980424033fe2ef1d50868f98bdb9",
+      "android_source_sha256": "6e2a3bdd53149e48d71c0e93569f0e84069518cc23aa30c85de6511680055f8d",
       "desktop_source_sha256": "130c842e01f410b8aff6aa46956c374bd965e3a11adc595ac410341217dc0867",
       "adapted": true
     },
@@ -21,8 +21,8 @@
     },
     {
       "file": "data/SoundCloudRepository.kt",
-      "android_source_sha256": "07633586656ad7e5865e23b0b24362246ec7def8b2708418854b3aaa0b512ddb",
-      "desktop_source_sha256": "d58ad8855232db48f296b8a2f4e77d69741582948ab01c62dc722145bf24d62f",
+      "android_source_sha256": "523224e295bcc2283123bce06a053d7859c8c2cee92a602b21fe66a30ab0971d",
+      "desktop_source_sha256": "fdfd3259a6d7b49050ec2dd09b0dd83265c007b4ce03bc5612b15eeb2c13f26a",
       "adapted": true
     },
     {
@@ -48,6 +48,14 @@
       "android_source_sha256": "3e8a45b90bfd95f14b92a3744dc9b423558dda1218ac5434f56acd436f7028b8",
       "desktop_source_sha256": "9dbeefd00aa41a00159840dff3a058989ad4d546e6871d7f8ab6f9607fc9677e",
       "adapted": true
+    },
+    {
+      "file": "data/SoundCloudTransport.kt",
+      "android_source_sha256": "fdcd4215cc7dfab3cb495775b5aadb7ca4a984732f1b94242d3540394a71fd82",
+      "desktop_source_sha256": "fdcd4215cc7dfab3cb495775b5aadb7ca4a984732f1b94242d3540394a71fd82",
+      "adapted": false
     }
-  ]
+  ],
+  "desktop_release": "1.8.2",
+  "feature_coverage": "See RELEASE_1.8.2.md; default-browser login, installer localization, SoundCloud transport and Linux AppImage added. No shared-code percentage claimed."
 }

@@ -47,18 +47,12 @@ object SoundCloudRepository {
         connectTimeout: Int = 10000,
         readTimeout: Int = 12000,
     ): HttpURLConnection {
-        val conn = URL(urlStr).openConnection() as HttpURLConnection
-        conn.setRequestProperty("User-Agent", USER_AGENT)
-        conn.setRequestProperty("Accept", "application/json, text/plain, */*")
-        if (includeAuth) {
-            val token = cleanToken(currentAuthToken)
-            if (token.isNotBlank()) {
-                conn.setRequestProperty("Authorization", "OAuth $token")
-            }
-        }
-        conn.connectTimeout = connectTimeout
-        conn.readTimeout = readTimeout
-        return conn
+        return SoundCloudTransport.open(
+            urlStr,
+            if (includeAuth) cleanToken(currentAuthToken) else null,
+            connectTimeout,
+            readTimeout,
+        )
     }
 
     private suspend fun refreshClientIdIfNeeded(): String =
@@ -115,7 +109,9 @@ object SoundCloudRepository {
         val title = obj.optString("title", "Без названия").trim()
         val userObj = obj.optJSONObject("user")
         val artist = userObj?.optString("username", "SoundCloud")?.trim() ?: "SoundCloud"
-        val durationMs = obj.optLong("duration", 180_000L).coerceAtLeast(10_000L)
+        val durationMs =
+            obj.optLong("full_duration", 0L).takeIf { it > 0 }
+                ?: obj.optLong("duration", 0L).coerceAtLeast(0L)
         val rawArt =
             obj.optString("artwork_url", "").ifBlank { userObj?.optString("avatar_url", "") ?: "" }
         val artworkUrl =
@@ -376,60 +372,15 @@ object SoundCloudRepository {
                 .trim()
         if (trackId.isBlank()) return uri
 
-        try {
-            val cid = getClientId()
-            val candidateTranscodings = mutableListOf<String>()
-
-            val cached = transcodingsCache[trackId]
-            if (!cached.isNullOrBlank()) {
-                candidateTranscodings.add(cached)
-            }
-
-            val trackMetaUrl = "https://api-v2.soundcloud.com/tracks/$trackId?client_id=$cid"
-            val conn = openConnection(trackMetaUrl, includeAuth = false)
-            if (conn.responseCode in 200..299) {
-                val body = conn.inputStream.bufferedReader().use { it.readText() }
-                conn.disconnect()
-                val obj = JSONObject(body)
-                val media = obj.optJSONObject("media")
-                val transcodings = media?.optJSONArray("transcodings")
-                if (transcodings != null) {
-                    for (i in 0 until transcodings.length()) {
-                        val tc = transcodings.optJSONObject(i) ?: continue
-                        val format = tc.optJSONObject("format")
-                        val protocol = format?.optString("protocol", "") ?: ""
-                        val tcUrl = tc.optString("url", "")
-                        if (tcUrl.isNotBlank() && !candidateTranscodings.contains(tcUrl)) {
-                            if (protocol == "progressive") {
-                                candidateTranscodings.add(0, tcUrl)
-                            } else {
-                                candidateTranscodings.add(tcUrl)
-                            }
-                        }
-                    }
-                }
-            } else {
-                conn.disconnect()
-            }
-
-            for (tcUrl in candidateTranscodings) {
-                val sep = if (tcUrl.contains("?")) "&" else "?"
-                val finalStreamMetaUrl = "$tcUrl${sep}client_id=$cid"
-                val sConn = openConnection(finalStreamMetaUrl, includeAuth = false)
-                if (sConn.responseCode in 200..299) {
-                    val sBody = sConn.inputStream.bufferedReader().use { it.readText() }
-                    sConn.disconnect()
-                    val streamObj = JSONObject(sBody)
-                    val directUrl = streamObj.optString("url", "")
-                    if (directUrl.isNotBlank()) {
-                        transcodingsCache[trackId] = tcUrl
-                        return java.net.URI.create(directUrl)
-                    }
-                } else {
-                    sConn.disconnect()
-                }
-            }
-        } catch (_: Exception) {}
+        val stream =
+            SoundCloudTransport.resolve(
+                trackId,
+                ::getClientId,
+                { kotlinx.coroutines.runBlocking { refreshClientIdIfNeeded() } },
+                { cleanToken(currentAuthToken) },
+                false,
+            )
+        if (stream != null) return java.net.URI.create(stream)
 
         return uri
     }

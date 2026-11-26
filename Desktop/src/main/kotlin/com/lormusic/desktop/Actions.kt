@@ -11,7 +11,8 @@ import javax.swing.JFileChooser
 import javax.swing.filechooser.FileNameExtensionFilter
 import kotlinx.coroutines.*
 
-class Actions(val state: SavedState, val scope: CoroutineScope, val notify: (String) -> Unit) {
+class Actions(val state: SavedState, val scope: CoroutineScope, notifySink: (String) -> Unit) {
+    val notify: (String) -> Unit = { notifySink(translate(state.language, it)) }
     var revision by mutableStateOf(0)
     var busy by mutableStateOf(false)
     var progress by mutableStateOf("")
@@ -27,7 +28,7 @@ class Actions(val state: SavedState, val scope: CoroutineScope, val notify: (Str
     fun work(label: String, block: suspend () -> Unit) {
         scope.launch {
             busy = true
-            progress = label
+            progress = translate(state.language, label)
             try {
                 block()
             } catch (e: CancellationException) {
@@ -58,16 +59,23 @@ class Actions(val state: SavedState, val scope: CoroutineScope, val notify: (Str
     }
 
     fun importPaths(selected: List<File>, playFirst: Boolean = false) {
+        val videos = selected.filter { it.isFile && it.extension.lowercase() in videoExtensions }
+        videos.forEach { video ->
+            runCatching { previewVideo(video) }
+                .onFailure { notify(translate(state.language, "Не удалось открыть видео")) }
+        }
+        val audioFiles = selected - videos.toSet()
+        if (audioFiles.isEmpty()) return
         work("Читаю теги и обложки…") {
             val lists =
                 withContext(Dispatchers.IO) {
-                    selected
+                    audioFiles
                         .filter { it.isFile && it.extension.lowercase() in setOf("m3u", "m3u8") }
                         .map { Library.importPlaylist(it) }
                 }
             val added =
                 withContext(Dispatchers.IO) {
-                    selected.flatMap {
+                    audioFiles.flatMap {
                         when {
                             it.isDirectory -> Library.scan(it)
                             it.extension.lowercase() in Library.extensions ->
@@ -77,7 +85,7 @@ class Actions(val state: SavedState, val scope: CoroutineScope, val notify: (Str
                     }
                 } + lists.flatMap { it.songs }
             state.playlists.addAll(lists)
-            state.folders += selected.filter { it.isDirectory }.map { it.canonicalPath }
+            state.folders += audioFiles.filter { it.isDirectory }.map { it.canonicalPath }
             state.library = (state.library + added).distinctBy { it.id }.toMutableList()
             changed()
             notify("Добавлено треков: ${added.size}")

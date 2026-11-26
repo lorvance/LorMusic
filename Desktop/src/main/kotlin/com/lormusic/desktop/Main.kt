@@ -27,7 +27,6 @@ import androidx.compose.ui.unit.*
 import androidx.compose.ui.window.*
 import com.lormusic.app.data.*
 import com.lormusic.app.model.*
-import com.lormusic.app.model.RepeatMode
 import java.awt.Desktop
 import java.io.File
 import java.net.URI
@@ -43,6 +42,9 @@ val accents =
         Color(0xFF9EC9FF),
         Color(0xFFF0A9C8),
         Color(0xFFE1D084),
+        Color(0xFFB65D70),
+        Color(0xFF6469AD),
+        Color(0xFFC48250),
     )
 
 fun clock(ms: Long): String {
@@ -55,6 +57,8 @@ fun browse(url: String) {
 }
 
 fun main(args: Array<String>) {
+    if(args.contains("--soundcloud-test")){SoundCloudChecks.run();return}
+    if(args.contains("--default-browser-test")){val choice=DefaultBrowser.detect();println("Default browser: ${choice?.name ?: "unavailable"}; automatic bridge=${choice?.chromium==true || choice?.name?.contains("firefox")==true}");return}
     if (args.contains("--network-test")) {
         NetworkChecks.run()
         return
@@ -221,13 +225,13 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
         else
             darkColorScheme(
                 primary = primary,
-                onPrimary = Color(0xFF302040),
+                onPrimary = Color(0xFF092346),
                 secondary = primary,
-                background = Color(0xFF111015),
-                surface = Color(0xFF111015),
-                surfaceVariant = Color(0xFF25222C),
+                background = Color(0xFF10131B),
+                surface = Color(0xFF10131B),
+                surfaceVariant = Color(0xFF202736),
                 onSurface = Color(0xFFECE6F1),
-                onSurfaceVariant = Color(0xFFB9B1C3),
+                onSurfaceVariant = Color(0xFFAEB9CC),
                 outline = Color(0xFF514A5C),
             )
     MaterialTheme(colorScheme = scheme, typography = Typography()) {
@@ -237,6 +241,9 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
         ) {
             var page by remember {
                 mutableStateOf(System.getProperty("lormusic.initialPage", "Главная"))
+            }
+            var fullPlayer by remember {
+                mutableStateOf(System.getProperty("lormusic.fullPlayer") == "true")
             }
             var query by remember { mutableStateOf("") }
             var panel by remember {
@@ -295,12 +302,17 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                 Column(Modifier.fillMaxSize()) {
                     Row(Modifier.weight(1f)) {
                         Column(
-                            Modifier.width(218.dp)
+                            Modifier.width(if (compactPanel) 232.dp else 244.dp)
                                 .fillMaxHeight()
                                 .padding(14.dp, 18.dp)
                                 .background(
-                                    scheme.surfaceVariant.copy(alpha = .35f),
-                                    RoundedCornerShape(30.dp),
+                                    Brush.verticalGradient(
+                                        listOf(
+                                            scheme.surfaceVariant.copy(alpha = .55f),
+                                            scheme.primary.copy(alpha = .16f),
+                                        )
+                                    ),
+                                    RoundedCornerShape(34.dp),
                                 )
                                 .padding(12.dp)
                         ) {
@@ -308,26 +320,14 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                                 Modifier.padding(6.dp, 16.dp),
                                 verticalAlignment = Alignment.CenterVertically,
                             ) {
-                                Box(
-                                    Modifier.size(38.dp)
-                                        .background(primary, RoundedCornerShape(14.dp)),
-                                    contentAlignment = Alignment.Center,
-                                ) {
-                                    Icon(Icons.Rounded.MusicNote, null, tint = scheme.onPrimary)
-                                }
+                                BrandIcon(if(compactPanel)36.dp else 48.dp)
                                 Spacer(Modifier.width(10.dp))
                                 Column {
                                     Text(
                                         t("LorMusic"),
                                         fontWeight = FontWeight.Bold,
-                                        fontSize = 19.sp,
+                                        fontSize = if(compactPanel)17.sp else 19.sp,
                                         maxLines = 1,
-                                    )
-                                    Text(
-                                        t("DESKTOP"),
-                                        fontSize = 10.sp,
-                                        letterSpacing = 2.sp,
-                                        color = scheme.onSurfaceVariant,
                                     )
                                 }
                             }
@@ -356,7 +356,7 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                                 go("Настройки")
                             }
                             Text(
-                                t("1.8.0 · Desktop preview"),
+                                DESKTOP_VERSION,
                                 Modifier.padding(16.dp, 8.dp),
                                 fontSize = 10.sp,
                                 color = scheme.onSurfaceVariant,
@@ -365,11 +365,16 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                         Column(
                             Modifier.weight(1f)
                                 .fillMaxHeight()
-                                .padding(start = 12.dp, end = 22.dp, top = 26.dp)
+                                .padding(
+                                    start = if (compactPanel) 12.dp else 30.dp,
+                                    end = if (compactPanel) 18.dp else 36.dp,
+                                    top = 28.dp,
+                                ),
+                            horizontalAlignment = Alignment.CenterHorizontally,
                         ) {
                             Row(
                                 verticalAlignment = Alignment.CenterVertically,
-                                modifier = Modifier.fillMaxWidth(),
+                                modifier = Modifier.widthIn(max = 1400.dp).fillMaxWidth(),
                             ) {
                                 Column(Modifier.weight(1f)) {
                                     Text(
@@ -382,14 +387,14 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                                                 else -> "LORMUSIC"
                                             },
                                         color = scheme.primary,
-                                        fontSize = 10.sp,
-                                        letterSpacing = 2.sp,
+                                        fontSize = 11.sp,
+                                        letterSpacing = 1.sp,
                                         fontWeight = FontWeight.Bold,
                                     )
                                     Spacer(Modifier.height(6.dp))
                                     Text(
                                         playlist?.name ?: t(page),
-                                        fontSize = 32.sp,
+                                        fontSize = 36.sp,
                                         fontWeight = FontWeight.Bold,
                                         maxLines = 1,
                                         overflow = TextOverflow.Ellipsis,
@@ -405,7 +410,14 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                                         },
                                         Modifier.widthIn(min = 190.dp, max = 320.dp)
                                             .weight(.65f, false),
-                                        placeholder = { Text(t("Поиск музыки"), fontSize = 14.sp) },
+                                        placeholder = {
+                                            Text(
+                                                t("Поиск музыки"),
+                                                fontSize = 13.sp,
+                                                maxLines = 1,
+                                                overflow = TextOverflow.Ellipsis,
+                                            )
+                                        },
                                         leadingIcon = { Icon(Icons.Rounded.Search, null) },
                                         trailingIcon = {
                                             if (query.isNotEmpty())
@@ -425,6 +437,10 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                                         Icon(Icons.Rounded.MoreVert, "Ещё")
                                     }
                                     DropdownMenu(topMenu, { topMenu = false }) {
+                                        DropdownMenuItem({ Text(t("Видео в аудио")) }, {
+                                            topMenu = false
+                                            dialog = "Видео в аудио"
+                                        })
                                         DropdownMenuItem(
                                             { Text(t("Обновить медиатеку")) },
                                             {
@@ -672,6 +688,7 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                         panel,
                         { panel = if (panel == it) "" else it },
                         { dialog = "Эквалайзер" },
+                        { fullPlayer = true },
                     )
                 }
                 if (compactPanel && panel.isNotBlank()) {
@@ -687,11 +704,15 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
                         SidePanel(a, panel, { panel = "" }, { showSong(it) })
                     }
                 }
+                if (fullPlayer) FullscreenPlayer(a, { fullPlayer = false }, { showSong(it) })
+                UpdateNotice(a)
                 SnackbarHost(
                     snackbar,
                     Modifier.align(Alignment.BottomCenter).padding(bottom = 126.dp),
                 )
             }
+            DesktopAchievements(a)
+            if (dialog == "Видео в аудио") VideoTools(a) { dialog = "" }
             if (menuSong != null) {
                 val song = menuSong!!
                 SongActions(
@@ -918,7 +939,7 @@ fun LorMusic(a: Actions, snackbar: SnackbarHostState) {
 @Composable
 fun NavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
     val c = MaterialTheme.colorScheme
-    val bg by animateColorAsState(if (selected) c.primary.copy(alpha = .20f) else Color.Transparent)
+    val bg by animateColorAsState(if (selected) c.primary else Color.Transparent)
     Row(
         Modifier.fillMaxWidth()
             .padding(vertical = 2.dp)
@@ -928,13 +949,13 @@ fun NavItem(label: String, icon: ImageVector, selected: Boolean, onClick: () -> 
             .padding(14.dp, 13.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(icon, label, Modifier.size(21.dp), if (selected) c.primary else c.onSurfaceVariant)
+        Icon(icon, label, Modifier.size(21.dp), if (selected) c.onPrimary else c.onSurfaceVariant)
         Spacer(Modifier.width(12.dp))
         Text(
             t(label),
-            fontSize = 13.sp,
+            fontSize = 14.sp,
             fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
-            color = if (selected) c.primary else c.onSurfaceVariant,
+            color = if (selected) c.onPrimary else c.onSurfaceVariant,
             maxLines = 1,
         )
     }
@@ -977,7 +998,10 @@ fun Art(song: Song?, size: Dp = 48.dp) {
                 Modifier.fillMaxSize(),
                 contentScale = ContentScale.Crop,
             )
-        else Icon(Icons.Rounded.MusicNote, null, Modifier.size(size * .42f), c.primary)
+        else {
+            ExpressiveWaves(Modifier.fillMaxSize())
+            Icon(Icons.Rounded.MusicNote, null, Modifier.size(size * .5f), Color(0xFFF6F7FF))
+        }
     }
 }
 
@@ -1066,7 +1090,7 @@ fun TrackRow(
         Text(
             if (selected && playing) "Ⅱ" else "${index+1}",
             Modifier.width(28.dp),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             color = if (selected) c.primary else c.onSurfaceVariant,
         )
         Art(s, 44.dp)
@@ -1077,20 +1101,20 @@ fun TrackRow(
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 14.sp,
+                fontSize = 16.sp,
                 color = if (selected) c.primary else c.onSurface,
             )
             Text(
                 s.artist,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
-                fontSize = 12.sp,
+                fontSize = 13.sp,
                 color = c.onSurfaceVariant,
             )
         }
         Text(
             clock(s.durationMs),
-            fontSize = 12.sp,
+            fontSize = 13.sp,
             color = c.onSurfaceVariant,
             modifier = Modifier.padding(horizontal = 12.dp),
         )
@@ -1109,303 +1133,13 @@ fun TrackRow(
 }
 
 @Composable
-fun Home(
+fun SidePanel(
     a: Actions,
-    go: (String) -> Unit,
-    play: (Song) -> Unit,
+    tab: String,
+    close: () -> Unit,
     menu: (Song) -> Unit,
-    add: () -> Unit,
+    modifier: Modifier = Modifier.width(300.dp),
 ) {
-    val c = MaterialTheme.colorScheme
-    val ls = rememberScrollState()
-    Column(
-        Modifier.fillMaxSize().verticalScroll(ls).padding(bottom = 24.dp),
-        verticalArrangement = Arrangement.spacedBy(24.dp),
-    ) {
-        Box(
-            Modifier.fillMaxWidth()
-                .heightIn(min = 200.dp)
-                .clip(RoundedCornerShape(34.dp))
-                .background(
-                    Brush.linearGradient(listOf(c.primary.copy(alpha = .22f), c.surfaceVariant))
-                )
-        ) {
-            androidx.compose.foundation.Canvas(Modifier.align(Alignment.CenterEnd).size(250.dp)) {
-                drawCircle(
-                    c.primary.copy(alpha = .10f),
-                    size.minDimension * .48f,
-                    center =
-                        androidx.compose.ui.geometry.Offset(size.width * .8f, size.height * .25f),
-                )
-                drawCircle(
-                    c.primary.copy(alpha = .14f),
-                    size.minDimension * .35f,
-                    center =
-                        androidx.compose.ui.geometry.Offset(size.width * .6f, size.height * .72f),
-                )
-            }
-            Column(Modifier.padding(28.dp)) {
-                Text(t("Хороший день для музыки"), fontSize = 28.sp, fontWeight = FontWeight.Bold)
-                Text(
-                    t("Вся ваша коллекция. Новые открытия. Один плеер."),
-                    Modifier.padding(top = 8.dp, bottom = 20.dp),
-                    color = c.onSurfaceVariant,
-                )
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    Button(
-                        {
-                            a.state.library.firstOrNull()?.let {
-                                a.player.play(it, a.state.library)
-                            } ?: add()
-                        },
-                        shape = CircleShape,
-                    ) {
-                        Icon(Icons.Rounded.PlayArrow, null)
-                        Text(t("Моя музыка"))
-                    }
-                    OutlinedButton(add, shape = CircleShape) { Text(t("Добавить папку")) }
-                }
-            }
-        }
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Discovery(
-                "YouTube Music",
-                "Поиск, радио и ваша коллекция",
-                Icons.Rounded.PlayCircle,
-                Modifier.weight(1f),
-            ) {
-                go("YouTube Music")
-            }
-            Discovery(
-                "SoundCloud",
-                "Независимая музыка и открытия",
-                Icons.Rounded.Cloud,
-                Modifier.weight(1f),
-            ) {
-                go("SoundCloud")
-            }
-        }
-        val recent = a.state.history.take(8)
-        if (recent.isNotEmpty()) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Text(
-                    t("Недавно слушали"),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    modifier = Modifier.weight(1f),
-                )
-                TextButton({ a.player.play(recent.first(), recent) }) { Text(t("Слушать всё")) }
-            }
-            recent.forEachIndexed { i, s ->
-                TrackRow(
-                    s,
-                    i,
-                    a.player.song?.id == s.id,
-                    a.player.playing,
-                    s.id in a.state.liked,
-                    { play(s) },
-                    { menu(s) },
-                    { a.favorite(s) },
-                )
-            }
-        } else {
-            Text(t("Начните со своей коллекции"), fontSize = 22.sp, fontWeight = FontWeight.Bold)
-            Text(
-                t(
-                    "Добавьте папку с компьютера или найдите музыку в YouTube Music и SoundCloud. Здесь появятся недавно прослушанные треки."
-                ),
-                color = c.onSurfaceVariant,
-            )
-        }
-    }
-}
-
-@Composable
-fun Discovery(
-    title: String,
-    subtitle: String,
-    icon: ImageVector,
-    modifier: Modifier,
-    click: () -> Unit,
-) {
-    val c = MaterialTheme.colorScheme
-    Column(
-        modifier
-            .clip(RoundedCornerShape(25.dp))
-            .background(c.surfaceVariant.copy(alpha = .65f))
-            .clickable(onClick = click)
-            .padding(22.dp)
-    ) {
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Icon(icon, null, tint = c.primary, modifier = Modifier.size(30.dp))
-            Spacer(Modifier.weight(1f))
-            Icon(Icons.Rounded.ArrowOutward, null, tint = c.onSurfaceVariant)
-        }
-        Text(title, Modifier.padding(top = 14.dp), fontSize = 18.sp, fontWeight = FontWeight.Bold)
-        Text(subtitle, Modifier.padding(top = 6.dp), fontSize = 12.sp, color = c.onSurfaceVariant)
-    }
-}
-
-@Composable
-fun PlayerBar(a: Actions, panel: String, showPanel: (String) -> Unit, eq: () -> Unit) {
-    val p = a.player
-    val c = MaterialTheme.colorScheme
-    val song = p.song
-    Surface(
-        color = c.surfaceVariant.copy(alpha = .85f),
-        shape = RoundedCornerShape(topStart = 28.dp, topEnd = 28.dp),
-        modifier = Modifier.fillMaxWidth().height(114.dp),
-    ) {
-        Row(
-            Modifier.fillMaxSize().padding(20.dp, 12.dp),
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Row(Modifier.weight(.9f), verticalAlignment = Alignment.CenterVertically) {
-                Art(song, 60.dp)
-                Spacer(Modifier.width(12.dp))
-                Column(Modifier.weight(1f)) {
-                    Text(
-                        song?.title ?: "Музыка начинается здесь",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 13.sp,
-                    )
-                    Text(
-                        song?.artist ?: "Добавьте трек в очередь",
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis,
-                        color = c.onSurfaceVariant,
-                        fontSize = 11.sp,
-                    )
-                }
-                IconButton({ song?.let { a.favorite(it) } }, enabled = song != null) {
-                    Icon(
-                        if (song?.id in a.state.liked) Icons.Rounded.Favorite
-                        else Icons.Rounded.FavoriteBorder,
-                        "Нравится",
-                        Modifier.size(20.dp),
-                        if (song?.id in a.state.liked) c.primary else c.onSurfaceVariant,
-                    )
-                }
-            }
-            Column(
-                Modifier.weight(1.35f).padding(horizontal = 16.dp),
-                horizontalAlignment = Alignment.CenterHorizontally,
-            ) {
-                Row(
-                    verticalAlignment = Alignment.CenterVertically,
-                    horizontalArrangement = Arrangement.spacedBy(5.dp),
-                ) {
-                    IconButton({ p.shuffle = !p.shuffle }) {
-                        Icon(
-                            Icons.Rounded.Shuffle,
-                            "Перемешать",
-                            Modifier.size(19.dp),
-                            if (p.shuffle) c.primary else c.onSurfaceVariant,
-                        )
-                    }
-                    IconButton({ p.previous() }) { Icon(Icons.Rounded.SkipPrevious, "Предыдущий") }
-                    FilledIconButton(
-                        { p.toggle() },
-                        enabled = song != null,
-                        modifier = Modifier.size(46.dp),
-                        shape = RoundedCornerShape(if (p.playing) 16.dp else 23.dp),
-                    ) {
-                        if (p.loading)
-                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp)
-                        else
-                            Icon(
-                                if (p.playing) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
-                                "Воспроизведение",
-                                Modifier.size(28.dp),
-                            )
-                    }
-                    IconButton({ p.next() }) { Icon(Icons.Rounded.SkipNext, "Следующий") }
-                    IconButton({ p.repeat = RepeatMode.entries[(p.repeat.ordinal + 1) % 3] }) {
-                        Icon(
-                            if (p.repeat == RepeatMode.ONE) Icons.Rounded.RepeatOne
-                            else Icons.Rounded.Repeat,
-                            "Повтор",
-                            Modifier.size(19.dp),
-                            if (p.repeat != RepeatMode.OFF) c.primary else c.onSurfaceVariant,
-                        )
-                    }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    Text(
-                        clock(p.position),
-                        fontSize = 10.sp,
-                        color = c.onSurfaceVariant,
-                        modifier = Modifier.width(34.dp),
-                    )
-                    var seeking by remember { mutableStateOf<Float?>(null) }
-                    Slider(
-                        seeking
-                            ?: p.position
-                                .toFloat()
-                                .coerceIn(0f, p.duration.toFloat().coerceAtLeast(1f)),
-                        { seeking = it },
-                        onValueChangeFinished = {
-                            seeking?.let { p.seek(it.toLong()) }
-                            seeking = null
-                        },
-                        valueRange = 0f..p.duration.toFloat().coerceAtLeast(1f),
-                        enabled = song != null,
-                        modifier = Modifier.weight(1f).height(26.dp),
-                    )
-                    Text(
-                        clock(p.duration),
-                        fontSize = 10.sp,
-                        color = c.onSurfaceVariant,
-                        modifier = Modifier.padding(start = 8.dp),
-                    )
-                }
-            }
-            Row(
-                Modifier.weight(.8f),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.End,
-            ) {
-                IconButton(eq, Modifier.size(34.dp)) {
-                    Icon(Icons.Rounded.GraphicEq, "Эквалайзер", Modifier.size(20.dp))
-                }
-                IconButton({ showPanel("Текст") }, Modifier.size(34.dp)) {
-                    Icon(
-                        Icons.Rounded.Lyrics,
-                        "Текст песни",
-                        Modifier.size(20.dp),
-                        if (panel == "Текст") c.primary else c.onSurfaceVariant,
-                    )
-                }
-                IconButton({ showPanel("Очередь") }, Modifier.size(34.dp)) {
-                    Icon(
-                        Icons.Rounded.QueueMusic,
-                        "Очередь",
-                        Modifier.size(22.dp),
-                        if (panel == "Очередь") c.primary else c.onSurfaceVariant,
-                    )
-                }
-                IconButton({ p.changeVolume(if (p.volume == 0) 75 else 0) }, Modifier.size(32.dp)) {
-                    Icon(
-                        if (p.volume == 0) Icons.Rounded.VolumeOff else Icons.Rounded.VolumeUp,
-                        "Громкость",
-                        Modifier.size(20.dp),
-                    )
-                }
-                Slider(
-                    p.volume.toFloat(),
-                    { p.changeVolume(it.toInt()) },
-                    valueRange = 0f..100f,
-                    modifier = Modifier.widthIn(max = 95.dp).weight(1f).height(24.dp),
-                )
-            }
-        }
-    }
-}
-
-@Composable
-fun SidePanel(a: Actions, tab: String, close: () -> Unit, menu: (Song) -> Unit) {
     val p = a.player
     val c = MaterialTheme.colorScheme
     var lyrics by remember(p.song?.id) { mutableStateOf<List<LyricLine>>(emptyList()) }
@@ -1425,7 +1159,7 @@ fun SidePanel(a: Actions, tab: String, close: () -> Unit, menu: (Song) -> Unit) 
         }
     }
     Column(
-        Modifier.width(300.dp)
+        modifier
             .fillMaxHeight()
             .padding(top = 24.dp, end = 12.dp)
             .background(
@@ -1472,6 +1206,28 @@ fun SidePanel(a: Actions, tab: String, close: () -> Unit, menu: (Song) -> Unit) 
                                 fontSize = 10.sp,
                                 maxLines = 1,
                                 color = c.onSurfaceVariant,
+                            )
+                        }
+                        IconButton(
+                            { p.moveQueue(i, -1) },
+                            enabled = i > 0,
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.KeyboardArrowUp,
+                                "Выше в очереди",
+                                Modifier.size(18.dp),
+                            )
+                        }
+                        IconButton(
+                            { p.moveQueue(i, 1) },
+                            enabled = i < p.queue.lastIndex,
+                            modifier = Modifier.size(24.dp),
+                        ) {
+                            Icon(
+                                Icons.Rounded.KeyboardArrowDown,
+                                "Ниже в очереди",
+                                Modifier.size(18.dp),
                             )
                         }
                         IconButton({ p.removeQueue(i) }, Modifier.size(25.dp)) {

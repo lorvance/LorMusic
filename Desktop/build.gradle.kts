@@ -21,9 +21,9 @@ compose.desktop {
   mainClass = "com.lormusic.desktop.MainKt"
   jvmArgs += listOf("-Dfile.encoding=UTF-8")
   nativeDistributions {
-   targetFormats(TargetFormat.Deb, TargetFormat.Exe)
+   targetFormats(TargetFormat.Deb)
    packageName = "lormusic"
-   packageVersion = "1.8.0"
+   packageVersion = "1.8.3"
    description = "LorMusic — Material 3 Expressive music player"
    vendor = "LorMusic"
    modules("java.sql", "java.net.http", "jdk.unsupported", "java.naming", "java.management", "jdk.charsets", "jdk.zipfs", "java.prefs", "java.security.jgss", "java.rmi")

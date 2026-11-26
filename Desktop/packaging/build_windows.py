@@ -19,5 +19,5 @@ for name in ['LICENSE','README.md','THIRD_PARTY_NOTICES.md']:shutil.copy(root/na
 if (root/'third-party-licenses').exists():shutil.copytree(root/'third-party-licenses',win/'third-party-licenses')
 a.output=a.output.resolve();a.output.mkdir(parents=True,exist_ok=True)
 subprocess.run([a.makensis,'-V2','launcher.nsi'],cwd=pack,check=True)
-subprocess.run([a.makensis,'-V2','-DOUTPUTFILE='+str(a.output/'LorMusic-1.8.0-Windows-x64-Setup.exe'),'installer.nsi'],cwd=pack,check=True)
-print(a.output/'LorMusic-1.8.0-Windows-x64-Setup.exe')
+subprocess.run([a.makensis,'-V2','-DOUTPUTFILE='+str(a.output/'LorMusic-1.8.3-Windows-x64-Setup.exe'),'installer.nsi'],cwd=pack,check=True)
+print(a.output/'LorMusic-1.8.3-Windows-x64-Setup.exe')

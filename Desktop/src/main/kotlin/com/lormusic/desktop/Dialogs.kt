@@ -47,14 +47,31 @@ fun Settings(
         SettingsGroup("Оформление") {
             Text(t("Акцентный цвет"), fontWeight = FontWeight.SemiBold)
             Row(
-                Modifier.padding(vertical = 12.dp),
+                Modifier.horizontalScroll(rememberScrollState()).padding(vertical = 12.dp),
                 horizontalArrangement = Arrangement.spacedBy(12.dp),
             ) {
                 accents.forEachIndexed { i, v ->
                     Box(
-                        Modifier.size(43.dp).clip(CircleShape).background(v).clickable { color(i) },
+                        Modifier.size(43.dp).clip(CircleShape).clickable { color(i) },
                         contentAlignment = Alignment.Center,
                     ) {
+                        val light = when (i) {
+                            6 -> Color(0xFFE8A3B2)
+                            7 -> Color(0xFFB2B5EF)
+                            8 -> Color(0xFFF0B98F)
+                            else -> lerp(v, Color.White, .35f)
+                        }
+                        val deep = when (i) {
+                            6 -> Color(0xFF713344)
+                            7 -> Color(0xFF393C76)
+                            8 -> Color(0xFF80502F)
+                            else -> lerp(v, Color.Black, .42f)
+                        }
+                        Canvas(Modifier.fillMaxSize()) {
+                            drawArc(v, 180f, 180f, useCenter = true)
+                            drawArc(deep, 90f, 90f, useCenter = true)
+                            drawArc(light, 0f, 90f, useCenter = true)
+                        }
                         if (i == accent) Icon(Icons.Rounded.Check, null, tint = Color(0xFF27212D))
                     }
                 }
@@ -69,6 +86,18 @@ fun Settings(
                     )
                 }
                 Switch(light, theme)
+            }
+        }
+        DesktopAchievementSettings(a)
+        SettingsGroup("Обновления") { UpdateSettings(a) }
+        SettingsGroup("Плеер") {
+            PreferenceSwitch("Градиент по обложке", a.state.playerGradient) {
+                a.state.playerGradient = it
+                a.changed()
+            }
+            PreferenceSwitch("Цвет элементов по обложке", a.state.dynamicColors) {
+                a.state.dynamicColors = it
+                a.changed()
             }
         }
         SettingsGroup("Воспроизведение") {
@@ -170,17 +199,8 @@ fun Settings(
                 TextButton({ dialog("Восстановить") }) { Text(t("Восстановить")) }
             }
         }
-        SettingsGroup("О приложении") {
-            Text(t("LorMusic Desktop · 1.8.0"), fontWeight = FontWeight.Bold)
-            Text(
-                "Kotlin · Compose Multiplatform · VLC\nОткрытая музыка в выразительном интерфейсе Material 3.",
-                fontSize = 13.sp,
-                color = c.onSurfaceVariant,
-            )
-            TextButton({ browse("https://github.com/Lorvance/LorMusic") }) {
-                Text(t("Исходный код и лицензии — в комплекте дистрибутива"))
-            }
-        }
+        DesktopSystemInfo()
+
     }
 }
 
@@ -346,7 +366,7 @@ fun DeleteFileButton(a: Actions, s: Song, close: () -> Unit) {
             onDismissRequest = { confirm = false },
             title = { Text(t("Удалить аудиофайл?")) },
             text = {
-                Text("${s.title}\n\nФайл будет удалён с компьютера. Это действие нельзя отменить.")
+                Text(s.title + "\n\n" + t("Файл будет удалён с компьютера. Это действие нельзя отменить."))
             },
             confirmButton = {
                 TextButton({

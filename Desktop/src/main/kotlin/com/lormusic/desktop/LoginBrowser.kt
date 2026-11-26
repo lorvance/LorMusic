@@ -54,6 +54,10 @@ object LoginBrowser {
     }
 
     fun open(a: Actions, youtube: Boolean) {
+        if (youtube) {
+            YouTubeBrowser.open(a)
+            return
+        }
         frame?.let {
             if (it.isDisplayable) {
                 it.toFront()
@@ -220,6 +224,7 @@ object LoginBrowser {
     }
 
     fun signOut() {
+        YouTubeBrowser.signOut()
         frame?.dispose()
         if (app != null) {
             CefCookieManager.getGlobalManager().deleteCookies(null, null)
@@ -228,6 +233,7 @@ object LoginBrowser {
     }
 
     fun shutdown() {
+        YouTubeBrowser.shutdown()
         frame?.dispose()
         app?.dispose()
         app = null
